@@ -1,0 +1,35 @@
+{
+  "name": "webzlp",
+  "version": "0.1.0",
+  "description": "Zebra LP-series WebUSB driver",
+  "type": "module",
+  "exports": {
+    ".": "./lib/*.js",
+    "./labelepl": "./lib/LabelEpl.js",
+    "./lp2844": "./lib/LP2844.js"
+  },
+  "scripts": {
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Cellivar/WebZLP.git"
+  },
+  "keywords": [
+    "thermal_printer",
+    "printer",
+    "webusb",
+    "zebra",
+    "lp2844",
+    "lp2824"
+  ],
+  "author": "Cellivar Kangaroorat",
+  "license": "GPL-3.0-only",
+  "bugs": {
+    "url": "https://github.com/Cellivar/WebZLP/issues"
+  },
+  "homepage": "https://github.com/Cellivar/WebZLP#readme",
+  "devDependencies": {
+    "jest": "^27.4.5"
+  }
+}
