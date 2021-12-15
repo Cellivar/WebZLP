@@ -2,9 +2,9 @@ import { LabelEpl } from "./LabelEpl";
 import { LineBreakTransformer } from "./LineBreakTransformer";
 import { PrinterCommunicationMode } from "./PrinterCommunicationMode";
 
-export * from LabelEpl;
-export * from PrinterCommunicationMode;
-export * from LineBreakTransformer;
+export { LabelEpl };
+export { PrinterCommunicationMode };
+export { LineBreakTransformer };
 
 export class LP2844 {
     #inputStream;
@@ -39,8 +39,8 @@ export class LP2844 {
      * Create a new instance of the LP2844 class.
      *
      * @param {USBDevice} - The WebUSB device object representing the printer.
-     * @param (int) lineSpacing - Additional dots to place between lines.
-     * @param (float) labelDimensionRoundingStep - The nearest fraction of an inch to round label dimensions to.
+     * @param {number} lineSpacing - The default line spacing for creating new labels.
+     * @param {number} labelDimensionRoundingStep - The nearest fraction of an inch to round label dimensions to. Usually 0.25.
      */
     constructor(device, lineSpacing, labelDimensionRoundingStep) {
         this.#device = device; // The USB device to work with

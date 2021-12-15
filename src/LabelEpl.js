@@ -6,6 +6,7 @@ export class LabelEpl {
     #rawCmdBuffer = [];
     #fontNumber = "1";
     #dpi;
+    #lineSpacing
 
     // Temp holders on a per-label basis.
     #xOffset = 0;
@@ -24,7 +25,7 @@ export class LabelEpl {
         this.labelWidthDots = labelWidthDots;
         this.labelHeightDots = labelHeightDots;
         this.#dpi = dpi;
-        this.lineSpacing = lineSpacing || 5;
+        this.#lineSpacing = lineSpacing === 0 ? 0 : (lineSpacing || 5);
         this.color = color || "#FFFFFF";
 
         this.clearCommandBuffer();
@@ -43,6 +44,16 @@ export class LabelEpl {
 
         return buffer;
     }
+
+    /**
+     * Gets the current font selection
+     */
+    get font() { return this.#fontNumber; }
+
+    /**
+     * Gets the line spacing setting.
+     */
+    get lineSpacing() { return this.#lineSpacing; }
 
     /**
      * Get the ASCII text representation of the operations of this label. Only useful for debugging.
@@ -81,6 +92,16 @@ export class LabelEpl {
     }
 
     /**
+     * Gets the current horizontal offset.
+     */
+    get horizontalOffset() { return this.#xOffset; }
+
+    /**
+     * Gets the current vertical offset.
+     */
+    get verticalOffset() { return this.#yOffset; }
+
+    /**
      * Complete a label. Must be called to print the label.
      *
      * @param (int) count - The number of labels to print, 1 or higher.
@@ -102,8 +123,7 @@ export class LabelEpl {
 
         if (fontNumber < 1 || fontNumber > 7) {
             console.log("Invalid font size! Defaulting to 1");
-            this.#fontNumber = 1;
-            return;
+            fontNumber = 1;
         }
 
         this.#fontNumber = fontNumber;
@@ -131,7 +151,7 @@ export class LabelEpl {
      * @param (int) dots - The size in dots to add.
      */
     setLineSpacing(dots) {
-        this.lineSpacing = Math.trunc(dots);
+        this.#lineSpacing = Math.trunc(dots);
         return this;
     }
 
@@ -206,14 +226,14 @@ export class LabelEpl {
         size = Math.trunc(size) || 1;
 
         // Font size 5 only supports uppercase letters.
-        if (this.fontSize == 5) {
+        if (this.#fontNumber == 5) {
             text = text.toUpperCase();
         }
 
         this.#addTextRaw(this.#xOffset, this.#yOffset, 0, this.#fontNumber, size, size, false, text);
 
         let textHeight = (size * this.fontSizes[this.#fontNumber]["y"]);
-        this.#yOffset += Math.trunc(textHeight + this.lineSpacing);
+        this.#yOffset += Math.trunc(textHeight + this.#lineSpacing);
 
         return this;
     }
@@ -243,7 +263,7 @@ export class LabelEpl {
         this.#addTextRaw(centerOffset, this.#yOffset, 0, this.#fontNumber, size, size, false, text);
 
         let textHeight = (size * this.fontSizes[this.#fontNumber]["y"]);
-        this.#yOffset += Math.trunc(textHeight + this.lineSpacing);
+        this.#yOffset += Math.trunc(textHeight + this.#lineSpacing);
 
         return this;
     }
