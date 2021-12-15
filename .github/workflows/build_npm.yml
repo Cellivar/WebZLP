@@ -1,0 +1,41 @@
+name: Build
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [16.x]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Build on Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v1
+        with:
+          node-version: ${{ matrix.node-version }}
+      - run: npm ci --ignore-scripts
+      - uses: mattallty/jest-github-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  publish:
+    if: github.ref == 'refs/heads/main'
+    environment: publish
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v1
+        with:
+          node-version: 16
+      - name: Publish
+        run: |
+          npm config set //registry.npmjs.org/:_authToken ${NPM_TOKEN}
+          npm publish --ignore-scripts
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
