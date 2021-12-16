@@ -1,14 +1,16 @@
 {
   "name": "webzlp",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Zebra LP-series WebUSB driver",
   "type": "module",
   "exports": {
-    ".": "./src/*.js",
-    "./labelepl": "./src/LabelEpl.js",
-    "./lp2844": "./src/LP2844.js",
-    "./PrinterCommunicationMode": "./src/PrinterCommunicationMode.js",
-    "./LineBreakTransformer": "./src/LineBreakTransformer.js",
+    ".": "./src/index.js",
+    "./src": "./src/index.js",
+    "./src/*": "./src/*.js",
+    "./src/labelepl": "./src/LabelEpl.js",
+    "./src/lp2844": "./src/LP2844.js",
+    "./src/PrinterCommunicationMode": "./src/PrinterCommunicationMode.js",
+    "./src/LineBreakTransformer": "./src/LineBreakTransformer.js",
     "./package.json": "./package.json"
   },
   "scripts": {
