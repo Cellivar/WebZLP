@@ -176,6 +176,13 @@ export class LP2844 {
     }
 
     /**
+     * Cut the last printed label. Avoid cutting when there is nothing to cut.
+     */
+    async cut() {
+        await this.addCmd("C").print();
+    }
+
+    /**
      * Feed a blank label.
      */
     async feed() {
