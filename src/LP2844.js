@@ -1,10 +1,6 @@
-import { LabelEpl } from "./LabelEpl";
-import { LineBreakTransformer } from "./LineBreakTransformer";
-import { PrinterCommunicationMode } from "./PrinterCommunicationMode";
-
-export { LabelEpl };
-export { PrinterCommunicationMode };
-export { LineBreakTransformer };
+import { LabelEpl } from "./LabelEpl.js";
+import { LineBreakTransformer } from "./LineBreakTransformer.js";
+import { PrinterCommunicationMode } from "./PrinterCommunicationMode.js";
 
 export class LP2844 {
     #inputStream;
