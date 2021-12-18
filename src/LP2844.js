@@ -5,31 +5,148 @@ import { PrinterCommunicationMode } from "./PrinterCommunicationMode.js";
 export class LP2844 {
     #inputStream;
     #nextLineCache;
+
     #device;
+    /**
+     * Get the underlying USB device this printer represents.
+     */
+    get device() { return this.#device }
+
     #deviceOut;
     #deviceIn;
 
     #serialNumber;
-    #modelNumber;
-    #firmware;
-    #doubleBuffering;
-    #commMode = PrinterCommunicationMode.None;
+    /**
+     * Get the serial number of this printer, if available.
+     */
+    get serial() { return this.#serialNumber; }
 
+    #modelNumber;
+    /**
+     * Get the model ID for this printer.
+     */
+    get modelId() { return this.#modelNumber; }
+
+    #firmware;
+    /**
+     * Get the firmware version of this printer, if available.
+     */
+    get firmware() { return this.#firmware; }
+
+    #doubleBuffering = false;
+    /**
+     * Get whether this printer has double buffering enabled.
+     */
+    get doubleBuffering() { return this.#doubleBuffering; }
+
+    #commMode = PrinterCommunicationMode.None;
+    /**
+     * Get the communication mode this printer is in.
+     */
+    get communicationMode() { return this.#commMode }
+
+    /**
+     * @type {Array.<Uint8Array>}
+     */
     #rawCmdBuffer = [];
+    /**
+     * Get the raw command buffer queued for this printer to print.
+     * @type {Uint8Array}
+     */
+    get rawCommandBuffer() {
+        const bufferLen = this.#rawCmdBuffer.reduce((sum, arr) => sum + arr.byteLength, 0);
+        const buffer = new Uint8Array(bufferLen);
+        this.#rawCmdBuffer.reduce((offset, arr) => {
+            buffer.set(arr, offset);
+            return arr.byteLength + offset;
+        }, 0);
+
+        return buffer;
+    }
+
+    /**
+     * Get the ASCII interpreted command buffer. Note that it is not safe to print this directly as it may be sent to the printer as UTF-8.
+     */
+    get commandBuffer() {
+        return new TextDecoder("ascii").decode(this.rawCommandBuffer);
+    }
 
     #speed = 4;
-    #density = 8;
+    /**
+     * Get the speed setting for this printer.
+     */
+    get speed() { return this.#speed; }
 
-    // LP 2844 has a 203 DPI print head
+    #density = 8;
+    /**
+     * Get the density (darkness) setting for this printer.
+     */
+    get density() { return this.#density; }
+
     #dpi = 203;
+    /**
+     * Get the DPI of this printer's print head.
+     */
+    get dpi() { return this.#dpi; }
+
+    /**
+     * Get the USB Vendor ID for this type of printer
+     */
+    static get usbVendorId() { return 0x0a5f; }
+
     #labelType = LabelEpl;
 
     #labelWidthIn;
+    /**
+     * Get the label width in inches.
+     */
+    get labelWidth() { return this.#labelWidthIn; }
+
+    /**
+     * Set the label's width in inches.
+     */
+    set labelWidth(value) {
+        this.#labelWidthIn = value;
+        this.#xLabel = Math.trunc(value * this.#dpi);
+    }
+
     #xLabel;
+    /**
+     * Get the label width in dots.
+     */
+    get labelWidthDots() { return this.#xLabel; }
+
     #labelHeightIn;
+    /**
+     * Get the label height in inches.
+     */
+    get labelHeight() { return this.#labelHeightIn; }
+
+    /**
+     * Set the label heigh in inches.
+     */
+    set labelHeight(value) {
+        this.#labelHeightIn = value;
+        this.#yLabel = Math.trunc(value * this.#dpi);
+    }
+
     #yLabel;
+    /**
+     * Get the label height in dots.
+     */
+    get labelHeightDots() { return this.#yLabel; }
+
     #labelGapIn;
+    /**
+     * Get the gap between labels in inches.
+     */
+    get labelGap() { return this.#labelGapIn; }
+
     #gLabel;
+    /**
+     * Get the gap between labels in dots.
+     */
+    get labelGapDots() { return this.#gLabel; }
 
     /**
      * Create a new instance of the LP2844 class.
@@ -57,51 +174,6 @@ export class LP2844 {
         // fraction then set the appropriate rounding fraction.
         this.labelDimensionRoundingStep = labelDimensionRoundingStep || 0.25;
     }
-
-    // LP 2844 and variants use this USB vendor ID
-    static get usbVendorId() { return 0x0a5f; }
-
-    get communicationMode() { return this.#commMode }
-    get dpi() { return this.#dpi; }
-    get serial() { return this.#serialNumber; }
-    get firmware() { return this.#firmware; }
-    get modelId() { return this.#modelNumber; }
-    get doubleBuffering() { return this.#doubleBuffering; }
-
-    get rawCommandBuffer() {
-        const bufferLen = this.#rawCmdBuffer.reduce((sum, arr) => sum + arr.byteLength, 0);
-        const buffer = new Uint8Array(bufferLen);
-        this.#rawCmdBuffer.reduce((offset, arr) => {
-            buffer.set(arr, offset);
-            return arr.byteLength + offset;
-        }, 0);
-
-        return buffer;
-    }
-
-    get commandBuffer() {
-        return new TextDecoder("ascii").decode(this.rawCommandBuffer);
-    }
-
-    get labelWidth() { return this.#labelWidthIn; }
-    set labelWidth(value) {
-        this.#labelWidthIn = value;
-        this.#xLabel = Math.trunc(value * this.#dpi);
-    }
-    get labelWidthDots() { return this.#xLabel; }
-
-    get labelHeight() { return this.#labelHeightIn; }
-    set labelHeight(value) {
-        this.#labelHeightIn = value;
-        this.#yLabel = Math.trunc(value * this.#dpi);
-    }
-    get labelHeightDots() { return this.#yLabel; }
-
-    get labelGap() { return this.#labelGapIn; }
-    get labelGapDots() { return this.#gLabel; }
-
-    get speed() { return this.#speed; }
-    get density() { return this.#density; }
 
     /**
      * Get a label based on this printer's configuration.
@@ -139,9 +211,7 @@ export class LP2844 {
             console.log(`Printer can only print ${this.#labelType} labels.`);
         }
 
-        this.addRawCmd(label.rawCommandBuffer);
-
-        return this;
+        return this.addRawCmd(label.rawCommandBuffer);
     }
 
     /**
@@ -151,10 +221,9 @@ export class LP2844 {
      * @param (int) count - The number of copies to print.
      */
     async printLabel(label, count) {
-        this.bufferLabel(label);
-        this.addPrintCmd(count);
-
-        await this.print();
+        await this.bufferLabel(label)
+          .addPrintCmd(count)
+          .print();
     }
 
     /**
@@ -186,7 +255,7 @@ export class LP2844 {
      * Feed a blank label.
      */
     async feed() {
-        this.clearImageBuffer().addPrintCmd().print();
+        await this.clearImageBuffer().addPrintCmd().print();
     }
 
     /**
@@ -343,12 +412,13 @@ export class LP2844 {
                     result.serialPort = str.substring(12).trim();
                     break;
                 case /^q\d+\sQ/.test(str):
-                    // q600 Q208,25            # Form width (q) and length (Q). See those commands.
+                    // q600 Q208,25            # Form width (q) and length (Q), with label gap
                     let settingsForm = str.trim().split(' ');
                     let length = settingsForm[1].split(',');
                     result.labelWidthDots = parseInt(settingsForm[0].substring(1));
-                    result.labelHeightDots = parseInt(length[0].substring(1));
                     result.labelGapDots = parseInt(length[1].trim());
+                    // Height is more reliable when subtracting the gap. It's still not perfect..
+                    result.labelHeightDots = parseInt(length[0].substring(1)) - result.labelGapDots;
                     break;
                 case /^S\d\sD\d\d\sR/.test(str):
                     // S4 D08 R112,000 ZB UN   # Config settings 2
