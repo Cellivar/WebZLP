@@ -4,7 +4,7 @@
  */
 export class LabelEpl {
     #rawCmdBuffer = [];
-    #fontNumber = "1";
+    #fontNumber = 1;
     #dpi;
     #lineSpacing
 
@@ -15,11 +15,11 @@ export class LabelEpl {
     /**
      * Create a new EPL-language label.
      *
-     * @param (int) labelWidthDots - The width of the label in dots
-     * @param (int) labelHeightDots - The height of the label in dots
-     * @param (int) dpi - The DPI of the label.
-     * @param (int) lineSpacing - The number of dots between lines of text
-     * @param (string) color - The color of the label.
+     * @param {number} labelWidthDots - The width of the label in dots
+     * @param {number} labelHeightDots - The height of the label in dots
+     * @param {number} dpi - The DPI of the label.
+     * @param {number} lineSpacing - The number of dots between lines of text
+     * @param {string} color - The color of the label.
      */
     constructor(labelWidthDots, labelHeightDots, dpi, lineSpacing, color) {
         this.labelWidthDots = labelWidthDots;
@@ -104,7 +104,7 @@ export class LabelEpl {
     /**
      * Complete a label. Must be called to print the label.
      *
-     * @param (int) count - The number of labels to print, 1 or higher.
+     * @param {number} count - The number of labels to print, 1 or higher.
      */
     end(count) {
         count = Math.trunc(count) || 1;
@@ -116,7 +116,7 @@ export class LabelEpl {
     /**
      * Set the font to be used for subsequent text commands
      *
-     * @param (int) fontNumber - The font to use. See the font docs for details. 1-5.
+     * @param {number} fontNumber - The font to use. See the font docs for details. 1-5.
      */
     setFont(fontNumber) {
         fontNumber = Math.trunc(fontNumber) || 1;
@@ -133,11 +133,11 @@ export class LabelEpl {
     /**
      * Change the current offset from the top-left of the label
      *
-     * @param (int) x - Horizontal offset to the right
-     * @param (int) y - Vertical offset down from the top
+     * @param {number} x - Horizontal offset to the right
+     * @param {number} y - Vertical offset down from the top
      */
     setOffset(x, y) {
-        this.#xOffset = Math.trunc(x) || 0;
+        this.#xOffset = Math.trunc(x) || this.#xOffset;
 
         if (y !== undefined) {
             this.#yOffset = Math.trunc(y) || 0;
@@ -146,12 +146,17 @@ export class LabelEpl {
     }
 
     /**
-     * Set the line spacing between added lines of text.
+     * Add to the current offset from the top-left of the label.
      *
-     * @param (int) dots - The size in dots to add.
+     * @param {number} x - Horizontal offset to add to the right.
+     * @param {number} y - Vertical offset to add down the label.
      */
-    setLineSpacing(dots) {
-        this.#lineSpacing = Math.trunc(dots);
+    addOffset(x, y) {
+        this.#xOffset += Math.trunc(x) || 0;
+
+        if (y !== undefined) {
+            this.#yOffset += Math.trunc(y) || 0;
+        }
         return this;
     }
 
@@ -165,15 +170,25 @@ export class LabelEpl {
     }
 
     /**
+     * Set the line spacing between added lines of text.
+     *
+     * @param {number} dots - The size in dots to add.
+     */
+    setLineSpacing(dots) {
+        this.#lineSpacing = Math.trunc(dots);
+        return this;
+    }
+
+    /**
      * Draw an image into the buffer.
      *
-     * @param (ImageData) imageData - An ImageData object, see Canvas.getImageData.
+     * @param {ImageData} imageData - An ImageData object, see Canvas.getImageData.
      */
     addImage(imageData) {
         // Only supports sRGB as RGBA data.
         if (imageData.colorSpace !== "srgb") {
             console.error("Unknown color space for given imageData! Expected srgb but got " + imageData.colorSpace);
-            return;
+            return this;
         }
 
         // TODO: Figure out how to add padding to ensure the image width
@@ -203,20 +218,18 @@ export class LabelEpl {
         }
 
         let parameters = ["GW" + this.#xOffset, this.#yOffset, Math.trunc(imageData.width / 8), imageData.height];
-        this.addRawCmd(new TextEncoder().encode(parameters.join(',') + ','));
-        this.addRawCmd(buffer);
-        this.addCmd("");
-
-        this.#yOffset += imageData.height;
-
-        return this;
+        return this
+            .addRawCmd(new TextEncoder().encode(parameters.join(',') + ','))
+            .addRawCmd(buffer)
+            .addCmd("")
+            .addOffset(0, imageData.height);
     }
 
     /**
      * Add text, advancing the yOffset by the font height + line spacing.
      *
-     * @param (string) text - The text to add
-     * @param (int) size - The size to scale the font, 1-6
+     * @param {string} text - The text to add
+     * @param {number} size - The size to scale the font, 1-6
      *
      * @example
      *     addText("Hello world!", 1)
@@ -233,16 +246,15 @@ export class LabelEpl {
         this.#addTextRaw(this.#xOffset, this.#yOffset, 0, this.#fontNumber, size, size, false, text);
 
         let textHeight = (size * this.fontSizes[this.#fontNumber]["y"]);
-        this.#yOffset += Math.trunc(textHeight + this.#lineSpacing);
 
-        return this;
+        return this.addOffset(0, Math.trunc(textHeight + this.#lineSpacing));
     }
 
     /**
      * Add text centered on the label, advancing the yOffset by the font height + line spacing.
      *
-     * @param (string) text - The text to add
-     * @param (int) size - The size to scale the font, 1-6
+     * @param {string} text - The text to add
+     * @param {number} size - The size to scale the font, 1-6
      *
      * @example
      *     addTextCentered("Hello world!", 1)
@@ -263,17 +275,16 @@ export class LabelEpl {
         this.#addTextRaw(centerOffset, this.#yOffset, 0, this.#fontNumber, size, size, false, text);
 
         let textHeight = (size * this.fontSizes[this.#fontNumber]["y"]);
-        this.#yOffset += Math.trunc(textHeight + this.#lineSpacing);
 
-        return this;
+        return this.addOffset(0, Math.trunc(textHeight + this.#lineSpacing));
     }
 
     /**
      * Draw a line, starting at the current offset and going for length and height.
      *
-     * @param (int) length - The horizontal length of the line
-     * @param (int) height - The vertical height of the line
-     * @param (string) drawmode - The mode to draw with, either 'black' (default), 'white', or 'xor'.
+     * @param {number} length - The horizontal length of the line
+     * @param {number} height - The vertical height of the line
+     * @param {string} drawmode - The mode to draw with, either 'black' (default), 'white', or 'xor'.
      */
     addLine(length, height, drawmode) {
         length = Math.trunc(length) || 0;
@@ -292,44 +303,40 @@ export class LabelEpl {
                 break;
         }
 
-        this.addCmd(drawmode + this.#xOffset, this.#yOffset, length, height);
-
-        return this;
+        return this.addCmd(drawmode + this.#xOffset, this.#yOffset, length, height);
     }
 
     /**
      * Draw a box
      *
-     * @param (int) length - The width of the box to draw
-     * @param (int) height - The height of the box to draw
-     * @param (int) thickness - The thickness of the box's lines
+     * @param {number} length - The width of the box to draw
+     * @param {number} height - The height of the box to draw
+     * @param {number} thickness - The thickness of the box's lines
      */
     addBox(length, height, thickness) {
         length = Math.trunc(length) || 0;
         height = Math.trunc(height) || 0;
         thickness = Math.trunc(thickness) || 0;
 
-        this.addCmd("X" + this.#xOffset, this.#yOffset, thickness, length, height);
-        return this;
+        return this.addCmd("X" + this.#xOffset, this.#yOffset, thickness, length, height);
     }
 
     /**
      * Add command to the command buffer, concatenating given parameters with a comma.
      *
-     * @param (array) parameters - The command and parameters to add, first element should be the command and the first parameter.
+     * @param {Array.<String>} parameters - The command and parameters to add, first element should be the command and the first parameter.
      *
      * @example
      * addCmd("A10", 10, 0, 1, 1, 1, "N", "Hello World!");
      */
     addCmd(...parameters) {
-        this.addRawCmd(new TextEncoder().encode(parameters.join(',') + "\n"));
-        return this;
+        return this.addRawCmd(new TextEncoder().encode(parameters.join(',') + "\n"));
     }
 
     /**
      * Add a raw byte array to the command buffer.
      *
-     * @param (Uint8Array) array - Array of ASCII characters for the command to add.
+     * @param {Uint8Array} array - Array of ASCII characters for the command to add.
      */
     addRawCmd(array) {
         this.#rawCmdBuffer.push(array);
@@ -341,8 +348,7 @@ export class LabelEpl {
      */
     clearCommandBuffer() {
         this.#rawCmdBuffer = [];
-        this.addCmd("\nN");
-        return this;
+        return this.addCmd("\nN");
     }
 
     #addTextRaw(xOffset, yOffset, rotation, font, xMultiplier, yMultiplier, reverse, data) {
