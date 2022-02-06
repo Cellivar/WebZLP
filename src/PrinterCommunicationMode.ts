@@ -7,6 +7,9 @@ export class PrinterCommunicationMode {
     static Unidirectional = new PrinterCommunicationMode(true, false);
     static Bidirectional = new PrinterCommunicationMode(true, true);
 
+    output;
+    input;
+
     constructor(output, input){
         this.output = output;
         this.input = input;
