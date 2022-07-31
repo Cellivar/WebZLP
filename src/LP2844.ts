@@ -6,6 +6,11 @@ export class LP2844 {
     #inputStream;
     #nextLineCache;
 
+    labelColor;
+    labelDimensionRoundingStep;
+    lineSpacing;
+    debug;
+
     #device;
     /**
      * Get the underlying USB device this printer represents.
@@ -179,7 +184,7 @@ export class LP2844 {
      * Get a label based on this printer's configuration.
      */
     getLabel() {
-        return new LabelEpl(this.#xLabel, this.#yLabel, this.#dpi, this.lineSpacing, this.color);
+        return new LabelEpl(this.#xLabel, this.#yLabel, this.#dpi, this.lineSpacing, this.labelColor);
     }
 
     /**
@@ -255,7 +260,7 @@ export class LP2844 {
      * Feed a blank label.
      */
     async feed() {
-        await this.clearImageBuffer().addPrintCmd().print();
+        await this.clearImageBuffer().addPrintCmd(1).print();
     }
 
     /**
@@ -394,7 +399,18 @@ export class LP2844 {
         let result = {
             model: modelId,
             firmware: firmware,
-            serial: "no_serial"
+            serial: "no_serial",
+            serialPort: undefined,
+            labelWidthDots: undefined,
+            labelGapDots: undefined,
+            labelHeightDots: undefined,
+            speed: undefined,
+            density: undefined,
+            xRef: undefined,
+            yRef: undefined,
+            doubleBuffering: undefined,
+            headDistanceIn: undefined,
+            printerDistanceIn: undefined,
         };
 
         // All the rest of these follow some kind of standard pattern for
@@ -506,7 +522,7 @@ export class LP2844 {
             return value;
         })();
 
-        const timeoutPromise = new Promise((resolve) => {
+        const timeoutPromise = new Promise<void>((resolve) => {
             setTimeout(() => {
                 timedOut = true;
                 resolve();

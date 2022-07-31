@@ -3,18 +3,12 @@
   "version": "0.4.0",
   "description": "Zebra LP-series WebUSB driver",
   "type": "module",
-  "exports": {
-    ".": "./src/index.js",
-    "./src": "./src/index.js",
-    "./src/*": "./src/*.js",
-    "./src/labelepl": "./src/LabelEpl.js",
-    "./src/lp2844": "./src/LP2844.js",
-    "./src/PrinterCommunicationMode": "./src/PrinterCommunicationMode.js",
-    "./src/LineBreakTransformer": "./src/LineBreakTransformer.js",
-    "./package.json": "./package.json"
-  },
+  "main": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
+  "files": ["dist/src/*"],
   "scripts": {
-    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js"
+    "build": "npx tsc -d",
+    "test": "npx jest"
   },
   "repository": {
     "type": "git",
@@ -35,6 +29,9 @@
   },
   "homepage": "https://github.com/Cellivar/WebZLP#readme",
   "devDependencies": {
-    "jest": "^27.4.5"
+    "@types/jest": "^27.4.0",
+    "jest": "^27.5.0",
+    "ts-jest": "^27.1.3",
+    "typescript": "^4.5.5"
   }
 }

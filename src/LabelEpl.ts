@@ -6,7 +6,11 @@ export class LabelEpl {
     #rawCmdBuffer = [];
     #fontNumber = 1;
     #dpi;
-    #lineSpacing
+    #lineSpacing;
+
+    color;
+    labelWidthDots;
+    labelHeightDots;
 
     // Temp holders on a per-label basis.
     #xOffset = 0;
@@ -68,7 +72,7 @@ export class LabelEpl {
     get fontSizes() {
         switch (this.#dpi) {
             default:
-                console.error("Unknown DPI requested for font size! " + dpi);
+                console.error("Unknown DPI requested for font size! " + this.#dpi);
                 return;
             case 203:
                 return {
@@ -106,8 +110,8 @@ export class LabelEpl {
      *
      * @param {number} count - The number of labels to print, 1 or higher.
      */
-    end(count) {
-        count = Math.trunc(count) || 1;
+    end(count=1) {
+        count = Math.trunc(count);
         count = (count < 1) ? 1 : count;
 
         return this.addCmd(`P${count}`);
@@ -118,8 +122,8 @@ export class LabelEpl {
      *
      * @param {number} fontNumber - The font to use. See the font docs for details. 1-5.
      */
-    setFont(fontNumber) {
-        fontNumber = Math.trunc(fontNumber) || 1;
+    setFont(fontNumber=1) {
+        fontNumber = Math.trunc(fontNumber);
 
         if (fontNumber < 1 || fontNumber > 7) {
             console.log("Invalid font size! Defaulting to 1");
@@ -136,12 +140,10 @@ export class LabelEpl {
      * @param {number} x - Horizontal offset to the right
      * @param {number} y - Vertical offset down from the top
      */
-    setOffset(x, y) {
-        this.#xOffset = Math.trunc(x) || this.#xOffset;
+    setOffset(x=this.#xOffset, y=0) {
+        this.#xOffset = Math.trunc(x);
+        this.#yOffset = Math.trunc(y);
 
-        if (y !== undefined) {
-            this.#yOffset = Math.trunc(y) || 0;
-        }
         return this;
     }
 
@@ -234,9 +236,9 @@ export class LabelEpl {
      * @example
      *     addText("Hello world!", 1)
      */
-    addText(text, size) {
-        text = text || "";
-        size = Math.trunc(size) || 1;
+    addText(text="", size=1) {
+        text = text;
+        size = Math.trunc(size);
 
         // Font size 5 only supports uppercase letters.
         if (this.#fontNumber == 5) {
@@ -264,7 +266,7 @@ export class LabelEpl {
         size = Math.trunc(size) || 1;
 
         // Font size 5 only supports uppercase letters.
-        if (this.fontSize == 5) {
+        if (this.#fontNumber == 5) {
             text = text.toUpperCase();
         }
 
@@ -286,12 +288,11 @@ export class LabelEpl {
      * @param {number} height - The vertical height of the line
      * @param {string} drawmode - The mode to draw with, either 'black' (default), 'white', or 'xor'.
      */
-    addLine(length, height, drawmode) {
+    addLine(length, height, drawmode="black") {
         length = Math.trunc(length) || 0;
         height = Math.trunc(height) || 0;
 
         switch (drawmode) {
-            default:
             case "black":
                 drawmode = "LO";
                 break;
