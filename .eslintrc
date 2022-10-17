@@ -1,28 +1,29 @@
 {
-    "root": true,
-    "parser": "@typescript-eslint/parser",
-    "plugins": [
-      "@typescript-eslint",
-      "prettier"
+  "root": true,
+  "parser": "@typescript-eslint/parser",
+  "plugins": [
+    "@typescript-eslint",
+    "prettier"
+  ],
+  "extends": [
+    "eslint:recommended",
+    "plugin:@typescript-eslint/eslint-recommended",
+    "plugin:@typescript-eslint/recommended",
+    "prettier"
+  ],
+  "rules": {
+    "no-fallthrough": 0,
+    "prettier/prettier": [
+      "error",
+      {
+          "printWidth": 100,
+          "endOfLine": "auto"
+      }
     ],
-    "extends": [
-      "eslint:recommended",
-      "plugin:@typescript-eslint/eslint-recommended",
-      "plugin:@typescript-eslint/recommended",
-      "prettier"
-    ],
-    "rules": {
-      "no-fallthrough": 0,
-      "prettier/prettier": [
-        "error",
-        {
-            "printWidth": 100,
-            "endOfLine": "auto"
-        }
-      ],
-      "linebreak-style": 0
-    },
-    "ignorePatterns": [
-        "dist/*"
-    ]
-  }
+    "linebreak-style": 0
+  },
+  "ignorePatterns": [
+      "dist/*",
+      "demo/ts-browser.js"
+  ]
+}
