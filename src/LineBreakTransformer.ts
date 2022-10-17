@@ -1,4 +1,3 @@
-
 export class LineBreakTransformer {
     #container = '';
 
@@ -6,7 +5,7 @@ export class LineBreakTransformer {
         this.#container += chunk;
         const lines = this.#container.split('\n');
         this.#container = lines.pop();
-        lines.forEach(line => controller.enqueue(line));
+        lines.forEach((line) => controller.enqueue(line));
     }
 
     flush(controller) {
