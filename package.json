@@ -12,7 +12,8 @@
     "build": "npx tsc -d",
     "test": "npx jest",
     "lint": "eslint . --ext .ts",
-    "lint-and-fix": "eslint . --ext .ts --fix"
+    "lint-and-fix": "eslint . --ext .ts --fix",
+    "serve-local": "export PORT=4443 || set PORT=4443&& serve ."
   },
   "repository": {
     "type": "git",
@@ -39,6 +40,7 @@
     "eslint": "^8.25.0",
     "eslint-config-prettier": "^8.5.0",
     "eslint-plugin-prettier": "^4.2.1",
+    "https-localhost": "^4.7.1",
     "jest": "^27.5.0",
     "prettier": "^2.7.1",
     "ts-jest": "^27.1.3",
