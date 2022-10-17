@@ -1,6 +1,6 @@
-import { LabelEpl } from "./LabelEpl.js";
-import { LineBreakTransformer } from "./LineBreakTransformer.js";
-import { PrinterCommunicationMode } from "./PrinterCommunicationMode.js";
+import { LabelEpl } from './LabelEpl.js';
+import { LineBreakTransformer } from './LineBreakTransformer.js';
+import { PrinterCommunicationMode } from './PrinterCommunicationMode.js';
 
 export class LP2844 {
     #inputStream;
@@ -15,7 +15,9 @@ export class LP2844 {
     /**
      * Get the underlying USB device this printer represents.
      */
-    get device() { return this.#device }
+    get device() {
+        return this.#device;
+    }
 
     #deviceOut;
     #deviceIn;
@@ -24,31 +26,41 @@ export class LP2844 {
     /**
      * Get the serial number of this printer, if available.
      */
-    get serial() { return this.#serialNumber; }
+    get serial() {
+        return this.#serialNumber;
+    }
 
     #modelNumber;
     /**
      * Get the model ID for this printer.
      */
-    get modelId() { return this.#modelNumber; }
+    get modelId() {
+        return this.#modelNumber;
+    }
 
     #firmware;
     /**
      * Get the firmware version of this printer, if available.
      */
-    get firmware() { return this.#firmware; }
+    get firmware() {
+        return this.#firmware;
+    }
 
     #doubleBuffering = false;
     /**
      * Get whether this printer has double buffering enabled.
      */
-    get doubleBuffering() { return this.#doubleBuffering; }
+    get doubleBuffering() {
+        return this.#doubleBuffering;
+    }
 
     #commMode = PrinterCommunicationMode.None;
     /**
      * Get the communication mode this printer is in.
      */
-    get communicationMode() { return this.#commMode }
+    get communicationMode() {
+        return this.#commMode;
+    }
 
     /**
      * @type {Array.<Uint8Array>}
@@ -73,31 +85,39 @@ export class LP2844 {
      * Get the ASCII interpreted command buffer. Note that it is not safe to print this directly as it may be sent to the printer as UTF-8.
      */
     get commandBuffer() {
-        return new TextDecoder("ascii").decode(this.rawCommandBuffer);
+        return new TextDecoder('ascii').decode(this.rawCommandBuffer);
     }
 
     #speed = 4;
     /**
      * Get the speed setting for this printer.
      */
-    get speed() { return this.#speed; }
+    get speed() {
+        return this.#speed;
+    }
 
     #density = 8;
     /**
      * Get the density (darkness) setting for this printer.
      */
-    get density() { return this.#density; }
+    get density() {
+        return this.#density;
+    }
 
     #dpi = 203;
     /**
      * Get the DPI of this printer's print head.
      */
-    get dpi() { return this.#dpi; }
+    get dpi() {
+        return this.#dpi;
+    }
 
     /**
      * Get the USB Vendor ID for this type of printer
      */
-    static get usbVendorId() { return 0x0a5f; }
+    static get usbVendorId() {
+        return 0x0a5f;
+    }
 
     #labelType = LabelEpl;
 
@@ -105,7 +125,9 @@ export class LP2844 {
     /**
      * Get the label width in inches.
      */
-    get labelWidth() { return this.#labelWidthIn; }
+    get labelWidth() {
+        return this.#labelWidthIn;
+    }
 
     /**
      * Set the label's width in inches.
@@ -119,13 +141,17 @@ export class LP2844 {
     /**
      * Get the label width in dots.
      */
-    get labelWidthDots() { return this.#xLabel; }
+    get labelWidthDots() {
+        return this.#xLabel;
+    }
 
     #labelHeightIn;
     /**
      * Get the label height in inches.
      */
-    get labelHeight() { return this.#labelHeightIn; }
+    get labelHeight() {
+        return this.#labelHeightIn;
+    }
 
     /**
      * Set the label heigh in inches.
@@ -139,19 +165,25 @@ export class LP2844 {
     /**
      * Get the label height in dots.
      */
-    get labelHeightDots() { return this.#yLabel; }
+    get labelHeightDots() {
+        return this.#yLabel;
+    }
 
     #labelGapIn;
     /**
      * Get the gap between labels in inches.
      */
-    get labelGap() { return this.#labelGapIn; }
+    get labelGap() {
+        return this.#labelGapIn;
+    }
 
     #gLabel;
     /**
      * Get the gap between labels in dots.
      */
-    get labelGapDots() { return this.#gLabel; }
+    get labelGapDots() {
+        return this.#gLabel;
+    }
 
     /**
      * Create a new instance of the LP2844 class.
@@ -163,7 +195,7 @@ export class LP2844 {
     constructor(device, lineSpacing, labelDimensionRoundingStep) {
         this.#device = device; // The USB device to work with
 
-        this.labelColor = "#FFFFFF" // Handy to store, not actually used anywhere
+        this.labelColor = '#FFFFFF'; // Handy to store, not actually used anywhere
 
         // Additional spacing between lines of text, in dots.
         this.lineSpacing = lineSpacing || 0;
@@ -184,14 +216,20 @@ export class LP2844 {
      * Get a label based on this printer's configuration.
      */
     getLabel() {
-        return new LabelEpl(this.#xLabel, this.#yLabel, this.#dpi, this.lineSpacing, this.labelColor);
+        return new LabelEpl(
+            this.#xLabel,
+            this.#yLabel,
+            this.#dpi,
+            this.lineSpacing,
+            this.labelColor
+        );
     }
 
     /**
      * Clear the image buffer. Must be called before printing a new label.
      */
     clearImageBuffer() {
-        return this.addCmd("\nN");
+        return this.addCmd('\nN');
     }
 
     /**
@@ -201,7 +239,7 @@ export class LP2844 {
      */
     addPrintCmd(count) {
         count = Math.trunc(count) || 1;
-        count = (count < 1) ? 1 : count;
+        count = count < 1 ? 1 : count;
 
         return this.addCmd(`P${count}`);
     }
@@ -212,7 +250,7 @@ export class LP2844 {
      * @param label - The label to load into the command buffer.
      */
     bufferLabel(label) {
-        if (!(label instanceof (this.#labelType))) {
+        if (!(label instanceof this.#labelType)) {
             console.log(`Printer can only print ${this.#labelType} labels.`);
         }
 
@@ -226,22 +264,20 @@ export class LP2844 {
      * @param (int) count - The number of copies to print.
      */
     async printLabel(label, count) {
-        await this.bufferLabel(label)
-          .addPrintCmd(count)
-          .print();
+        await this.bufferLabel(label).addPrintCmd(count).print();
     }
 
     /**
      * Send the commands in the command buffer to the printer, clearing the buffer.
      */
     async print() {
-        console.debug("Sending print command to printer..");
+        console.debug('Sending print command to printer..');
         if (this.debug) {
             console.debug(this.commandBuffer);
         }
         try {
             await this.#device.transferOut(this.#deviceOut.endpointNumber, this.rawCommandBuffer);
-            console.debug("Completed sending print command.");
+            console.debug('Completed sending print command.');
         } catch (e) {
             console.error(`Print error: ${e.name}: ${e.message}`);
         } finally {
@@ -253,7 +289,7 @@ export class LP2844 {
      * Cut the last printed label. Avoid cutting when there is nothing to cut.
      */
     async cut() {
-        await this.addCmd("C").print();
+        await this.addCmd('C').print();
     }
 
     /**
@@ -273,7 +309,7 @@ export class LP2844 {
         // Each printer will have one input and one output interface
         // Go find them.
         let o, i;
-        for (let endpoint of d.configuration.interfaces[0].alternates[0].endpoints) {
+        for (const endpoint of d.configuration.interfaces[0].alternates[0].endpoints) {
             if (endpoint.direction == 'out') {
                 o = endpoint;
             } else if (endpoint.direction == 'in') {
@@ -282,18 +318,21 @@ export class LP2844 {
         }
 
         if (!o) {
-            console.error("Failed to find an output for printer, cannot communicate!");
+            console.error('Failed to find an output for printer, cannot communicate!');
         } else {
             this.#deviceOut = o;
         }
 
         if (!i) {
-            console.warn("Failed to find an input endpoint for printer, using unidirectinal mode.");
+            console.warn('Failed to find an input endpoint for printer, using unidirectinal mode.');
         } else {
             this.#deviceIn = i;
         }
 
-        this.#commMode = PrinterCommunicationMode.getCommunicationMode(this.#deviceOut, this.#deviceIn);
+        this.#commMode = PrinterCommunicationMode.getCommunicationMode(
+            this.#deviceOut,
+            this.#deviceIn
+        );
         if (this.#commMode === PrinterCommunicationMode.None) {
             // Can't talk to the printer so don't try.
             return;
@@ -308,10 +347,15 @@ export class LP2844 {
             this.#inputStream = new ReadableStream({
                 pull: async (controller) => {
                     const result = await this.#device.transferIn(this.#deviceIn.endpointNumber, 64);
-                    const chunk = new Uint8Array(result.data.buffer, result.data.byteOffset, result.data.byteLength);
+                    const chunk = new Uint8Array(
+                        result.data.buffer,
+                        result.data.byteOffset,
+                        result.data.byteLength
+                    );
                     controller.enqueue(chunk);
-                },
-            }).pipeThrough(new TextDecoderStream())
+                }
+            })
+                .pipeThrough(new TextDecoderStream())
                 .pipeThrough(new TransformStream(new LineBreakTransformer()));
 
             // Test the connection by pulling the current configuration.
@@ -324,7 +368,7 @@ export class LP2844 {
                 this.#listenForDataAndConsoleLogAlways();
             }
         } else {
-            this.#serialNumber = "Manual Setup";
+            this.#serialNumber = 'Manual Setup';
         }
 
         return this.#commMode;
@@ -335,18 +379,18 @@ export class LP2844 {
      * uncommitted configuration changes.
      */
     async configGetFromPrinter() {
-        var config;
-        var validConfig = false;
-        var retryLimit = 3;
+        let config;
+        let validConfig = false;
+        let retryLimit = 3;
         do {
             retryLimit--;
 
             // Start listening for the response we're about to generate
-            let listenResult = this.#listenForData();
+            const listenResult = this.#listenForData();
 
-            await this.clearImageBuffer().addCmd("UQ").print();
+            await this.clearImageBuffer().addCmd('UQ').print();
 
-            let rawText = await listenResult;
+            const rawText = await listenResult;
             config = this.#parseConfigInquiry(rawText);
 
             if (this.debug) {
@@ -356,10 +400,11 @@ export class LP2844 {
             // All firmwares return these values, if they failed to parse
             // out for any reason it means we got an error reading the
             // config and we should try again.
-            validConfig = config.hasOwnProperty("labelWidthDots") &&
-                config.hasOwnProperty("firmware") &&
-                config.hasOwnProperty("speed");
-        } while (!validConfig && retryLimit > 0)
+            validConfig =
+                Object.prototype.hasOwnProperty.call(config, 'labelWidthDots') &&
+                Object.prototype.hasOwnProperty.call(config, 'firmware') &&
+                Object.prototype.hasOwnProperty.call(config, 'speed');
+        } while (!validConfig && retryLimit > 0);
 
         this.#density = config.density;
         this.#doubleBuffering = config.doubleBuffering;
@@ -368,9 +413,9 @@ export class LP2844 {
         this.#firmware = config.firmware;
         this.#gLabel = config.labelGapDots;
 
-        let rawX = config.labelWidthDots / this.#dpi;
-        let rawY = config.labelHeightDots / this.#dpi;
-        let inverse = 1.0 / this.labelDimensionRoundingStep
+        const rawX = config.labelWidthDots / this.#dpi;
+        const rawY = config.labelHeightDots / this.#dpi;
+        const inverse = 1.0 / this.labelDimensionRoundingStep;
 
         this.labelWidth = Math.round(rawX * inverse) / inverse;
         this.labelHeight = Math.round(rawY * inverse) / inverse;
@@ -383,12 +428,12 @@ export class LP2844 {
         const lines = rawText
             .replaceAll('\r', '')
             .split('\n')
-            .filter(i => i);
+            .filter((i) => i);
 
         // UKQ1935HLU     V4.29    # ID code and firmware version
         // First line determines firmware version to read and is consistent
         // across observed dumps.
-        const header = lines[0].split(' ').filter(i => i);
+        const header = lines[0].split(' ').filter((i) => i);
         // First element is always the model ID
         const modelId = header[0];
         // Header may include "FDX", indicating a nonstandard unit.
@@ -396,10 +441,10 @@ export class LP2844 {
         // the firmware version
         const firmware = header[header.length - 1];
 
-        let result = {
+        const result = {
             model: modelId,
             firmware: firmware,
-            serial: "no_serial",
+            serial: 'no_serial',
             serialPort: undefined,
             labelWidthDots: undefined,
             labelGapDots: undefined,
@@ -410,14 +455,14 @@ export class LP2844 {
             yRef: undefined,
             doubleBuffering: undefined,
             headDistanceIn: undefined,
-            printerDistanceIn: undefined,
+            printerDistanceIn: undefined
         };
 
         // All the rest of these follow some kind of standard pattern for
         // each value which we can pick up with regex. The cases here are
         // built out of observed configuration dumps.
         for (let i = 1; i < lines.length; i++) {
-            let str = lines[i]
+            const str = lines[i];
             switch (true) {
                 case /^S\/N.*/.test(str):
                     // S/N: 42A000000000       # Serial number
@@ -427,39 +472,44 @@ export class LP2844 {
                     // Serial port:96,N,8,1    # Serial port config
                     result.serialPort = str.substring(12).trim();
                     break;
-                case /^q\d+\sQ/.test(str):
+                case /^q\d+\sQ/.test(str): {
                     // q600 Q208,25            # Form width (q) and length (Q), with label gap
-                    let settingsForm = str.trim().split(' ');
-                    let length = settingsForm[1].split(',');
+                    const settingsForm = str.trim().split(' ');
+                    const length = settingsForm[1].split(',');
                     result.labelWidthDots = parseInt(settingsForm[0].substring(1));
                     result.labelGapDots = parseInt(length[1].trim());
                     // Height is more reliable when subtracting the gap. It's still not perfect..
                     result.labelHeightDots = parseInt(length[0].substring(1)) - result.labelGapDots;
                     break;
-                case /^S\d\sD\d\d\sR/.test(str):
+                }
+                case /^S\d\sD\d\d\sR/.test(str): {
                     // S4 D08 R112,000 ZB UN   # Config settings 2
-                    let settings2 = str.trim().split(' ');
-                    let ref = settings2[2].split(',');
+                    const settings2 = str.trim().split(' ');
+                    const ref = settings2[2].split(',');
                     result.speed = parseInt(settings2[0].substring(1));
                     result.density = parseInt(settings2[1].substring(1));
                     result.xRef = parseInt(ref[0].substring(1));
                     result.yRef = parseInt(ref[1]);
                     break;
-                case /^I\d,.,\d\d\d\sr[YN]/.test(str):
+                }
+                case /^I\d,.,\d\d\d\sr[YN]/.test(str): {
                     // I8,A,001 rY JF WY       # Config settings 1
-                    let settings1 = str.split(' ');
-                    result.doubleBuffering = settings1[1][1] === 'Y'
+                    const settings1 = str.split(' ');
+                    result.doubleBuffering = settings1[1][1] === 'Y';
                     break;
-                case /^HEAD\s\s\s\susage\s=/.test(str):
+                }
+                case /^HEAD\s\s\s\susage\s=/.test(str): {
                     // HEAD    usage =     249,392"    # Odometer of the head
-                    let headsplit = str.substring(15).split(' ');
+                    const headsplit = str.substring(15).split(' ');
                     result.headDistanceIn = headsplit[headsplit.length - 1];
                     break;
-                case /^PRINTER\susage\s=/.test(str):
+                }
+                case /^PRINTER\susage\s=/.test(str): {
                     // PRINTER usage =     249,392"    # Odometer of the printer
-                    let printsplit = str.substring(15).split(' ');
+                    const printsplit = str.substring(15).split(' ');
                     result.printerDistanceIn = printsplit[printsplit.length - 1];
                     break;
+                }
                 case /^\d\d\s\d\d\s\d\d\s$/.test(str):
                 // 06 10 14                # AutoSense settings, see below
                 case /^oE.,/.test(str):
@@ -533,15 +583,15 @@ export class LP2844 {
     }
 
     async #listenForDataAndConsoleLogAlways() {
-        while (true) {
+        for (;;) {
             const line = await this.#nextLine();
             console.log("PRINTER SAYS TEXT IN SINGLE QUOTES\n'" + line + "'");
         }
     }
 
     async #listenForData() {
-        let aggregate = "";
-        while (true) {
+        let aggregate = '';
+        for (;;) {
             const line = await this.#nextLine();
             if (line === undefined) {
                 return aggregate;
@@ -572,10 +622,11 @@ export class LP2844 {
 
         const label = this.getLabel();
 
-        let quarter = (label.labelWidthDots / 4);
-        let lineHeight = 20;
+        const quarter = label.labelWidthDots / 4;
+        const lineHeight = 20;
 
-        label.setOffset(0, 0)
+        label
+            .setOffset(0, 0)
             .addLine(label.labelWidthDots, lineHeight * 2)
             .setOffset(0, lineHeight * 2)
             .addLine(quarter, lineHeight)
@@ -587,17 +638,18 @@ export class LP2844 {
             .addLine(quarter, lineHeight)
             .setOffset(0, lineHeight * 6);
 
-        let slashStart = (lineHeight * 6) + 5;
-        let slashHeight = 8;
+        const slashStart = lineHeight * 6 + 5;
+        const slashHeight = 8;
         for (let i = 0; i <= label.labelWidthDots; i += 4) {
-            label.setOffset(i + 0, slashStart + 0)
+            label
+                .setOffset(i + 0, slashStart + 0)
                 .addLine(1, slashHeight)
                 .setOffset(i + 1, slashStart + slashHeight)
                 .addLine(1, slashHeight)
-                .setOffset(i + 2, slashStart + (slashHeight * 2))
+                .setOffset(i + 2, slashStart + slashHeight * 2)
                 .addLine(1, slashHeight)
-                .setOffset(i + 3, slashStart + (slashHeight * 3))
-                .addLine(1, slashHeight)
+                .setOffset(i + 3, slashStart + slashHeight * 3)
+                .addLine(1, slashHeight);
         }
         await this.printLabel(label, 1);
     }
@@ -606,14 +658,16 @@ export class LP2844 {
      * Send the configured label width to the printer
      */
     async configLabelWidth() {
-        await this.clearImageBuffer().addCmd("q" + this.#xLabel).print();
+        await this.clearImageBuffer()
+            .addCmd('q' + this.#xLabel)
+            .print();
     }
 
     /**
      * Perform an autocalibration for the label length
      */
     async setLabelHeightCalibration() {
-        await this.clearImageBuffer().addCmd("xa").print();
+        await this.clearImageBuffer().addCmd('xa').print();
     }
 
     /**
@@ -623,16 +677,18 @@ export class LP2844 {
      */
     async configDensity(density) {
         density = parseInt(density) || 8;
-        density = (density < 0 || density > 15) ? 8 : density;
+        density = density < 0 || density > 15 ? 8 : density;
 
-        await this.clearImageBuffer().addCmd("D" + density).print();
+        await this.clearImageBuffer()
+            .addCmd('D' + density)
+            .print();
     }
 
     /**
      * Reset the printer, same as turning it off and on.
      */
     async configReset() {
-        await this.clearImageBuffer().addCmd("^@").print();
+        await this.clearImageBuffer().addCmd('^@').print();
     }
 
     /**
@@ -642,8 +698,10 @@ export class LP2844 {
      */
     async configPrintDirection(upsideDown) {
         upsideDown = upsideDown || false;
-        let dir = upsideDown ? "T" : "B"
-        await this.clearImageBuffer().addCmd("Z" + dir).print();
+        const dir = upsideDown ? 'T' : 'B';
+        await this.clearImageBuffer()
+            .addCmd('Z' + dir)
+            .print();
     }
 
     /**
@@ -653,9 +711,11 @@ export class LP2844 {
      */
     async configSpeed(speed) {
         speed = parseInt(speed) || 4;
-        speed = (speed < 1 || speed > 4) ? 4 : speed;
+        speed = speed < 1 || speed > 4 ? 4 : speed;
 
-        await this.clearImageBuffer().addCmd("S" + speed).print();
+        await this.clearImageBuffer()
+            .addCmd('S' + speed)
+            .print();
     }
 
     /**
@@ -667,7 +727,7 @@ export class LP2844 {
      * addCmd("A10", 10, 0, 1, 1, 1, "N", "Hello World!");
      */
     addCmd(...parameters) {
-        this.addRawCmd(new TextEncoder().encode(parameters.join(',') + "\n"));
+        this.addRawCmd(new TextEncoder().encode(parameters.join(',') + '\n'));
         return this;
     }
 

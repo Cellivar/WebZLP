@@ -1,4 +1,3 @@
-
 /**
  * Enum representing the communication mode of a printer.
  */
@@ -10,7 +9,7 @@ export class PrinterCommunicationMode {
     output;
     input;
 
-    constructor(output, input){
+    constructor(output, input) {
         this.output = output;
         this.input = input;
     }

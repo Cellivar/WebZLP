@@ -1,16 +1,15 @@
-
 /**
  * A label for use with EPL printers
  */
 export class LabelEpl {
     #rawCmdBuffer = [];
     #fontNumber = 1;
-    #dpi;
-    #lineSpacing;
+    #dpi: number;
+    #lineSpacing: number;
 
     color;
-    labelWidthDots;
-    labelHeightDots;
+    labelWidthDots: number;
+    labelHeightDots: number;
 
     // Temp holders on a per-label basis.
     #xOffset = 0;
@@ -29,8 +28,8 @@ export class LabelEpl {
         this.labelWidthDots = labelWidthDots;
         this.labelHeightDots = labelHeightDots;
         this.#dpi = dpi;
-        this.#lineSpacing = lineSpacing === 0 ? 0 : (lineSpacing || 5);
-        this.color = color || "#FFFFFF";
+        this.#lineSpacing = lineSpacing === 0 ? 0 : lineSpacing || 5;
+        this.color = color || '#FFFFFF';
 
         this.clearCommandBuffer();
     }
@@ -52,18 +51,22 @@ export class LabelEpl {
     /**
      * Gets the current font selection
      */
-    get font() { return this.#fontNumber; }
+    get font() {
+        return this.#fontNumber;
+    }
 
     /**
      * Gets the line spacing setting.
      */
-    get lineSpacing() { return this.#lineSpacing; }
+    get lineSpacing() {
+        return this.#lineSpacing;
+    }
 
     /**
      * Get the ASCII text representation of the operations of this label. Only useful for debugging.
      */
     get commandBuffer() {
-        return new TextDecoder("ascii").decode(this.rawCommandBuffer);
+        return new TextDecoder('ascii').decode(this.rawCommandBuffer);
     }
 
     /**
@@ -72,7 +75,7 @@ export class LabelEpl {
     get fontSizes() {
         switch (this.#dpi) {
             default:
-                console.error("Unknown DPI requested for font size! " + this.#dpi);
+                console.error('Unknown DPI requested for font size! ' + this.#dpi);
                 return;
             case 203:
                 return {
@@ -84,13 +87,13 @@ export class LabelEpl {
                     // while character spacing is automatic.
                     // And yes font 4 is somewhere beween 16 and 17 characters wide.
                     // 16.2 seems to be stable over the full 4" print width.
-                    "1": { "y": 10, "x": 10 },
-                    "2": { "y": 14, "x": 12 },
-                    "3": { "y": 16, "x": 14 },
-                    "4": { "y": 20, "x": 16.2 },
-                    "5": { "y": 48, "x": 36 },
-                    "6": { "y": 19, "x": 16 },
-                    "7": { "y": 19, "x": 16 },
+                    '1': { y: 10, x: 10 },
+                    '2': { y: 14, x: 12 },
+                    '3': { y: 16, x: 14 },
+                    '4': { y: 20, x: 16.2 },
+                    '5': { y: 48, x: 36 },
+                    '6': { y: 19, x: 16 },
+                    '7': { y: 19, x: 16 }
                 };
         }
     }
@@ -98,21 +101,25 @@ export class LabelEpl {
     /**
      * Gets the current horizontal offset.
      */
-    get horizontalOffset() { return this.#xOffset; }
+    get horizontalOffset() {
+        return this.#xOffset;
+    }
 
     /**
      * Gets the current vertical offset.
      */
-    get verticalOffset() { return this.#yOffset; }
+    get verticalOffset() {
+        return this.#yOffset;
+    }
 
     /**
      * Complete a label. Must be called to print the label.
      *
      * @param {number} count - The number of labels to print, 1 or higher.
      */
-    end(count=1) {
+    end(count = 1) {
         count = Math.trunc(count);
-        count = (count < 1) ? 1 : count;
+        count = count < 1 ? 1 : count;
 
         return this.addCmd(`P${count}`);
     }
@@ -122,11 +129,11 @@ export class LabelEpl {
      *
      * @param {number} fontNumber - The font to use. See the font docs for details. 1-5.
      */
-    setFont(fontNumber=1) {
+    setFont(fontNumber = 1) {
         fontNumber = Math.trunc(fontNumber);
 
         if (fontNumber < 1 || fontNumber > 7) {
-            console.log("Invalid font size! Defaulting to 1");
+            console.log('Invalid font size! Defaulting to 1');
             fontNumber = 1;
         }
 
@@ -140,7 +147,7 @@ export class LabelEpl {
      * @param {number} x - Horizontal offset to the right
      * @param {number} y - Vertical offset down from the top
      */
-    setOffset(x=this.#xOffset, y=0) {
+    setOffset(x = this.#xOffset, y = 0) {
         this.#xOffset = Math.trunc(x);
         this.#yOffset = Math.trunc(y);
 
@@ -188,8 +195,11 @@ export class LabelEpl {
      */
     addImage(imageData) {
         // Only supports sRGB as RGBA data.
-        if (imageData.colorSpace !== "srgb") {
-            console.error("Unknown color space for given imageData! Expected srgb but got " + imageData.colorSpace);
+        if (imageData.colorSpace !== 'srgb') {
+            console.error(
+                'Unknown color space for given imageData! Expected srgb but got ' +
+                    imageData.colorSpace
+            );
             return this;
         }
 
@@ -200,30 +210,41 @@ export class LabelEpl {
         // RGBA data gets compressed down to 1 bit, then packed into a byte array.
         // Note that the passed in width and height aren't relevant here, just
         // what the imageData says.
-        const buffer = new Uint8Array(imageData.height * imageData.width / 8);
+        const buffer = new Uint8Array((imageData.height * imageData.width) / 8);
         const d = imageData.data;
 
         // If the grayscale version of the pixel + alpha is above this
         // value treat it as white, else black.
         const threshold = 200;
 
-        for (var y = 0; y < imageData.height; y++) {
-            for (var x = 0; x < imageData.width; x++) {
-                let o = (y * imageData.width * 4) + (x * 4);
-                let gray = Math.min(Math.pow((Math.pow(d[o] / 255.0, 2.2) * 0.2126 + Math.pow(d[o + 1] / 255.0, 2.2) * 0.7152 + Math.pow(d[o + 2] / 255.0, 2.2) * 0.0722), 0.454545) * 255)
-                let alpha = d[o + 3] / 255;
-                let grayAlpha = ((1 - alpha) * 255) + (alpha * gray);
-                let bit = (grayAlpha > threshold ? 1 : 0) << (7 - x % 8);
+        for (let y = 0; y < imageData.height; y++) {
+            for (let x = 0; x < imageData.width; x++) {
+                const o = y * imageData.width * 4 + x * 4;
+                const gray = Math.min(
+                    Math.pow(
+                        Math.pow(d[o] / 255.0, 2.2) * 0.2126 +
+                            Math.pow(d[o + 1] / 255.0, 2.2) * 0.7152 +
+                            Math.pow(d[o + 2] / 255.0, 2.2) * 0.0722,
+                        0.454545
+                    ) * 255
+                );
+                const alpha = d[o + 3] / 255;
+                const grayAlpha = (1 - alpha) * 255 + alpha * gray;
+                const bit = (grayAlpha > threshold ? 1 : 0) << (7 - (x % 8));
 
-                buffer[(y * imageData.width / 8) + Math.floor(x / 8)] |= bit;
+                buffer[(y * imageData.width) / 8 + Math.floor(x / 8)] |= bit;
             }
         }
 
-        let parameters = ["GW" + this.#xOffset, this.#yOffset, Math.trunc(imageData.width / 8), imageData.height];
-        return this
-            .addRawCmd(new TextEncoder().encode(parameters.join(',') + ','))
+        const parameters = [
+            'GW' + this.#xOffset,
+            this.#yOffset,
+            Math.trunc(imageData.width / 8),
+            imageData.height
+        ];
+        return this.addRawCmd(new TextEncoder().encode(parameters.join(',') + ','))
             .addRawCmd(buffer)
-            .addCmd("")
+            .addCmd('')
             .addOffset(0, imageData.height);
     }
 
@@ -236,8 +257,7 @@ export class LabelEpl {
      * @example
      *     addText("Hello world!", 1)
      */
-    addText(text="", size=1) {
-        text = text;
+    addText(text = '', size = 1) {
         size = Math.trunc(size);
 
         // Font size 5 only supports uppercase letters.
@@ -245,9 +265,18 @@ export class LabelEpl {
             text = text.toUpperCase();
         }
 
-        this.#addTextRaw(this.#xOffset, this.#yOffset, 0, this.#fontNumber, size, size, false, text);
+        this.#addTextRaw(
+            this.#xOffset,
+            this.#yOffset,
+            0,
+            this.#fontNumber,
+            size,
+            size,
+            false,
+            text
+        );
 
-        let textHeight = (size * this.fontSizes[this.#fontNumber]["y"]);
+        const textHeight = size * this.fontSizes[this.#fontNumber]['y'];
 
         return this.addOffset(0, Math.trunc(textHeight + this.#lineSpacing));
     }
@@ -261,8 +290,7 @@ export class LabelEpl {
      * @example
      *     addTextCentered("Hello world!", 1)
      */
-    addTextCentered(text, size) {
-        text = text || "";
+    addTextCentered(text = '', size) {
         size = Math.trunc(size) || 1;
 
         // Font size 5 only supports uppercase letters.
@@ -271,12 +299,12 @@ export class LabelEpl {
         }
 
         // Width = string length * character width * char size stretch
-        let textWidth = (text.length * size * this.fontSizes[this.#fontNumber]["x"]);
-        let centerOffset = Math.trunc((this.labelWidthDots - textWidth) / 2);
+        const textWidth = text.length * size * this.fontSizes[this.#fontNumber]['x'];
+        const centerOffset = Math.trunc((this.labelWidthDots - textWidth) / 2);
 
         this.#addTextRaw(centerOffset, this.#yOffset, 0, this.#fontNumber, size, size, false, text);
 
-        let textHeight = (size * this.fontSizes[this.#fontNumber]["y"]);
+        const textHeight = size * this.fontSizes[this.#fontNumber]['y'];
 
         return this.addOffset(0, Math.trunc(textHeight + this.#lineSpacing));
     }
@@ -288,19 +316,19 @@ export class LabelEpl {
      * @param {number} height - The vertical height of the line
      * @param {string} drawmode - The mode to draw with, either 'black' (default), 'white', or 'xor'.
      */
-    addLine(length, height, drawmode="black") {
+    addLine(length, height, drawmode = 'black') {
         length = Math.trunc(length) || 0;
         height = Math.trunc(height) || 0;
 
         switch (drawmode) {
-            case "black":
-                drawmode = "LO";
+            case 'black':
+                drawmode = 'LO';
                 break;
-            case "white":
-                drawmode = "LW";
+            case 'white':
+                drawmode = 'LW';
                 break;
-            case "xor":
-                drawmode = "LE";
+            case 'xor':
+                drawmode = 'LE';
                 break;
         }
 
@@ -319,7 +347,7 @@ export class LabelEpl {
         height = Math.trunc(height) || 0;
         thickness = Math.trunc(thickness) || 0;
 
-        return this.addCmd("X" + this.#xOffset, this.#yOffset, thickness, length, height);
+        return this.addCmd('X' + this.#xOffset, this.#yOffset, thickness, length, height);
     }
 
     /**
@@ -331,7 +359,7 @@ export class LabelEpl {
      * addCmd("A10", 10, 0, 1, 1, 1, "N", "Hello World!");
      */
     addCmd(...parameters) {
-        return this.addRawCmd(new TextEncoder().encode(parameters.join(',') + "\n"));
+        return this.addRawCmd(new TextEncoder().encode(parameters.join(',') + '\n'));
     }
 
     /**
@@ -349,26 +377,36 @@ export class LabelEpl {
      */
     clearCommandBuffer() {
         this.#rawCmdBuffer = [];
-        return this.addCmd("\nN");
+        return this.addCmd('\nN');
     }
 
     #addTextRaw(xOffset, yOffset, rotation, font, xMultiplier, yMultiplier, reverse, data) {
-        data = this.#cleanString((data || ""));
-        let reverseImage = (reverse || false) ? "R" : "N";
+        data = this.#cleanString(data || '');
+        const reverseImage = reverse || false ? 'R' : 'N';
 
         if (!Number.isInteger(rotation) || rotation < 0 || rotation > 3) {
             rotation = 0;
         }
 
-        xMultiplier = ((xMultiplier >= 1 && xMultiplier <= 6) || xMultiplier === 8) ? xMultiplier : 1;
-        yMultiplier = ((yMultiplier >= 1 && yMultiplier <= 9)) ? yMultiplier : 1;
+        xMultiplier = (xMultiplier >= 1 && xMultiplier <= 6) || xMultiplier === 8 ? xMultiplier : 1;
+        yMultiplier = yMultiplier >= 1 && yMultiplier <= 9 ? yMultiplier : 1;
 
-        this.addCmd("A" + xOffset, yOffset, rotation, font, xMultiplier, yMultiplier, reverseImage, "\"" + data + "\"");
+        this.addCmd(
+            'A' + xOffset,
+            yOffset,
+            rotation,
+            font,
+            xMultiplier,
+            yMultiplier,
+            reverseImage,
+            '"' + data + '"'
+        );
     }
 
     #cleanString(str) {
-        return str.replace(/\\/gi, "\\\\")
-            .replace(/"/gi, "\\\"")
-            .replace(/[\r\n]+/gi, " ");
+        return str
+            .replace(/\\/gi, '\\\\')
+            .replace(/"/gi, '\\"')
+            .replace(/[\r\n]+/gi, ' ');
     }
 }
