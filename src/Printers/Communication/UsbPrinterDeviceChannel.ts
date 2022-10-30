@@ -1,32 +1,35 @@
-import { IPrinterDeviceChannel } from './IPrinterDeviceChannel';
+import { WebZplError } from '../../WebZplError';
 import { LineBreakTransformer } from './LineBreakTransformer';
-import { PrinterCommunicationMode } from './PrinterCommunicationMode';
+import {
+    PrinterChannelType,
+    PrinterCommunicationMode,
+    IPrinterDeviceChannel
+} from './PrinterCommunication';
 
-/**
- * Class for managing the WebUSB communication with a printer.
- */
+/** Class for managing the WebUSB communication with a printer. */
 export class UsbPrinterDeviceChannel extends EventTarget implements IPrinterDeviceChannel {
     private device: USBDevice;
     private deviceIn: USBEndpoint;
     private deviceOut: USBEndpoint;
 
-    public EnableConsoleDebug = false;
+    public enableConsoleDebug = false;
 
-    private commMode: PrinterCommunicationMode;
-    /**
-     * Gets the mode the communication is set up as.
-     */
-    public CommMode() {
-        return this.commMode;
+    private _commMode: PrinterCommunicationMode;
+    public get commMode() {
+        return this._commMode;
     }
 
-    private ready: Promise<boolean>;
-    public Ready(): Promise<boolean> {
-        return this.ready;
+    get channelMode(): PrinterChannelType {
+        return PrinterChannelType.usb;
     }
 
-    private inputStream: ReadableStream;
-    public StreamFromPrinter() {
+    private _ready: Promise<boolean>;
+    public get ready(): Promise<boolean> {
+        return this._ready;
+    }
+
+    private inputStream: ReadableStream<string>;
+    public get streamFromPrinter() {
         return this.inputStream;
     }
 
@@ -34,23 +37,22 @@ export class UsbPrinterDeviceChannel extends EventTarget implements IPrinterDevi
         super();
 
         this.device = device;
-        this.EnableConsoleDebug = enableConsoleDebug;
+        this.enableConsoleDebug = enableConsoleDebug;
 
-        this.ready = new Promise((resolve, reject) => {
-            this.Connect()
-                .then(() => {
-                    resolve(true);
-                })
-                .catch(reject);
-        });
+        this._ready = this.setup();
     }
 
-    public Dispose() {
+    private async setup() {
+        await this.connect();
+        return true;
+    }
+
+    public dispose() {
         this.device.close();
     }
 
-    public async SendCommands(commandBuffer: Uint8Array) {
-        if (this.EnableConsoleDebug) {
+    public async sendCommands(commandBuffer: Uint8Array) {
+        if (this.enableConsoleDebug) {
             console.debug('Sending print command buffer to printer via USB..');
             console.debug(commandBuffer);
             console.time('sendPrintBuffer');
@@ -62,14 +64,14 @@ export class UsbPrinterDeviceChannel extends EventTarget implements IPrinterDevi
             const event = new CustomEvent<unknown>('usbPrinterDeviceOutError', e);
             this.dispatchEvent(event);
         } finally {
-            if (this.EnableConsoleDebug) {
+            if (this.enableConsoleDebug) {
                 console.timeEnd('sendPrintBuffer');
                 console.debug('Completed sending print command.');
             }
         }
     }
 
-    private async Connect() {
+    private async connect() {
         const d = this.device;
 
         // A standard Zebra printer will have two endpoints on one interface.
@@ -88,24 +90,24 @@ export class UsbPrinterDeviceChannel extends EventTarget implements IPrinterDevi
         // input endpoint. Sometimes they'll also omit the output endpoint. This
         // attempts to handle those situations in a degraded mode.
         if (!o) {
-            console.error('Failed to find an output for USB printer, cannot communicate!');
+            throw new WebZplError(
+                'USB printer did not expose an output channel. Try power-cycling the printer. This is a hardware problem.'
+            );
         } else {
             this.deviceOut = o;
         }
 
         if (!i) {
-            console.warn(
-                'Failed to find an input endpoint for USB printer, using unidirectinal mode.'
-            );
+            console.warn('USB printer did not expose an input channel, using unidirectinal mode.');
         } else {
             this.deviceIn = i;
         }
 
-        this.commMode = PrinterCommunicationMode.getCommunicationMode(
+        this._commMode = PrinterCommunicationMode.getCommunicationMode(
             this.deviceOut,
             this.deviceIn
         );
-        if (this.commMode === PrinterCommunicationMode.None) {
+        if (this._commMode === PrinterCommunicationMode.none) {
             // Can't talk to the printer so don't try.
             return;
         }
@@ -115,8 +117,8 @@ export class UsbPrinterDeviceChannel extends EventTarget implements IPrinterDevi
         await d.selectConfiguration(1);
         await d.claimInterface(0);
 
-        if (this.commMode === PrinterCommunicationMode.Bidirectional) {
-            this.inputStream = new ReadableStream({
+        if (this._commMode === PrinterCommunicationMode.bidirectional) {
+            this.inputStream = new ReadableStream<Uint8Array>({
                 pull: async (controller) => {
                     const result = await this.device.transferIn(this.deviceIn.endpointNumber, 64);
                     const chunk = new Uint8Array(

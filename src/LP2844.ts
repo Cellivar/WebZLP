@@ -1,6 +1,6 @@
 import { LabelEpl } from './LabelEpl.js';
-import { LineBreakTransformer } from './LineBreakTransformer.js';
-import { PrinterCommunicationMode } from './PrinterCommunicationMode.js';
+import { LineBreakTransformer } from './Printers/Communication/LineBreakTransformer.js';
+import { PrinterCommunicationMode } from './Printers/Communication/PrinterCommunication';
 
 export class LP2844 {
     #inputStream;
@@ -54,7 +54,7 @@ export class LP2844 {
         return this.#doubleBuffering;
     }
 
-    #commMode = PrinterCommunicationMode.None;
+    #commMode = PrinterCommunicationMode.none;
     /**
      * Get the communication mode this printer is in.
      */
@@ -333,7 +333,7 @@ export class LP2844 {
             this.#deviceOut,
             this.#deviceIn
         );
-        if (this.#commMode === PrinterCommunicationMode.None) {
+        if (this.#commMode === PrinterCommunicationMode.none) {
             // Can't talk to the printer so don't try.
             return;
         }
@@ -343,7 +343,7 @@ export class LP2844 {
         await d.selectConfiguration(1);
         await d.claimInterface(0);
 
-        if (this.#commMode === PrinterCommunicationMode.Bidirectional) {
+        if (this.#commMode === PrinterCommunicationMode.bidirectional) {
             this.#inputStream = new ReadableStream({
                 pull: async (controller) => {
                     const result = await this.#device.transferIn(this.#deviceIn.endpointNumber, 64);
@@ -444,105 +444,8 @@ export class LP2844 {
         const result = {
             model: modelId,
             firmware: firmware,
-            serial: 'no_serial',
-            serialPort: undefined,
-            labelWidthDots: undefined,
-            labelGapDots: undefined,
-            labelHeightDots: undefined,
-            speed: undefined,
-            density: undefined,
-            xRef: undefined,
-            yRef: undefined,
-            doubleBuffering: undefined,
-            headDistanceIn: undefined,
-            printerDistanceIn: undefined
+            serial: 'no_serial'
         };
-
-        // All the rest of these follow some kind of standard pattern for
-        // each value which we can pick up with regex. The cases here are
-        // built out of observed configuration dumps.
-        for (let i = 1; i < lines.length; i++) {
-            const str = lines[i];
-            switch (true) {
-                case /^S\/N.*/.test(str):
-                    // S/N: 42A000000000       # Serial number
-                    result.serial = str.substring(5).trim();
-                    break;
-                case /^Serial\sport/.test(str):
-                    // Serial port:96,N,8,1    # Serial port config
-                    result.serialPort = str.substring(12).trim();
-                    break;
-                case /^q\d+\sQ/.test(str): {
-                    // q600 Q208,25            # Form width (q) and length (Q), with label gap
-                    const settingsForm = str.trim().split(' ');
-                    const length = settingsForm[1].split(',');
-                    result.labelWidthDots = parseInt(settingsForm[0].substring(1));
-                    result.labelGapDots = parseInt(length[1].trim());
-                    // Height is more reliable when subtracting the gap. It's still not perfect..
-                    result.labelHeightDots = parseInt(length[0].substring(1)) - result.labelGapDots;
-                    break;
-                }
-                case /^S\d\sD\d\d\sR/.test(str): {
-                    // S4 D08 R112,000 ZB UN   # Config settings 2
-                    const settings2 = str.trim().split(' ');
-                    const ref = settings2[2].split(',');
-                    result.speed = parseInt(settings2[0].substring(1));
-                    result.density = parseInt(settings2[1].substring(1));
-                    result.xRef = parseInt(ref[0].substring(1));
-                    result.yRef = parseInt(ref[1]);
-                    break;
-                }
-                case /^I\d,.,\d\d\d\sr[YN]/.test(str): {
-                    // I8,A,001 rY JF WY       # Config settings 1
-                    const settings1 = str.split(' ');
-                    result.doubleBuffering = settings1[1][1] === 'Y';
-                    break;
-                }
-                case /^HEAD\s\s\s\susage\s=/.test(str): {
-                    // HEAD    usage =     249,392"    # Odometer of the head
-                    const headsplit = str.substring(15).split(' ');
-                    result.headDistanceIn = headsplit[headsplit.length - 1];
-                    break;
-                }
-                case /^PRINTER\susage\s=/.test(str): {
-                    // PRINTER usage =     249,392"    # Odometer of the printer
-                    const printsplit = str.substring(15).split(' ');
-                    result.printerDistanceIn = printsplit[printsplit.length - 1];
-                    break;
-                }
-                case /^\d\d\s\d\d\s\d\d\s$/.test(str):
-                // 06 10 14                # AutoSense settings, see below
-                case /^oE.,/.test(str):
-                // oEv,w,x,y,z             # Config settings 4, see below
-                case /^Option:/.test(str):
-                // Option:D,Ff             # Config settings 3, see below
-                case /^Emem:/.test(str):
-                // Emem:031K,0037K avl     # Soft font storage
-                case /^Gmem:/.test(str):
-                // Gmem:000K,0037K avl     # Graphics storage
-                case /^Fmem:/.test(str):
-                // Fmem:000.0K,060.9K avl  # Form storage
-                case /^Emem used:/.test(str):
-                // Emem used: 0     # Soft font storage
-                case /^Gmem used:/.test(str):
-                // Gmem used: 0            # Graphics storage
-                case /^Fmem used:/.test(str):
-                // Fmem used: 0 (bytes)    # Form storage
-                case /^Available:/.test(str):
-                // Available: 130559       # Total memory for Forms, Fonts, or Graphics
-                case /^Cover:/.test(str):
-                // Cover: T=118, C=129     # (T)reshold and (C)urrent Head Up (open) sensor.
-                case /^Image buffer size:/.test(str):
-                // Image buffer size:0245K # Image buffer size in use
-                case /^Page\sMode/.test(str):
-                    // Page mode               # Printer is in page mode
-                    // These are status details and are uninteresting, so we skip them.
-                    break;
-                default:
-                    console.log("Unhandled config line '" + str + "', consider reporting a bug!");
-                    break;
-            }
-        }
 
         return result;
     }
