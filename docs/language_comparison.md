@@ -7,11 +7,15 @@ There are generally four command languages you will encounter when looking at Ze
 * ZPL
 * ZPL2
 
-More modern thermal printers have more complex communication options, such as direct print of PDF files, that are far outside the scope of this library.
+Mobile printers add some complexity
 
-Some printer commands are only applicable to certain models of printers, such as battery information only being relevant to mobile label printers. Generally the source documentaiton will clarify when a command may not be applicable to all printers.
+* CPCL
 
-Many LP-series printers with UPS or FedEx firmware will have different behavior when running the same commands. 
+More modern thermal printers have more complex communication options, such as direct print of PDF files, that are far outside the scope of this library. Some of these printers have settings to emulate ZPL or EPL command sets. Setting the printer to these modes may make it work with this library.
+
+Some printer commands are only applicable to certain models of printers, such as battery information only being relevant to mobile label printers. Generally the source docs will clarify when a command may not be applicable to all printers. This library attempts to perform analysis to prevent invalid commands being set to printers that don't support those commads.
+
+Many LP-series printers with UPS or FedEx firmware will have different behavior when running the same commands.
 
 ## Eltron Programming Language (EPL)
 
@@ -38,6 +42,8 @@ ZPL is a totally different language from EPL. The LP- series printers had a `-Z`
 ### ZPL
 
 The original ZPL command language spec was designed to overcome some of the constraints of EPL and provide a more robust experience for designing complex label layouts directly in the command language. Sticking to a command language and not falling back to full rasterized labels the system can remain very snappy while still using slower serial speeds.
+
+Given the similarities betwen ZPL and ZPL II this library does not have official support for ZPL and may cause issues with a printer set to ZPL mode instead of ZPL II mode.
 
 Zebra maintains a ZPL programming guide [on their website](https://support.zebra.com/cpws/docs/zpl/zpl-zbi2-pm-en.pdf). They also have some [tips and tricks](https://www.zebra.com/us/en/support-downloads/knowledge-articles/zpl-command-information-and-details.html) documented for some specific edge cases.
 
