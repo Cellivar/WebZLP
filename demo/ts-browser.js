@@ -57,13 +57,12 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (scripts[i].type === 'text/typescript') {
       const { src } = scripts[i];
       const innerHtml = src ? null : scripts[i].innerHTML;
+      const url = innerHtml ? "INLINE SCRIPT" : src;
       let raw = innerHtml ? innerHtml : (await fetch(src).then(r => r.text()));
 
       // Strip imports so we avoid 'already has been declared' errors.
       raw = raw.replaceAll(/^import\s+\{[^;]*;/gm, '');
-
-      console.log(raw);
-      combined += "\n" + raw;
+      combined += '\n//\n//\n// ' + url + '\n//\n//\n' + raw;
     }
   }
 
