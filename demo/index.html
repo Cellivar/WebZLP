@@ -13,11 +13,9 @@
     <meta name="theme-color" content="#eeeeee" media="(prefers-color-scheme: dark)">
 </head>
 <body>
+    <!-- This part is all just evil shenanigans to make the page work. -->
     <script type="text/javascript" src="./ts-browser.js"></script>
-    <!-- TODO: Better way to do this -->
-    <script type="text/typescript">
-        declare module '*';
-    </script>
+    <script id="tscontainer" type="inline-module"></script>
     <script type="text/typescript" src="../src/Color.ts"></script>
     <script type="text/typescript" src="../src/NumericRange.ts"></script>
     <script type="text/typescript" src="../src/WebZplError.ts"></script>
@@ -30,9 +28,11 @@
     <script type="text/typescript" src="../src/Printers/Languages/EplPrinterCommandSet.ts"></script>
     <script type="text/typescript" src="../src/Printers/Languages/IPrinterCommandSet.ts"></script>
     <script type="text/typescript" src="../src/Printers/Models/PrinterModel.ts"></script>
+
+    <!-- Here's some actual demo code. Note that it is typescript, not javascript. -->
     <script type="text/typescript">
-      const message: string = 'TypeScript in inline scripts works'
-      console.log(message)
+        const printerMgr = new PrinterUsbManager(window.navigator);
+        printerMgr.promptToConnectUsbPrinter();
     </script>
 
     <div class="container-fluid">
