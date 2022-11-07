@@ -52,7 +52,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   // that should be exported, but we can't rely on imports working. We solve this
   // by mooshing all of the typescript together, running the compiler over that,
   // and then 'importing' that whole thing in one go.
-  let combined = "";
+  let combined = "console.log('Click the line number to jump to the compiled source');";
   for (let i = 0; i < scripts.length; i++) {
     if (scripts[i].type === 'text/typescript') {
       const { src } = scripts[i];
@@ -61,7 +61,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       let raw = innerHtml ? innerHtml : (await fetch(src).then(r => r.text()));
 
       // Strip imports so we avoid 'already has been declared' errors.
-      raw = raw.replaceAll(/^import\s+\{[^;]*;/gm, '');
+      raw = raw.replaceAll(/^import\s+[\{\*]+[^;]*;/gm, '');
       combined += '\n//\n//\n// ' + url + '\n//\n//\n' + raw;
     }
   }
