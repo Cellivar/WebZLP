@@ -216,7 +216,9 @@ export interface IPrinterOptions {
 }
 
 /** Configured options for a label printer */
-export class PrinterOptions implements IPrinterFactoryInformation, IPrinterOptions {
+export class PrinterOptions
+    implements IPrinterFactoryInformation, IPrinterOptions, IPrinterLabelMediaOptions
+{
     // Read-only printer config info
     private _serialNum: string;
     get serialNumber(): string {
@@ -235,6 +237,11 @@ export class PrinterOptions implements IPrinterFactoryInformation, IPrinterOptio
     private _language: PrinterCommandLanguage;
     get langauge(): PrinterCommandLanguage {
         return this._language;
+    }
+
+    private _valid: boolean;
+    get valid(): boolean {
+        return this._valid;
     }
 
     printSpeed: PrintSpeedSettings;
@@ -257,6 +264,34 @@ export class PrinterOptions implements IPrinterFactoryInformation, IPrinterOptio
     // Font stuff
     private _asianCharacterSpacing: number;
     private _characterSet: number;
+
+    /** How dark to print. 0 is blank, 99 is max darkness */
+    darknessPercent: NumericRange<0, 100>;
+
+    /** The label media thermal print mode. */
+    thermalPrintMode: ThermalPrintMode;
+
+    /** Mode the printer uses to detect separate labels when printing. */
+    labelGapDetectMode: LabelMediaGapDetectionMode;
+    /**
+     * The gap / mark length between labels. Mandatory for markSensing black line mode.
+     * Media with webSensing gaps can use AutoSense to get this value.
+     */
+    labelGapInches?: number;
+    /**
+     * Offset of the gap / mark from
+     * */
+    labelGapMarkOffsetInches: number;
+
+    /** The width of the label media, in inches. */
+    labelWidthInches: number;
+    /** The height of the label media, in inches. */
+    labelHeightInches: number;
+
+    /** The offset of the printable area, from the top-left corner. */
+    labelPrintOriginOffsetInches: Coordinate;
+
+    labelCutPositionOffset: number;
 
     constructor({
         serialNumber,

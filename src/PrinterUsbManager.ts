@@ -5,9 +5,9 @@ export class PrinterUsbManager extends EventTarget {
     private nav: Navigator;
 
     /** List of tracked printers. */
-    private printers: Printer[];
+    private printers: Printer[] = [];
     /** Corresponding list of tracked devices */
-    private devices: USBDevice[];
+    private devices: USBDevice[] = [];
 
     /** Default comm options used when connecting to a printer. */
     public printerCommunicationOptions: PrinterCommunicationOptions;
@@ -18,8 +18,8 @@ export class PrinterUsbManager extends EventTarget {
         this.printerCommunicationOptions = printerCommOpts ?? new PrinterCommunicationOptions();
 
         // Since this was created assume control over USB.
-        this.nav.usb.addEventListener('connect', this.handleConnectPrinter);
-        this.nav.usb.addEventListener('disconnect', this.handleDisconnectPrinter);
+        this.nav.usb.addEventListener('connect', this.handleConnectPrinter.bind(this));
+        this.nav.usb.addEventListener('disconnect', this.handleDisconnectPrinter.bind(this));
     }
 
     /** Display the USB device connection dialog to select a printer. */
@@ -32,11 +32,21 @@ export class PrinterUsbManager extends EventTarget {
                     }
                 ]
             });
+            console.log(device);
 
             await this.handleConnectPrinter({ device });
         } catch (e) {
-            // TODO: Better error handling.
-            console.log('Failed to connect to printer!' + e);
+            if (
+                e instanceof DOMException &&
+                e.name === 'NotFoundError' &&
+                e.message === 'No device selected.'
+            ) {
+                console.log('User did not select a printer');
+                return;
+            }
+
+            console.log('Failed to connect to printer!');
+            console.log(e);
             return;
         }
     }
@@ -44,7 +54,7 @@ export class PrinterUsbManager extends EventTarget {
     /** Simulate all printers being disconnected and reconnected. */
     public async reconnectAllPrinters() {
         this.devices = [];
-        this.printers.forEach((p) => p.dispose());
+        this.printers.forEach(async (p) => await p.dispose());
         this.printers = [];
 
         navigator.usb.getDevices().then((devices) => {
@@ -74,7 +84,7 @@ export class PrinterUsbManager extends EventTarget {
             const printer = this.printers[idx];
             this.devices.splice(idx, 1);
             this.printers.splice(idx, 1);
-            printer.dispose();
+            await printer.dispose();
 
             const event = new CustomEvent<Printer>('onDisconnectPrinter', { detail: printer });
             this.dispatchEvent(event);

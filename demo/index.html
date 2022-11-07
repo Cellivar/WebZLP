@@ -26,20 +26,49 @@
     <script type="text/typescript" src="../src/Printers/Communication/UsbPrinterDeviceChannel.ts"></script>
     <script type="text/typescript" src="../src/Printers/Configuration/PrinterOptions.ts"></script>
     <script type="text/typescript" src="../src/Printers/Languages/EplPrinterCommandSet.ts"></script>
+    <script type="text/typescript" src="../src/Printers/Languages/ZplPrinterCommandSet.ts"></script>
     <script type="text/typescript" src="../src/Printers/Languages/IPrinterCommandSet.ts"></script>
     <script type="text/typescript" src="../src/Printers/Models/PrinterModel.ts"></script>
+    <script type="text/typescript" src="../src/Documents/Commands.ts"></script>
+    <script type="text/typescript" src="../src/Documents/ConfigDocument.ts"></script>
+    <script type="text/typescript" src="../src/Documents/LabelDocument.ts"></script>
 
     <!-- Here's some actual demo code. Note that it is typescript, not javascript. -->
     <script type="text/typescript">
+        // Normally here you'd have an import to import the library.
+        // For this demo that's the only part we omit since it's being managed elsewhere.
+        // The rest of this code should behave the same as in your IDE.
+        // import * from 'WebZLP';
+
+        // For this demo we're going to make use of the USB printer manager
+        // so it can take care of concerns like the USB connect and disconnect events.
         const printerMgr = new PrinterUsbManager(window.navigator);
-        printerMgr.promptToConnectUsbPrinter();
+
+        // When you spin up the printerMgr it'll have some work to do, it's important
+        // to wait until it's ready.
+        await printerMgr.ready;
+
+        // We'll wire up some basic event listeners to the printer manager.
+        // Button to prompt a user to add a printer.
+        const addPrinterBtn = document.getElementById("addprinter");
+        addPrinterBtn.addEventListener('click', async () => printerMgr.promptToConnectUsbPrinter());
+        // Button to manually refresh all printers, in case add doesn't work..
+        const refreshPrinterBtn = document.getElementById("refreshPrinters");
+        refreshPrinterBtn.addEventListener('click', async () => printerMgr.reconnectAllPrinters());
     </script>
 
     <div class="container-fluid">
         <div class="row" style="padding-top: 16px;">
             <div class="col-3">
                 <div class="d-grid gap-2 col-8 mx-auto mb-3">
-                    <button class="btn btn-primary" id="addprinter">➕ Add Printer</button>
+                    <div class="row">
+                        <div class="col-9">
+                            <button class="btn btn-primary" id="addprinter">➕ Add Printer</button>
+                        </div>
+                        <div class="col-3">
+                            <button class="btn btn-success" id="refreshPrinters">🔃</button>
+                        </div>
+                    </div>
                 </div>
                 <ol id="printerlist" class="list-group list-group-numbered">
                 </ol>
@@ -189,8 +218,8 @@
                 this.labelForm.querySelector('#modalFont').addEventListener('change', () => this.#resizeTextArea());
                 this.labelForm.querySelector('#labelColor').addEventListener('change', () => this.#setLabelColor());
 
-                this.addPrinterBtn = addPrinterBtn;
-                addPrinterBtn.addEventListener('click', async (e) => this.printerPair(e));
+                //this.addPrinterBtn = addPrinterBtn;
+                //addPrinterBtn.addEventListener('click', async (e) => this.printerPair(e));
 
                 this.configModal = configModal;
                 this.configModalHandle = new bootstrap.Modal(this.configModal);
@@ -1432,7 +1461,6 @@
 
                 const btnContainer = document.getElementById("printerlist");
                 const labelForm = document.getElementById("labelForm");
-                const addPrinterBtn = document.getElementById("addprinter");
                 const modalElement = document.getElementById("printerOptionModal");
                 //printerMgr = new OldPrinterManager(lp2844, btnContainer, labelForm, addPrinterBtn, modalElement);
 

@@ -1,9 +1,10 @@
+import { IPrinterCommand } from '../../Documents/Commands';
+import { IDocument } from '../../Documents/Commands';
+import { WebZplError } from '../../WebZplError';
 import { PrinterOptions } from '../Configuration/PrinterOptions';
 
 export interface IPrinterCommandSet {
-    /**
-     * Get the contets of the command buffer as a single array.
-     */
+    /** Get the contets of the command buffer as a single array. */
     get commandBufferRaw(): Uint8Array;
 
     /**
@@ -13,6 +14,9 @@ export interface IPrinterCommandSet {
      * as a UTF-8 string. For printer communication use commandBufferRaw instead.
      */
     get commandBufferString(): string;
+
+    /** Add a document as a series of commands to the command buffer. */
+    loadDoc(doc: IDocument): IPrinterCommandSet;
 
     /**
      * Add command, concatenating given parameters with a comma.
@@ -34,10 +38,25 @@ export interface IPrinterCommandSet {
      */
     addRawCmd(array: Uint8Array): IPrinterCommandSet;
 
-    /**
-     * Empty the current command buffer entirely.
-     */
+    /** Empty the current command buffer entirely. */
     clearCommandBuffer(): IPrinterCommandSet;
 
+    /** Transpile a command to its native implementation. */
+    transpileCommand(cmd: IPrinterCommand): Uint8Array;
+
+    /** Parse the response of a configuration inqury in the command set language. */
     parseConfigurationResponse(rawText: string): PrinterOptions;
+}
+
+/** Represents an error when validating a document against a printer's capabilties. */
+export class DocumentValidationError extends WebZplError {
+    private _innerErrors: DocumentValidationError[] = [];
+    get innerErrors() {
+        return this._innerErrors;
+    }
+
+    constructor(message: string, innerErrors?: DocumentValidationError[]) {
+        super(message);
+        this._innerErrors = innerErrors;
+    }
 }

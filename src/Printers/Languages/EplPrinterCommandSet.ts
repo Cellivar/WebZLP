@@ -1,14 +1,16 @@
 import { WebZplError } from '../../WebZplError';
 import { PrinterCommandLanguage } from '../Configuration/PrinterOptions';
 import { PrinterOptions } from '../Configuration/PrinterOptions';
-import { detectModel } from '../Models/PrinterModel';
-import { IPrinterCommandSet } from './IPrinterCommandSet';
+import { getModel } from '../Models/PrinterModel';
+import { IPrinterCommandSet, DocumentValidationError } from './IPrinterCommandSet';
+import * as Commands from '../../Documents/Commands';
 
 /**
  * Command set for communicating with an EPL II printer.
  */
 export class EplPrinterCommandSet implements IPrinterCommandSet {
     private rawCmdBuffer: Array<Uint8Array> = [];
+    private encoder = new TextEncoder();
 
     get commandBufferRaw(): Uint8Array {
         const bufferLen = this.rawCmdBuffer.reduce((sum, arr) => sum + arr.byteLength, 0);
@@ -25,8 +27,28 @@ export class EplPrinterCommandSet implements IPrinterCommandSet {
         return new TextDecoder('ascii').decode(this.commandBufferRaw);
     }
 
+    loadDoc(doc: Commands.IDocument): IPrinterCommandSet {
+        // Parse through the commands, translating them to their EPL command equivalents
+        const validationErrors = [];
+        doc.commands.forEach((c) => {
+            try {
+                this.addRawCmd(this.transpileCommand(c));
+            } catch (e) {
+                if (e instanceof DocumentValidationError) {
+                    validationErrors.push(e);
+                } else {
+                    throw e;
+                }
+            }
+        });
+        if (validationErrors.length > 0) {
+            throw new DocumentValidationError('One or more validation errors', validationErrors);
+        }
+        return this;
+    }
+
     addCmd(...parameters: string[]): IPrinterCommandSet {
-        this.addRawCmd(new TextEncoder().encode(parameters.join(',') + '\n'));
+        this.addRawCmd(this.encodeCommand(parameters.join(',')));
         return this;
     }
 
@@ -38,6 +60,20 @@ export class EplPrinterCommandSet implements IPrinterCommandSet {
     clearCommandBuffer(): IPrinterCommandSet {
         this.rawCmdBuffer = [];
         return this;
+    }
+
+    encodeCommand(str: string): Uint8Array {
+        return this.encoder.encode(str + '\n');
+    }
+
+    transpileCommand(cmd: Commands.IPrinterCommand): Uint8Array {
+        // TODO: figure out a way to do exhausive type testing..
+        switch (true) {
+            case cmd instanceof Commands.ClearImageBufferCommand:
+                return this.encodeCommand('\nN');
+            case cmd instanceof Commands.QueryConfigurationCommand:
+                return this.encodeCommand('UQ');
+        }
     }
 
     parseConfigurationResponse(rawText: string): PrinterOptions {
@@ -83,7 +119,7 @@ export class EplPrinterCommandSet implements IPrinterCommandSet {
         }
 
         const printerInfo = {
-            model: detectModel(rawModelId),
+            model: getModel(rawModelId),
             firmware: header[header.length - 1],
             serial: 'no_serial_nm',
             serialPort: undefined,

@@ -9,6 +9,9 @@ export interface IPrinterDeviceChannel {
     /** Gets this channel mode. */
     get channelMode(): PrinterChannelType;
 
+    /** Gets the printer model hint, if available. Used to detect config faster. */
+    get modelHint(): string;
+
     /** A promise indicating this communication channel is ready for use. */
     get ready(): Promise<boolean>;
 
@@ -16,13 +19,18 @@ export interface IPrinterDeviceChannel {
     get streamFromPrinter(): ReadableStream<string>;
 
     /** Close the channel, disallowing future communication. */
-    dispose(): void;
+    dispose(): Promise<void>;
 
     /**
      * Send a series of commands to the printer.
      * @param commandBuffer The series of commands to execute in order.
      */
-    sendCommands(commandBuffer: Uint8Array): void;
+    sendCommands(commandBuffer: Uint8Array): Promise<PrinterError | null>;
+}
+
+/** Error generated from a print operation. */
+export interface PrinterError {
+    message: string;
 }
 
 /** Possible ways to communicate with a printer */

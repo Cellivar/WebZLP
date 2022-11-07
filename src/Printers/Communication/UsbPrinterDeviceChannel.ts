@@ -3,7 +3,8 @@ import { LineBreakTransformer } from './LineBreakTransformer';
 import {
     PrinterChannelType,
     PrinterCommunicationMode,
-    IPrinterDeviceChannel
+    IPrinterDeviceChannel,
+    PrinterError
 } from './PrinterCommunication';
 
 /** Class for managing the WebUSB communication with a printer. */
@@ -33,6 +34,10 @@ export class UsbPrinterDeviceChannel extends EventTarget implements IPrinterDevi
         return this.inputStream;
     }
 
+    public get modelHint(): string {
+        return this.device?.productName;
+    }
+
     constructor(device: USBDevice, enableConsoleDebug = false) {
         super();
 
@@ -47,11 +52,25 @@ export class UsbPrinterDeviceChannel extends EventTarget implements IPrinterDevi
         return true;
     }
 
-    public dispose() {
-        this.device.close();
+    public async dispose() {
+        try {
+            await this.device.close();
+        } catch (e) {
+            if (
+                e instanceof DOMException &&
+                e.name === 'NotFoundError' &&
+                e.message ===
+                    "Failed to execute 'close' on 'USBDevice': The device was disconnected."
+            ) {
+                // Device was already closed, no-op.
+                return;
+            }
+
+            throw e;
+        }
     }
 
-    public async sendCommands(commandBuffer: Uint8Array) {
+    public async sendCommands(commandBuffer: Uint8Array): Promise<PrinterError | null> {
         if (this.enableConsoleDebug) {
             console.debug('Sending print command buffer to printer via USB..');
             console.debug(commandBuffer);
@@ -60,9 +79,9 @@ export class UsbPrinterDeviceChannel extends EventTarget implements IPrinterDevi
 
         try {
             await this.device.transferOut(this.deviceOut.endpointNumber, commandBuffer);
+            return null;
         } catch (e: unknown) {
-            const event = new CustomEvent<unknown>('usbPrinterDeviceOutError', e);
-            this.dispatchEvent(event);
+            return { message: e } as PrinterError;
         } finally {
             if (this.enableConsoleDebug) {
                 console.timeEnd('sendPrintBuffer');
@@ -91,14 +110,14 @@ export class UsbPrinterDeviceChannel extends EventTarget implements IPrinterDevi
         // attempts to handle those situations in a degraded mode.
         if (!o) {
             throw new WebZplError(
-                'USB printer did not expose an output channel. Try power-cycling the printer. This is a hardware problem.'
+                'USB printer did not expose an output endpoint. Try power-cycling the printer. This is a hardware problem.'
             );
         } else {
             this.deviceOut = o;
         }
 
         if (!i) {
-            console.warn('USB printer did not expose an input channel, using unidirectinal mode.');
+            console.warn('USB printer did not expose an input endpoint, using unidirectinal mode.');
         } else {
             this.deviceIn = i;
         }
@@ -117,6 +136,7 @@ export class UsbPrinterDeviceChannel extends EventTarget implements IPrinterDevi
         await d.selectConfiguration(1);
         await d.claimInterface(0);
 
+        // Can only read if there's an endpoint to read from, otherwise skip.
         if (this._commMode === PrinterCommunicationMode.bidirectional) {
             this.inputStream = new ReadableStream<Uint8Array>({
                 pull: async (controller) => {
