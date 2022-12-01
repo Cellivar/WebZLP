@@ -6,9 +6,13 @@ Web USB library for communicating with EPL or ZPL printers.
 
 ## Demo
 
-See [the demo](https://cellivar.github.io/WebZLP/) that runs in your browser. Note that you will need a browser that supports WebUSB, such as Chrome, Edge, Opera, Chrome on Android, [etc](https://developer.mozilla.org/en-US/docs/Web/API/USB#browser_compatibility).
+See [the demo](https://cellivar.github.io/WebZLP/demo) that runs in your browser. Note that you will need a browser that supports WebUSB, such as Chrome, Edge, Opera, Chrome on Android, [etc](https://developer.mozilla.org/en-US/docs/Web/API/USB#browser_compatibility).
 
 The demo dynamically compiles the typescript in the browser so can take a minute to spin up.
+
+## Docs
+
+This repo contains some docs and findings related to Zebra label printers and their various quirks. I'm interested in collecting as much of this information as I can as I just think they're neat. If you have something to add please feel free to open an issue!
 
 ## Local development
 
