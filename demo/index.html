@@ -13,60 +13,488 @@
     <meta name="theme-color" content="#eeeeee" media="(prefers-color-scheme: dark)">
 </head>
 <body>
-    <script type="text/javascript" src="./ts-browser.js"></script>
-    <script type="text/typescript">
-      const message: string = 'TypeScript in inline scripts works'
-      console.log(message)
-    </script>
+    <a href="https://github.com/cellivar/webzlp" class="github-corner" aria-label="View source on GitHub"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#151513; color:#fff; position: absolute; top: 0; border: 0; right: 0;" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a><style>.github-corner:hover .octo-arm{animation:octocat-wave 560ms ease-in-out}@keyframes octocat-wave{0%,100%{transform:rotate(0)}20%,60%{transform:rotate(-25deg)}40%,80%{transform:rotate(10deg)}}@media (max-width:500px){.github-corner:hover .octo-arm{animation:none}.github-corner .octo-arm{animation:octocat-wave 560ms ease-in-out}}</style>
+    <!--
+        This part is just evil shenanigans to make the demo work, you can ignore it.
 
-    <div class="container-fluid">
-        <div class="row" style="padding-top: 16px;">
-            <div class="col-3">
-                <div class="d-grid gap-2 col-8 mx-auto mb-3">
-                    <button class="btn btn-primary" id="addprinter">➕ Add Printer</button>
-                </div>
-                <ol id="printerlist" class="list-group list-group-numbered">
-                </ol>
+        For those curious, this import map redirects import statements such that a Service Worker
+        can intercept them. The SW itself has the typescript compiler loaded, and it will recompile
+        the imported modules on the fly before sending them to the browser as javascript.
+
+        The page itself sends inline TS through the same flow, triggering the same module loading, so
+        even inline typescript works.
+    -->
+    <script type="importmap">
+        {
+          "imports": {
+            "webzlp": "../src/index.ts",
+            "ts-pattern": "https://unpkg.com/ts-pattern@4.0.5/dist/index.modern.js"
+          }
+        }
+    </script>
+    <script type="module" src="./ts-browser.js"></script>
+
+    <!-- Here's some actual demo code. Note that it is typescript, not javascript. -->
+    <script type="text/typescript">
+        import {
+            IDocument,
+            ILabelDocumentBuilder,
+            PrinterUsbManager,
+            PrinterCommunicationOptions,
+            PrintSpeed,
+            Printer,
+            ReadyToPrintDocuments
+        } from 'webzlp';
+
+        // For this demo we're going to make use of the USB printer manager
+        // so it can take care of concerns like the USB connect and disconnect events.
+
+        // Enable debugging, so the dev console can fill up with interesting messages!
+        const debugOpts = new PrinterCommunicationOptions();
+        debugOpts.debug = true;
+        const printerMgr = new PrinterUsbManager(window.navigator, debugOpts);
+
+        // We'll wire up some basic event listeners to the printer manager.
+        // First, a button to prompt a user to add a printer.
+        const addPrinterBtn = document.getElementById('addprinter');
+        addPrinterBtn.addEventListener('click', async () => printerMgr.promptToConnectUsbPrinter());
+
+        // Next a button to manually refresh all printers, just in case.
+        const refreshPrinterBtn = document.getElementById('refreshPrinters');
+        refreshPrinterBtn.addEventListener('click', async () => printerMgr.reconnectAllPrinters());
+
+        // Next we wire up some events on the PrinterUsbManager itself.
+        printerMgr.addEventListener('connectedPrinter', ({ detail }) => {
+            const printer = detail;
+            console.log('New printer is a', printer.printerModel.model);
+            const config = printer.printerConfig;
+            console.log('Printer darkness is', config.darknessPercent, 'percent');
+            console.log('Printer speed is', PrintSpeed[config.speed.printSpeed]);
+            console.log(
+                'Label is',
+                config.labelWidthInches,
+                'in wide and',
+                config.labelHeightInches,
+                'in tall, with a gap of',
+                config.labelGapInches,
+                'in.');
+        });
+        // There's also an event that will tell you when a printer disconnects.
+        printerMgr.addEventListener('disconnectedPrinter', ({ detail }) => {
+            const printer = detail;
+            // TODO: Hide appropriate interface.
+            console.log('Lost printer', printer.printerModel.model, 'serial', printer.printerConfig.serialNumber);
+        });
+
+        // When the browser first loaded the page any previously connected printers would have caused
+        // a connection event. Our listener wasn't listening yet so missed it.
+        // It's good practice to force a reconnect once your event handlers are ready.
+        // We're going to skip this for now though, because we want it to happen after the app is ready.
+        //await printerMgr.reconnectAllPrinters();
+
+        // And that's all there is to setup! The page can now talk to printers.
+        // If you're using a chromebook this should just work. If you're on Windows
+        // you might need to do some driver setup, see the repo README for more details.
+
+        // The rest of this demo is an example of a basic label generator app.
+
+        // The app's logic is wrapped in a class just for ease of reading.
+        class BasicLabelDesignerApp {
+            constructor(
+                manager: PrinterUsbManager,
+                btnContainer: HTMLElement,
+                labelForm: HTMLElement,
+                labelFormInstructions: HTMLElement,
+                configModal: HTMLElement
+            ) {
+                this.manager = manager;
+                this.btnContainer = btnContainer;
+                this.labelForm = labelForm;
+                this.labelFormInstructions = labelFormInstructions;
+                this.configModal = configModal;
+
+                // Based on the containers, map the various listeners.
+                this.configModalHandle = new bootstrap.Modal(this.configModal);
+                this.configModal
+                    .querySelector('form')
+                    .addEventListener('submit', this.updatePrinterConfig.bind(this));
+                this.labelForm.addEventListener('blur', this.renderTextForm.bind(this));
+                this.labelForm.addEventListener('keyup', this.renderTextForm.bind(this));
+
+                // Add a second set of event listeners for printer connect and disconnect to redraw
+                // the printer list when it changes.
+                this.manager.addEventListener('connectedPrinter', ({ detail }) => {
+                    this.activePrinterIndex = -1;
+                    this.redrawPrinterButtons();
+                });
+                this.manager.addEventListener('disconnectedPrinter', ({ detail }) => {
+                    this.activePrinterIndex = -1;
+                    this.redrawPrinterButtons();
+                });
+
+                // Let's load a nice font that looks good in monochrome and use that for labels.
+                this.fontName = "emojisymbols";
+                // EmojiSymbols Font (c)blockworks - Kenichi Kaneko http://emojisymbols.com/
+                const font = new FontFace(this.fontName, 'url(fonts/EmojiSymbols-Regular.woff)');
+                font.load().then(() => {
+                    document.fonts.add(font);
+                });
+            }
+
+            // Some storage fields and utility properties
+            private btnContainer: HTMLElement;
+            private labelForm: HTMLElement;
+            private labelFormInstructions: HTMLElement;
+            private configModal: HTMLElement;
+            private fontName: string;
+            private manager: PrinterUsbManager;
+            get printers(): readonly Printer[] {
+                return this.manager.printers;
+            }
+
+            // Track which printer is currently selected for operations
+            private _activePrinter = 0;
+            get activePrinter(): Printer {
+                return this._activePrinter < 0 || this._activePrinter > this.printers.length
+                    ? null
+                    : this.printers[this._activePrinter];
+            }
+            set activePrinterIndex(printerIdx: number) {
+                this._activePrinter = printerIdx;
+                this.redrawTextCanvas();
+            }
+
+            /** Initialize the app */
+            public async init() {
+                this.redrawPrinterButtons();
+                this.redrawTextCanvas();
+            }
+
+            /** Display the configuration for a printer. */
+            public showConfigModal(printer: Printer, printerIdx: number) {
+                if (printer == null) {
+                    return;
+                }
+                const config = printer.printerConfig;
+
+                // Translate the available speeds to options to be selected
+                const speedSelect = this.configModal.querySelector('#modalSpeed');
+                speedSelect.innerHTML = '';
+                const speedTable = printer.printerModel.speedTable as ReadonlyMap<PrintSpeed, number>;
+                for (const [key, val] of speedTable) {
+                    // Skip utility values, so long as there's more than the defaults.
+                    // Mobile printers *only* support auto, for example.
+                    if ((speedTable.length > 3)
+                        && (key == PrintSpeed.auto
+                            || key == PrintSpeed.ipsPrinterMax
+                            || key == PrintSpeed.ipsPrinterMin)) {
+                        continue;
+                    }
+                    const opt = document.createElement('option');
+                    opt.value = key;
+                    opt.innerHTML = PrintSpeed[key].substring(3).replaceAll('_', '.') + ' ips';
+                    speedSelect.appendChild(opt);
+                }
+                speedSelect.value = config.speed.printSpeed;
+
+                this.configModal.querySelector('#modalPrinterIndex').value = config.serialNumber;
+                this.configModal.querySelector('#modalPrinterIndexText').textContent = printerIdx;
+                this.configModal.querySelector('#modalLabelWidth').value = config.labelWidthInches;
+                this.configModal.querySelector('#modalLabelHeight').value = config.labelHeightInches;
+                this.configModal.querySelector('#modalDarkness').value = config.darknessPercent;
+                this.configModalHandle.show();
+            }
+
+            /** Erase and re-draw the list of printer buttons in the UI. */
+            private redrawPrinterButtons() {
+                this.btnContainer.innerHTML = '';
+                this.printers.forEach((printer, idx) => this.drawPrinterButton(printer, idx));
+            }
+
+            /** Highlight only the currently selected printer. */
+            private redrawPrinterButtonHighlights() {
+                this.printers.forEach((printer, idx) => {
+                    const element = document.getElementById(`printer_${idx}`);
+                    const highlight = this._activePrinter == idx ? "var(--bs-blue)" : "transparent";
+                    element.style.background = `linear-gradient(to right, ${highlight}, ${highlight}, grey, grey)`;
+                });
+            }
+
+            /** Add a printer's button UI to the list of printers. */
+            private drawPrinterButton(printer: Printer, idx: number) {
+                const highlight = this._activePrinter == idx ? "var(--bs-blue)" : "transparent";
+
+                // Generate a new label printer button for the given printer.
+                const element = document.createElement("div");
+                element.innerHTML = `
+    <li id="printer_${idx}" data-printer-idx="${idx}"
+        class="list-group-item d-flex flex-row justify-content-between sligh-items-start"
+        style="background: linear-gradient(to right, ${highlight}, ${highlight}, grey, grey);">
+        <div class="col-sm-8">
+            <div class="col-sm-12">
+                <span data-serial="${printer.printerConfig.serialNumber}">${printer.printerConfig.serialNumber}</span>
             </div>
-            <div class="col-9">
-                <form id="labelForm" action="javascript:void(0);">
-                    <div class="col row mb-3">
-                        <label for="leftOffset" class="col-sm-2 col-form-label">Left Margin</label>
-                        <div class="col-sm-2">
-                            <input class="form-control" type="number" id="leftOffset" value="10" name="leftOffset">
-                        </div>
-                        <label for="modalFont" class="col-sm-1 offset-sm-1 col-form-label">Font</label>
-                        <div class="col-sm-2">
-                            <select id="modalFont" class="form-select" aria-label="Font selection" name="fontSize">
-                                <option>1</option>
-                                <option>2</option>
-                                <option>3</option>
-                                <option>4</option>
-                                <option selected value="5">5 (allcaps)</option>
-                                <!-- <option value="6">6 (numbers</option>
-                                <option value="7">7 (numbers)</option> -->
-                            </select>
-                        </div>
-                        <label for="labelColor" class="col-sm-2 col-form-label">Label Color</label>
-                        <div class="col-sm-1">
-                            <input id="labelColor" type="color" class="form-control col-sm-1 form-control-color"
-                                value="#FFFFFF" name="labelColor" title="Choose paper color" style="height: 2.5rem;">
-                        </div>
-                    </div>
-                    <div class="col row mb-3">
-                        <label for="lineSpacing" class="col-sm-2 col-form-label">Line spacing</label>
-                        <div class="col-sm-2">
-                            <input class="form-control" type="number" id="lineSpacing" value="5" name="lineSpacing">
-                        </div>
-                    </div>
-                    <textarea id="labelFormText" name="labelText" maxlength="25" cols="25" rows="25" wrap="hard"
-                        style="resize: none; font-family: monospace; font-size: 18px; overflow-y: hidden; overflow-x: hidden;"
-                        placeholder="Enter your label text here!"></textarea>
-                        <canvas id="canvas" width="584" height="160" style="border: 2px solid blue; display:none"></canvas>
-                </form>
+            <div class="col-sm-12">
+                <span>${printer.printerConfig.labelWidthInches}" x ${printer.printerConfig.labelHeightInches}"</span>
             </div>
         </div>
-    </div>
+        <div class="d-flex flex-row justify-content-end">
+            <div class="btn-group" role="group" aria-label="Printer button group">
+                <button id="printto_${idx}" class="btn btn-success btn-lg" data-label-width="${printer.labelWidth}" data-label-height="${printer.labelHeight}" data-printer-idx="${idx}">🖨</button>
+                    <button class="btn btn-success dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+                        <span class="visually-hidden">Settings</span>
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a id="printtest_${idx}" data-printer-idx="${idx}" class="dropdown-item" href="#">
+                            Print test page
+                        </a></li>
+                        <li><a id="feedlabel_${idx}" data-printer-idx="${idx}" class="dropdown-item" href="#">
+                            Feed blank label
+                        </a></li>
+                        <li><a id="configprinter_${idx}" data-printer-idx="${idx}" class="dropdown-item" href="#">
+                            Set label config
+                        </a></li>
+                        <li><a id="printconfig_${idx}" data-printer-idx="${idx}" class="dropdown-item" href="#">
+                            Print config on labels
+                        </a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </li>`;
+                // And slap it into the button container.
+                this.btnContainer.appendChild(element);
+
+                // Then wire up the button events so they work.
+                document.getElementById(`printto_${idx}`)
+                    .addEventListener('click', async (e) => {
+                        e.preventDefault();
+                        const printerIdx = e.currentTarget.dataset.printerIdx as number;
+                        const printer = this.printers[printerIdx];
+                        const doc = this.addCanvasImageToLabelDoc(printer.getLabelDocument());
+                        await printer.sendDocument(doc);
+                    });
+                document.getElementById(`printer_${idx}`)
+                    .addEventListener('click', async (e) => {
+                        e.preventDefault();
+                        const printerIdx = e.currentTarget.dataset.printerIdx as number;
+                        this.activePrinterIndex = printerIdx;
+                        this.redrawPrinterButtonHighlights();
+                        this.redrawTextCanvas();
+                    });
+                document.getElementById(`printtest_${idx}`)
+                    .addEventListener('click', async (e) => {
+                        e.preventDefault();
+                        const printerIdx = e.currentTarget.dataset.printerIdx as number;
+                        const printer = this.printers[printerIdx];
+                        const doc = ReadyToPrintDocuments.printTestLabelDocument(
+                            printer.printerConfig.labelWidthDots);
+                        await printer.sendDocument(doc);
+                    });
+                document.getElementById(`feedlabel_${idx}`)
+                    .addEventListener('click', async (e) => {
+                        e.preventDefault();
+                        const printerIdx = e.currentTarget.dataset.printerIdx as number;
+                        const printer = this.printers[printerIdx];
+                        const doc = ReadyToPrintDocuments.feedLabelDoc;
+                        await printer.sendDocument(doc);
+                    });
+                document.getElementById(`printconfig_${idx}`)
+                    .addEventListener('click', async (e) => {
+                        e.preventDefault();
+                        const printerIdx = e.currentTarget.dataset.printerIdx as number;
+                        const printer = this.printers[printerIdx];
+                        const doc = ReadyToPrintDocuments.printerPrintConfigDoc;
+                        await printer.sendDocument(doc);
+                    });
+                document.getElementById(`configprinter_${idx}`)
+                    .addEventListener('click', async (e) => {
+                        e.preventDefault();
+                        const printerIdx = e.currentTarget.dataset.printerIdx as number;
+                        const printer = this.printers[printerIdx];
+                        this.showConfigModal(printer, printerIdx);
+                    });
+            }
+
+            /** Redraw the text canvas size according to the printer. */
+            private redrawTextCanvas() {
+                const printer = this.activePrinter;
+                if (printer == null) {
+                    this.labelForm.classList.add('d-none');
+                    this.labelFormInstructions.classList.remove('d-none');
+                    return;
+                } else {
+                    this.labelForm.classList.remove('d-none');
+                    this.labelFormInstructions.classList.add('d-none');
+                }
+
+                // Resize the canvas to match the label size.
+                const canvas = this.labelForm.querySelector("#labelCanvas") as HTMLCanvasElement;
+                // Add a small margin as printer alignment is not exact.
+                canvas.width = printer.printerConfig.labelWidthDots - 2;
+                canvas.height = printer.printerConfig.labelHeightDots - 2;
+
+                const textarea = this.labelForm.querySelector('#labelFormText') as HTMLTextAreaElement;
+                textarea.value = "Enter your label text here!";
+                this.renderTextForm(null);
+            }
+
+            /** Render the text form to the canvas */
+            private renderTextForm(e: KeyboardEvent) {
+                const printer = this.activePrinter;
+                if (printer == null) {
+                    return;
+                }
+
+                const textarea = this.labelForm.querySelector('#labelFormText') as HTMLTextAreaElement;
+                const canvas = this.labelForm.querySelector("#labelCanvas") as HTMLCanvasElement;
+                const c = canvas.getContext('2d');
+
+                // We're doing this the quick and dirty way, clearing the rectangle each time and
+                // redrawing all of the text. A more complex app could do this more gracefully!
+                c.clearRect(0, 0, canvas.width, canvas.height);
+                c.font = `30pt ${this.fontName}`;
+                c.imageSmoothingEnabled = false;
+                c.fillStyle = "#000000";
+
+                // fillText doesn't do newlines, do that manually
+                textarea.value.split('\n').forEach((l, i) => {
+                    c.fillText(l, 5, (i * 31) + 30);
+                })
+            }
+
+            /** Render the canvas to a document for printing */
+            private addCanvasImageToLabelDoc(builder: ILabelDocumentBuilder): IDocument {
+                const canvas = this.labelForm.querySelector("#labelCanvas") as HTMLCanvasElement;
+                const imgData = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height);
+
+                // One of the benefits of this library is being able to render images to a canvas element
+                // and sending that canvas directly to a label. This allows your webpage to generate complex
+                // images and fonts (like emoji!) that EPL/ZPL can't support.
+                return builder
+                    .addImage(imgData)
+                    .addPrintCmd()
+                    .finalize();
+            }
+
+            /** Send the contents of the config form as a config label to the printer. */
+            private async updatePrinterConfig(e: SubmitEvent) {
+                e.preventDefault();
+
+                // Figure out the right printer
+                const formElement = this.configModal.querySelector('form');
+                const form = formElement.elements as HTMLFormControlsCollection;
+                const printerIdx = parseInt(formElement.querySelector('#modalPrinterIndexText').innerText);
+                const printer = this.printers[printerIdx];
+                if (printer == null) {
+                    return;
+                }
+
+                form.modalSubmit.setAttribute("disabled", "");
+                form.modalCancel.setAttribute("disabled", "");
+
+                // Pull the values out of the form.
+                const darkness = parseInt(form.modalDarkness.value) as NumericRange<1, 100>;
+                const rawSpeed = parseInt(form.modalSpeed.value) as PrintSpeed;
+                const labelWidthInches = parseFloat(form.modalLabelWidth.value);
+                const autosense = form.modalWithAutosense.checked;
+
+                // Construct the config document with the values from the form
+                const configDoc = printer
+                    .getConfigDocument()
+                    .setPrintDirection()
+                    .setPrintSpeed(rawSpeed)
+                    .setDarknessConfig(darkness)
+                    .setLabelDimensions(labelWidthInches);
+                const doc = autosense
+                    ? configDoc.autosenseLabelLength()
+                    : configDoc.finalize();
+                // And send the whole shebang to the printer!
+                await printer.sendDocument(doc);
+
+                form.modalSubmit.removeAttribute("disabled");
+                form.modalCancel.removeAttribute("disabled");
+                this.activePrinterIndex = printerIdx;
+                this.configModalHandle.hide();
+            }
+        }
+
+        // With the app class defined we can run it.
+        // First up collect the basic structure of the app
+        const btnContainer = document.getElementById("printerlist");
+        const labelForm = document.getElementById("labelForm");
+        const labelFormInstructions = document.getElementById("labelFormInstructions");
+        const configModal = document.getElementById("printerOptionModal");
+
+        // And feed that into the app class to manage the elements
+        const app = new BasicLabelDesignerApp(printerMgr, btnContainer, labelForm, labelFormInstructions, configModal);
+        // and let it take over the UI.
+        await app.init();
+
+        // Now we'll fire the reconnect since our UI is wired up.
+        await printerMgr.reconnectAllPrinters();
+
+        // A couple of last minute things.
+        // This bit detects if the operating system is Windows and shows a little warning about the
+        // Windows print driver conflicting with WebUSB.
+        if (navigator.appVersion.indexOf('Win') != -1) {
+            document.getElementById('windowsDriverWarning').classList.remove('d-none');
+        }
+        // This bit detects if the browser supports WebUSB, displaying a warning if not.
+        if (navigator.usb == null) {
+            document.getElementById('browserNoWebUsb').classList.remove('d-none');
+        }
+    </script>
+    <row>
+        <div class="container-fluid">
+            <div class="col-md-9 offset-md-1" style="margin-top: 5px">
+                <div class="alert alert-warning alert-dismissible d-none" role="alert" id="windowsDriverWarning">
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    <h4>Windows may need extra configuration</h4>
+                    <p>It looks like your operating system is Windows. The <a href="https://web.dev/build-for-webusb/#windows">windows driver model conflicts with WebUSB</a> and might prevent this page from working with a printer.</p>
+                    <p>To make this demo work you'll need to <a href="https://cellivar.github.io/WebZLP/docs/windows_driver">set up your driver correctly</a>. You'll see errors in the developer console if it isn't configured correctly.</p>
+                </div>
+                <div class="alert alert-warning d-none" role="alert" id="browserNoWebUsb">
+                    <h4>Your browser doesn't support WebUSB</h4>
+                    <p>This demo uses WebUSB to function and your browser doesn't seem to have that available.</p>
+                </div>
+            </div>
+        </div>
+    </row>
+    <row>
+        <div class="container-fluid">
+            <div class="row" style="padding-top: 16px;">
+                <div class="col-3">
+                    <div class="d-grid gap-2 col-8 mx-auto mb-3">
+                        <div class="row">
+                            <div class="col-9">
+                                <button class="btn btn-primary" id="addprinter">➕ Add Printer</button>
+                            </div>
+                            <div class="col-3">
+                                <button class="btn btn-success" id="refreshPrinters">🔃</button>
+                            </div>
+                        </div>
+                    </div>
+                    <ol id="printerlist" class="list-group list-group-numbered">
+                    </ol>
+                </div>
+                <div class="col-9">
+                    <form id="labelForm" action="javascript:void(0);" class="d-none">
+                        <h5>Preview</h5>
+                        <canvas id="labelCanvas" width="584" height="160" style="border: 2px solid blue; background-color: white; margin-bottom: 10px;"></canvas>
+                        <h5>Input</h5>
+                        <textarea id="labelFormText" name="labelText" cols="40" rows="10" wrap="hard"
+                            style="font-family: monospace; resize: both;"
+                            placeholder="Enter your label text here!"></textarea>
+                    </form>
+                    <div id="labelFormInstructions">
+                        <p>Connect a printer to your computer, then click Add Printer!</p>
+                        <p>Once a printer is connected select it by clicking on it on the left.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </row>
     <div id="printerOptionModal" class="modal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -95,9 +523,16 @@
                                 <div class="col">
                                     <label for="modalLabelHeight" class="form-label">Label Height</label>
                                     <div class="input-group mb-3">
-                                        <input id="modalLabelHeight" type="text" class="form-control" placeholder="1.25"
-                                            aria-label="Height" required pattern="\d+\.*\d*">
+                                        <input id="modalLabelHeight" type="text" class="form-control" placeholder="2.25"
+                                            aria-label="Height" required pattern="\d+\.*\d*" readonly>
                                         <span id="modalLabelHeightText" class="input-group-text">in</span>
+                                    </div>
+                                </div>
+                                <div class="col">
+                                    <div class="form-check form-switch">
+                                        <input id="modalWithAutosense" type="checkbox" role="switch" class="form-check-input"
+                                            aria-label="RunAutosense">
+                                        <label for="modalWithAutosense" class="form-check-label">Perform autosense</label>
                                     </div>
                                 </div>
                             </div>
@@ -105,26 +540,11 @@
                         <div class="mb-3">
                             <div class="row">
                                 <div class="col row mb-3">
-                                    <label for="modalDarkness" class="col-sm-6 col-form-label">Darkness</label>
-                                    <div class="col-sm-6">
-                                        <div class="col-sm-7">
-                                            <select id="modalDarkness" class="form-select" aria-label="Darkness">
-                                                <option>1</option>
-                                                <option>2</option>
-                                                <option>3</option>
-                                                <option>4</option>
-                                                <option>5</option>
-                                                <option>6</option>
-                                                <option>7</option>
-                                                <option>8</option>
-                                                <option>9</option>
-                                                <option>10</option>
-                                                <option>11</option>
-                                                <option>12</option>
-                                                <option>13</option>
-                                                <option>14</option>
-                                                <option>15</option>
-                                            </select>
+                                    <label for="modalDarkness" class="col-sm-5 col-form-label">Darkness</label>
+                                    <div class="col-sm-7">
+                                        <div class="input-group col-sm-7">
+                                            <input type="number" min="1" max="99" id="modalDarkness" class="form-control" aria-label="Darkness"/>
+                                            <span class="input-group-text">%</span>
                                         </div>
                                     </div>
                                 </div>
@@ -132,10 +552,10 @@
                                     <label for="modalSpeed" class="col-sm-5 col-form-label">Speed</label>
                                     <div class="col-sm-7">
                                         <select id="modalSpeed" class="form-select" aria-label="Speed">
-                                            <option>1</option>
-                                            <option>2</option>
-                                            <option>3</option>
-                                            <option>4</option>
+                                            <option value="3">1.5 ips</option>
+                                            <option value="4">2 ips</option>
+                                            <option value="5">2.5 ips</option>
+                                            <option value="7">3.5 ips</option>
                                         </select>
                                     </div>
                                 </div>
@@ -143,1304 +563,13 @@
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button id="modalCancel" type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                         <input id="modalSubmit" type="submit" class="btn btn-primary" value="Save">
                     </div>
                 </form>
             </div>
         </div>
     </div>
-    <script>
-        // idb keyval wrapper
-        // https://github.com/jakearchibald/idb-keyval
-        function _typeof(n) { return (_typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (n) { return typeof n } : function (n) { return n && "function" == typeof Symbol && n.constructor === Symbol && n !== Symbol.prototype ? "symbol" : typeof n })(n) } !function (n, t) { "object" === ("undefined" == typeof exports ? "undefined" : _typeof(exports)) && "undefined" != typeof module ? t(exports) : "function" == typeof define && define.amd ? define(["exports"], t) : t((n = "undefined" != typeof globalThis ? globalThis : n || self).idbKeyval = {}) }(this, (function (n) { "use strict"; function t(n) { return new Promise((function (t, e) { n.oncomplete = n.onsuccess = function () { return t(n.result) }, n.onabort = n.onerror = function () { return e(n.error) } })) } function e(n, e) { var r, o = (!navigator.userAgentData && /Safari\//.test(navigator.userAgent) && !/Chrom(e|ium)\//.test(navigator.userAgent) && indexedDB.databases ? new Promise((function (n) { var t = function () { return indexedDB.databases().finally(n) }; r = setInterval(t, 100), t() })).finally((function () { return clearInterval(r) })) : Promise.resolve()).then((function () { var r = indexedDB.open(n); return r.onupgradeneeded = function () { return r.result.createObjectStore(e) }, t(r) })); return function (n, t) { return o.then((function (r) { return t(r.transaction(e, n).objectStore(e)) })) } } var r; function o() { return r || (r = e("keyval-store", "keyval")), r } function u(n, e) { return n("readonly", (function (n) { return n.openCursor().onsuccess = function () { this.result && (e(this.result), this.result.continue()) }, t(n.transaction) })) } n.clear = function () { var n = arguments.length > 0 && void 0 !== arguments[0] ? arguments[0] : o(); return n("readwrite", (function (n) { return n.clear(), t(n.transaction) })) }, n.createStore = e, n.del = function (n) { var e = arguments.length > 1 && void 0 !== arguments[1] ? arguments[1] : o(); return e("readwrite", (function (e) { return e.delete(n), t(e.transaction) })) }, n.delMany = function (n) { var e = arguments.length > 1 && void 0 !== arguments[1] ? arguments[1] : o(); return e("readwrite", (function (e) { return n.forEach((function (n) { return e.delete(n) })), t(e.transaction) })) }, n.entries = function () { var n = arguments.length > 0 && void 0 !== arguments[0] ? arguments[0] : o(), t = []; return u(n, (function (n) { return t.push([n.key, n.value]) })).then((function () { return t })) }, n.get = function (n) { var e = arguments.length > 1 && void 0 !== arguments[1] ? arguments[1] : o(); return e("readonly", (function (e) { return t(e.get(n)) })) }, n.getMany = function (n) { var e = arguments.length > 1 && void 0 !== arguments[1] ? arguments[1] : o(); return e("readonly", (function (e) { return Promise.all(n.map((function (n) { return t(e.get(n)) }))) })) }, n.keys = function () { var n = arguments.length > 0 && void 0 !== arguments[0] ? arguments[0] : o(), t = []; return u(n, (function (n) { return t.push(n.key) })).then((function () { return t })) }, n.promisifyRequest = t, n.set = function (n, e) { var r = arguments.length > 2 && void 0 !== arguments[2] ? arguments[2] : o(); return r("readwrite", (function (r) { return r.put(e, n), t(r.transaction) })) }, n.setMany = function (n) { var e = arguments.length > 1 && void 0 !== arguments[1] ? arguments[1] : o(); return e("readwrite", (function (e) { return n.forEach((function (n) { return e.put(n[1], n[0]) })), t(e.transaction) })) }, n.update = function (n, e) { var r = arguments.length > 2 && void 0 !== arguments[2] ? arguments[2] : o(); return r("readwrite", (function (r) { return new Promise((function (o, u) { r.get(n).onsuccess = function () { try { r.put(e(this.result), n), o(t(r.transaction)) } catch (n) { u(n) } } })) })) }, n.values = function () { var n = arguments.length > 0 && void 0 !== arguments[0] ? arguments[0] : o(), t = []; return u(n, (function (n) { return t.push(n.value) })).then((function () { return t })) }, Object.defineProperty(n, "__esModule", { value: !0 }) }));
-
-        class PrinterManager {
-            #devices = [];
-            #printers = [];
-
-            #printerType;
-            #activePrinter = 0;
-
-            constructor(printerType, btnContainer, labelForm, addPrinterBtn, configModal) {
-                this.#printerType = printerType;
-
-                this.btnContainer = btnContainer;
-                this.labelForm = labelForm;
-                this.labelTextarea = this.labelForm.querySelector('textarea');
-                this.labelTextarea.addEventListener('keyup', () => this.#limitTextArea());
-                this.labelTextarea.addEventListener('change', () => this.#limitTextArea());
-                this.labelForm.querySelector('#leftOffset').addEventListener('change', () => this.#resizeTextArea());
-                this.labelForm.querySelector('#leftOffset').addEventListener('keyup', () => this.#resizeTextArea());
-                this.labelForm.querySelector('#lineSpacing').addEventListener('change', () => this.#resizeTextArea());
-                this.labelForm.querySelector('#lineSpacing').addEventListener('keyup', () => this.#resizeTextArea());
-                this.labelForm.querySelector('#modalFont').addEventListener('change', () => this.#resizeTextArea());
-                this.labelForm.querySelector('#labelColor').addEventListener('change', () => this.#setLabelColor());
-
-                this.addPrinterBtn = addPrinterBtn;
-                addPrinterBtn.addEventListener('click', async (e) => this.printerPair(e));
-
-                this.configModal = configModal;
-                this.configModalHandle = new bootstrap.Modal(this.configModal);
-                this.configModal.querySelector('form').addEventListener('submit', async (e) => await this.updatePrinterConfig(e));
-
-                navigator.usb.addEventListener('connect', async (e) => this.printerConnect(e));
-                navigator.usb.addEventListener('disconnect', async (e) => this.printerDisconnect(e));
-            }
-
-            get printers() { return this.#printers; }
-
-            get activePrinter() { return this.#activePrinter; }
-            set activePrinter(value) {
-                this.#activePrinter = value;
-                const p = this.#printers[this.#activePrinter];
-                if (p) {
-                    this.labelForm.querySelector('#labelColor').value = p.labelColor;
-                }
-                this.#resizeTextArea();
-            }
-
-            async printForm(printerId) {
-                let form = new FormData(this.labelForm);
-                let rawText = form.get('labelText').replaceAll("\r", "");
-                let fontSize = parseInt(form.get('fontSize'));
-                let xOffset = parseInt(form.get('leftOffset'));
-                let lineSpacing = parseInt(form.get('lineSpacing'));
-                const printer = this.#printers[printerId];
-                const label = printer.getLabel();
-
-                label.setOffset(xOffset, 0).setFont(fontSize).setLineSpacing(lineSpacing);
-                rawText.split("\n").forEach(l => label.addText(l));
-                await printer.printLabel(label, 1);
-            }
-
-            async printerConnect(e) {
-                if (!this.#devices.includes(e.device)) {
-                    this.#devices.push(e.device);
-                    let printer = new this.#printerType(e.device);
-                    await printer.connect();
-                    this.#printers.push(printer);
-                }
-
-                this.resetPrinterButtons();
-                this.#resizeTextArea();
-            }
-
-            async printerDisconnect(e) {
-                const idx = this.#devices.findIndex(i => e.device == i);
-                if (idx > -1) {
-                    const p = this.#printers[idx];
-                    this.#devices.splice(idx, 1);
-                    this.#printers.splice(idx, 1);
-                    this.resetPrinterButtons();
-                    await p.dispose();
-                }
-            }
-
-            async printerPair(e) {
-                try {
-                    let device = await navigator.usb.requestDevice({
-                        filters: [
-                            { vendorId: this.#printerType.usbVendorId }
-                        ]
-                    });
-
-                    await this.printerConnect( { device : device} )
-                } catch (e) {
-                    console.log("Failed to connect to printer!");
-                    console.log(e);
-                    return;
-                }
-            }
-
-            async printerReloadAll() {
-                this.#devices = [];
-                this.#printers.forEach(p => p.dispose());
-                this.#printers = [];
-
-                navigator.usb.getDevices().then((printers) => {
-                    printers.forEach(async d => {
-                        await this.printerConnect( { device : d });
-                    });
-
-                    this.resetPrinterButtons();
-                    this.activePrinter = 0;
-                    this.#resizeTextArea();
-                });
-            }
-
-            #limitTextArea() {
-                const maxLines = this.labelTextarea.rows;
-                var currentLinesRendered = (new FormData(this.labelForm)).get('labelText').split('\n');
-
-                while (currentLinesRendered.length > maxLines) {
-                    this.labelTextarea.value = this.labelTextarea.value.slice(0, -1);
-                    currentLinesRendered = (new FormData(this.labelForm)).get('labelText').split('\n');
-                }
-
-                // if ((currentLines.length >= maxLines) || (currentLinesRendered >= maxLines)) {
-                //     let lines = currentLines.slice(0, maxLines);
-                //     this.labelTextarea.value = lines.join('\n');
-                // }
-            }
-
-            #resizeTextArea() {
-                let p = this.#printers[this.activePrinter];
-                if (!p) {
-                    return;
-                }
-
-                let form = new FormData(this.labelForm);
-                let fontSize = parseInt(form.get('fontSize'));
-                let xOffset = parseInt(form.get('leftOffset'));
-                let lineSpacing = parseInt(form.get('lineSpacing'));
-                xOffset = xOffset >= p.labelWidthDots ? p.labelWidthDots - 1 : xOffset;
-
-                let font = p.getLabel().fontSizes[fontSize];
-                // Columns in Chrome render a little funny so we subtract one
-                // to match the true print width, more or less.
-                let cols = Math.floor((p.labelWidthDots - xOffset) / font.x) - 1;
-                cols = cols < 1 ? 1 : cols;
-                let rows = Math.floor(p.labelHeightDots / (font.y + lineSpacing));
-                rows = rows < 1 ? 1 : rows;
-
-                this.labelTextarea.cols = cols;
-                this.labelTextarea.rows = rows;
-                this.labelTextarea.maxLength = rows * cols;
-
-                this.#limitTextArea();
-            }
-
-            #setLabelColor() {
-                const p = this.#printers[this.activePrinter];
-                let form = new FormData(this.labelForm);
-                p.labelColor = form.get('labelColor');
-                this.#drawPrinterButtonHighlights();
-            }
-
-            resetPrinterButtons() {
-                this.btnContainer.innerHTML = "";
-                this.#printers.forEach((printer, index) => this.#drawPrinterButton(printer, index));
-            }
-
-            showConfigModal(printer, index) {
-                this.configModal.querySelector('#modalPrinterIndex').value = index;
-                this.configModal.querySelector('#modalPrinterIndexText').textContent = printer.serial;
-                this.configModal.querySelector('#modalLabelWidth').value = printer.labelWidth;
-                this.configModal.querySelector('#modalLabelHeight').value = printer.labelHeight;
-                this.configModal.querySelector('#modalDarkness').value = printer.density;
-                this.configModal.querySelector('#modalSpeed').value = printer.speed;
-                this.configModalHandle.show();
-            }
-
-            async updatePrinterConfig(e) {
-                e.preventDefault();
-                const form = this.configModal.querySelector("form").elements;
-                let deviceId = form.modalPrinterIndex.value;
-                let printer = this.#printers[deviceId];
-
-                printer.labelWidth = (parseFloat(form.modalLabelWidth.value));
-                printer.labelHeight = (parseFloat(form.modalLabelHeight.value));
-                this.configModalHandle.hide();
-
-                await printer.configDensity(form.modalDarkness.value);
-                await printer.configSpeed(form.modalSpeed.value);
-                await printer.configLabelWidth();
-
-                this.activePrinter = deviceId;
-                this.resetPrinterButtons();
-            }
-
-            #drawPrinterButtonHighlights() {
-                this.#printers.forEach((printer, index) => {
-                    let element = document.getElementById(`printer_${index}`);
-                    let highlight = this.#activePrinter == index ? "var(--bs-blue)" : "transparent";
-                    element.style.background = `linear-gradient(to right, ${highlight}, ${highlight}, ${printer.labelColor}, ${printer.labelColor})`;
-                });
-            }
-
-            #drawPrinterButton(printer, index) {
-                let highlight = this.#activePrinter == index ? "var(--bs-blue)" : "transparent";
-                let element = document.createElement("div");
-                element.innerHTML = `
-    <li id="printer_${index}" data-device-id="${index}"
-        class="list-group-item d-flex flex-row justify-content-between sligh-items-start"
-        style="background: linear-gradient(to right, ${highlight}, ${highlight}, ${printer.labelColor}, ${printer.labelColor});">
-        <div class="col-sm-8">
-            <div class="col-sm-12">
-                <span data-serial="${printer.serial}">${printer.serial}</span>
-            </div>
-            <div class="col-sm-12">
-                <span>${printer.labelWidth}" x ${printer.labelHeight}"</span>
-            </div>
-        </div>
-        <div class="d-flex flex-row justify-content-end">
-            <div class="btn-group" role="group" aria-label="Printer button group">
-                <button id="printto_${index}" class="btn btn-success btn-lg" data-label-width="${printer.labelWidth}" data-label-height="${printer.labelHeight}" data-device-id="${index}">🖨</button>
-                    <button class="btn btn-success dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
-                        <span class="visually-hidden">Settings</span>
-                    </button>
-                    <ul class="dropdown-menu">
-                        <li><a id="printtest_${index}" data-device-id="${index}" class="dropdown-item" href="#">
-                            Print test page
-                        </a></li>
-                        <li><a id="autosense_${index}" data-device-id="${index}" class="dropdown-item" href="#">
-                            AutoSense length
-                        </a></li>
-                        <li><a id="configprinter_${index}" data-device-id="${index}" class="dropdown-item" href="#">
-                            Set label config
-                        </a></li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-    </li>`;
-                this.btnContainer.appendChild(element);
-
-                document.getElementById(`printer_${index}`)
-                    .addEventListener('click', async (e) => {
-                        e.preventDefault();
-                        let deviceId = e.currentTarget.dataset.deviceId;
-                        this.activePrinter = deviceId;
-                        this.#drawPrinterButtonHighlights();
-                    });
-
-                document.getElementById(`configprinter_${index}`)
-                    .addEventListener('click', async (e) => {
-                        e.preventDefault();
-                        let deviceId = e.target.dataset.deviceId;
-                        this.showConfigModal(this.#printers[deviceId], deviceId);
-                    });
-
-                document.getElementById(`printto_${index}`)
-                    .addEventListener('click', async (e) => {
-                        e.preventDefault();
-                        let deviceId = e.target.dataset.deviceId;
-                        this.printForm(deviceId);
-                    });
-
-                document.getElementById(`autosense_${index}`)
-                    .addEventListener('click', async (e) => {
-                        e.preventDefault();
-                        let deviceId = e.target.dataset.deviceId;
-                        await this.#printers[deviceId].configLabelWidth();
-                        await this.#printers[deviceId].setLabelHeightCalibration();
-                    });
-
-                document.getElementById(`printtest_${index}`)
-                    .addEventListener('click', async (e) => {
-                        e.preventDefault();
-                        let deviceId = e.target.dataset.deviceId;
-                        await this.#printers[deviceId].printTestPage();
-                    });
-            }
-        }
-
-        class LineBreakTransformer {
-            #container = '';
-
-            transform(chunk, controller) {
-                this.#container += chunk;
-                const lines = this.#container.split('\n');
-                this.#container = lines.pop();
-                lines.forEach(line => controller.enqueue(line));
-            }
-
-            flush(controller) {
-                controller.enqueue(this.#container);
-            }
-        }
-
-        class PrinterCommunicationMode {
-            static None = new PrinterCommunicationMode(false, false);
-            static Unidirectional = new PrinterCommunicationMode(true, false);
-            static Bidirectional = new PrinterCommunicationMode(true, true);
-
-            constructor(output, input){
-                this.output = output;
-                this.input = input;
-            }
-
-            static getCommunicationMode(output, input) {
-                if (output === undefined) {
-                    return PrinterCommunicationMode.None;
-                } else if (input === undefined) {
-                    return PrinterCommunicationMode.Unidirectional;
-                } else {
-                    return PrinterCommunicationMode.Bidirectional;
-                }
-            }
-        }
-
-        /**
-         * A label for use with EPL printers
-         */
-        class LabelEpl {
-            #rawCmdBuffer = [];
-            #fontNumber = "1";
-            #dpi;
-
-            // Temp holders on a per-label basis.
-            #xOffset = 0;
-            #yOffset = 0;
-
-            /**
-             * Create a new EPL-language label.
-             *
-             * @param (int) labelWidthDots - The width of the label in dots
-             * @param (int) labelHeightDots - The height of the label in dots
-             * @param (int) dpi - The DPI of the label.
-             * @param (int) lineSpacing - The number of dots between lines of text
-             * @param (string) color - The color of the label.
-             */
-            constructor(labelWidthDots, labelHeightDots, dpi, lineSpacing, color) {
-                this.labelWidthDots = labelWidthDots;
-                this.labelHeightDots = labelHeightDots;
-                this.#dpi = dpi;
-                this.lineSpacing = lineSpacing || 5;
-                this.color = color || "#FFFFFF";
-
-                this.addCmd("\nN");
-            }
-
-            /**
-             * Get the raw command buffer representing all of the operations of this label.
-             */
-            get rawCommandBuffer() {
-                const bufferLen = this.#rawCmdBuffer.reduce((sum, arr) => sum + arr.byteLength, 0);
-                const buffer = new Uint8Array(bufferLen);
-                this.#rawCmdBuffer.reduce((offset, arr) => {
-                    buffer.set(arr, offset);
-                    return arr.byteLength + offset;
-                }, 0);
-
-                return buffer;
-            }
-
-            /**
-             * Get the ASCII text representation of the operations of this label. Only useful for debugging.
-             */
-            get commandBuffer() {
-                return new TextDecoder("ascii").decode(this.rawCommandBuffer);
-            }
-
-            /**
-             * Get the built-in font size info for this label's DPI.
-             */
-            get fontSizes() {
-                switch (this.#dpi) {
-                    default:
-                        console.error("Unknown DPI requested for font size! " + dpi);
-                        return;
-                    case 203:
-                        return {
-                            // Each character has 2 dots of inter-character space added
-                            // between each character and one dot added for vertical
-                            // Note that the font sizes here do not correspond to the
-                            // documentation, they were discovered through trial and error
-                            // They are zero-height as line spacing must be handled manually
-                            // while character spacing is automatic.
-                            // And yes font 4 is somewhere beween 16 and 17 characters wide.
-                            // 16.2 seems to be stable over the full 4" print width.
-                            "1": { "y": 10, "x": 10 },
-                            "2": { "y": 14, "x": 12 },
-                            "3": { "y": 16, "x": 14 },
-                            "4": { "y": 20, "x": 16.2 },
-                            "5": { "y": 48, "x": 36 },
-                            "6": { "y": 19, "x": 16 },
-                            "7": { "y": 19, "x": 16 },
-                        };
-                }
-            }
-
-            /**
-             * Complete a label. Must be called to print the label.
-             *
-             * @param (int) count - The number of labels to print, 1 or higher.
-             */
-            end(count) {
-                count = Math.trunc(count) || 1;
-                count = (count < 1) ? 1 : count;
-
-                return this.addCmd(`P${count}`);
-            }
-
-            /**
-             * Set the font to be used for subsequent text commands
-             *
-             * @param (int) fontNumber - The font to use. See the font docs for details. 1-5.
-             */
-            setFont(fontNumber) {
-                fontNumber = Math.trunc(fontNumber) || 1;
-
-                if (fontNumber < 1 || fontNumber > 7) {
-                    console.log("Invalid font size! Defaulting to 1");
-                    this.#fontNumber = 1;
-                    return;
-                }
-
-                this.#fontNumber = fontNumber;
-                return this;
-            }
-
-            /**
-             * Change the current offset from the top-left of the label
-             *
-             * @param (int) x - Horizontal offset to the right
-             * @param (int) y - Vertical offset down from the top
-             */
-            setOffset(x, y) {
-                this.#xOffset = Math.trunc(x) || 0;
-
-                if (y !== undefined) {
-                    this.#yOffset = Math.trunc(y) || 0;
-                }
-                return this;
-            }
-
-            /**
-             * Set the line spacing between added lines of text.
-             *
-             * @param (int) dots - The size in dots to add.
-             */
-            setLineSpacing(dots) {
-                this.lineSpacing = Math.trunc(dots);
-                return this;
-            }
-
-            /**
-             * Reset the offsets to 0.
-             */
-             clearOffsets() {
-                this.#xOffset = 0;
-                this.#yOffset = 0;
-                return this;
-            }
-
-            /**
-             * Draw an image into the buffer.
-             *
-             * @param (ImageData) imageData - An ImageData object, see Canvas.getImageData.
-             */
-             addImage(imageData) {
-                // Only supports sRGB as RGBA data.
-                if (imageData.colorSpace !== "srgb") {
-                    console.error("Unknown color space for given imageData! Expected srgb but got " + imageData.colorSpace);
-                    return;
-                }
-
-                // TODO: Figure out how to add padding to ensure the image width
-                // lands on an 8 byte boundary. Right now it'll just end up truncating
-                // the extra data on each line which is not ideal.
-
-                // RGBA data gets compressed down to 1 bit, then packed into a byte array.
-                // Note that the passed in width and height aren't relevant here, just
-                // what the imageData says.
-                const buffer = new Uint8Array(imageData.height * imageData.width / 8);
-                const d = imageData.data;
-
-                // If the grayscale version of the pixel + alpha is above this
-                // value treat it as white, else black.
-                const threshold = 200;
-
-                for (var y = 0; y < imageData.height; y++) {
-                    for (var x = 0; x < imageData.width; x++) {
-                        let o = (y * imageData.width * 4) + (x * 4);
-                        let gray = Math.min(Math.pow((Math.pow(d[o]/255.0,2.2)*0.2126+Math.pow(d[o + 1]/255.0,2.2)*0.7152+Math.pow(d[o + 2]/255.0,2.2)*0.0722),0.454545)*255)
-                        let alpha = d[o + 3] / 255;
-                        let grayAlpha = ((1 - alpha) * 255) + (alpha * gray);
-                        let bit = (grayAlpha > threshold ? 1 : 0) << (7 - x % 8);
-
-                        buffer[(y * imageData.width / 8) + Math.floor(x / 8)] |= bit;
-                    }
-                }
-
-                let parameters = ["GW" + this.#xOffset, this.#yOffset, Math.trunc(imageData.width / 8), imageData.height];
-                this.addRawCmd(new TextEncoder().encode(parameters.join(',') + ','));
-                this.addRawCmd(buffer);
-                this.addCmd("");
-
-                this.#yOffset += imageData.height;
-
-                return this;
-            }
-
-            /**
-             * Add text, advancing the yOffset by the font height + line spacing.
-             *
-             * @param (string) text - The text to add
-             * @param (int) size - The size to scale the font, 1-6
-             *
-             * @example
-             *     addText("Hello world!", 1)
-             */
-            addText(text, size) {
-                text = text || "";
-                size = Math.trunc(size) || 1;
-
-                // Font size 5 only supports uppercase letters.
-                if (this.fontSize == 5) {
-                    text = text.toUpperCase();
-                }
-
-                this.#addTextRaw(this.#xOffset, this.#yOffset, 0, this.#fontNumber, size, size, false, text);
-
-                let textHeight = (size * this.fontSizes[this.#fontNumber]["y"]);
-                this.#yOffset += Math.trunc(textHeight + this.lineSpacing);
-
-                return this;
-            }
-
-            /**
-             * Add text centered on the label, advancing the yOffset by the font height + line spacing.
-             *
-             * @param (string) text - The text to add
-             * @param (int) size - The size to scale the font, 1-6
-             *
-             * @example
-             *     addTextCentered("Hello world!", 1)
-             */
-            addTextCentered(text, size) {
-                text = text || "";
-                size = Math.trunc(size) || 1;
-
-                // Font size 5 only supports uppercase letters.
-                if (this.fontSize == 5) {
-                    text = text.toUpperCase();
-                }
-
-                // Width = string length * character width * char size stretch
-                let textWidth = (text.length * size * this.fontSizes[this.#fontNumber]["x"]);
-                let centerOffset = Math.trunc((this.labelWidthDots - textWidth) / 2);
-
-                this.#addTextRaw(centerOffset, this.#yOffset, 0, this.#fontNumber, size, size, false, text);
-
-                let textHeight = (size * this.fontSizes[this.#fontNumber]["y"]);
-                this.#yOffset += Math.trunc(textHeight + this.lineSpacing);
-
-                return this;
-            }
-
-            /**
-             * Draw a line, starting at the current offset and going for length and height.
-             *
-             * @param (int) length - The horizontal length of the line
-             * @param (int) height - The vertical height of the line
-             * @param (string) drawmode - The mode to draw with, either 'black' (default), 'white', or 'xor'.
-             */
-            addLine(length, height, drawmode) {
-                length = Math.trunc(length) || 0;
-                height = Math.trunc(height) || 0;
-
-                switch (drawmode) {
-                    default:
-                    case "black":
-                        drawmode = "LO";
-                        break;
-                    case "white":
-                        drawmode = "LW";
-                        break;
-                    case "xor":
-                        drawmode = "LE";
-                        break;
-                }
-
-                this.addCmd(drawmode + this.#xOffset, this.#yOffset, length, height);
-
-                return this;
-            }
-
-            /**
-             * Draw a box
-             *
-             * @param (int) length - The width of the box to draw
-             * @param (int) height - The height of the box to draw
-             * @param (int) thickness - The thickness of the box's lines
-             */
-            addBox(length, height, thickness) {
-                length = Math.trunc(length) || 0;
-                height = Math.trunc(height) || 0;
-                thickness = Math.trunc(thickness) || 0;
-
-                this.addCmd("X" + this.#xOffset, this.#yOffset, thickness, length, height);
-                return this;
-            }
-
-            /**
-             * Add command to the command buffer, concatenating given parameters with a comma.
-             *
-             * @param (array) parameters - The command and parameters to add, first element should be the command and the first parameter.
-             *
-             * @example
-             * addCmd("A10", 10, 0, 1, 1, 1, "N", "Hello World!");
-             */
-            addCmd(...parameters) {
-                this.addRawCmd(new TextEncoder().encode(parameters.join(',') + "\n"));
-                return this;
-            }
-
-            /**
-             * Add a raw byte array to the command buffer.
-             *
-             * @param (Uint8Array) array - Array of ASCII characters for the command to add.
-             */
-            addRawCmd(array) {
-                this.#rawCmdBuffer.push(array);
-                return this;
-            }
-
-            /**
-             * Empty the command buffer and re-add the initial clear image buffer command.
-             */
-            clearCommandBuffer() {
-                this.#rawCmdBuffer = [];
-                this.addCmd("\nN");
-                return this;
-            }
-
-            #addTextRaw(xOffset, yOffset, rotation, font, xMultiplier, yMultiplier, reverse, data) {
-                data = this.#cleanString((data || ""));
-                let reverseImage = (reverse || false) ? "R" : "N";
-
-                if (!Number.isInteger(rotation) || rotation < 0 || rotation > 3) {
-                    rotation = 0;
-                }
-
-                xMultiplier = ((xMultiplier >= 1 && xMultiplier <= 6) || xMultiplier === 8) ? xMultiplier : 1;
-                yMultiplier = ((yMultiplier >= 1 && yMultiplier <= 9)) ? yMultiplier : 1;
-
-                this.addCmd("A" + xOffset, yOffset, rotation, font, xMultiplier, yMultiplier, reverseImage, "\"" + data + "\"");
-            }
-
-            #cleanString(str) {
-                return str.replace(/\\/gi, "\\\\")
-                    .replace(/"/gi, "\\\"")
-                    .replace(/[\r\n]+/gi, " ");
-            }
-        }
-
-        class lp2844 {
-            #inputStream;
-            #nextLineCache;
-            #device;
-            #deviceOut;
-            #deviceIn;
-
-            #serialNumber;
-            #modelNumber;
-            #firmware;
-            #doubleBuffering;
-            #commMode = PrinterCommunicationMode.None;
-
-            #rawCmdBuffer = [];
-
-            #speed = 4;
-            #density = 8;
-
-            // LP 2844 has a 203 DPI print head
-            #dpi = 203;
-            #labelType = LabelEpl;
-
-            #labelWidthIn;
-            #xLabel;
-            #labelHeightIn;
-            #yLabel;
-            #labelGapIn;
-            #gLabel;
-
-            /**
-             * Create a new instance of the LP2844 class.
-             *
-             * @param device - The WebUSB device object representing the printer.
-             * @param (int) lineSpacing - Additional dots to place between lines.
-             * @param (float) labelDimensionRoundingStep - The nearest fraction of an inch to round label dimensions to.
-             */
-            constructor(device, lineSpacing, labelDimensionRoundingStep) {
-                this.#device = device; // The USB device to work with
-
-                this.labelColor = "#FFFFFF" // Handy to store, not actually used anywhere
-
-                // Additional spacing between lines of text, in dots.
-                this.lineSpacing = lineSpacing || 0;
-
-                // Debug flag for dumping commands to the console before sending
-                // to the printer
-                this.debug = true;
-
-                // The value to round read-from-config label sizes to.
-                // Configuration values can often be slightly off from the
-                // human-readable value, so this normalizes them.
-                // Most labels come in 0.25" increments, if your labels are a different
-                // fraction then set the appropriate rounding fraction.
-                this.labelDimensionRoundingStep = labelDimensionRoundingStep || 0.25;
-            }
-
-            // LP 2844 and variants use this USB vendor ID
-            static get usbVendorId() { return 0x0a5f; }
-
-            get communicationMode() { return this.#commMode }
-            get dpi() { return this.#dpi; }
-            get serial() { return this.#serialNumber; }
-            get firmware() { return this.#firmware; }
-            get modelId() { return this.#modelNumber; }
-
-            get rawCommandBuffer() {
-                const bufferLen = this.#rawCmdBuffer.reduce((sum, arr) => sum + arr.byteLength, 0);
-                const buffer = new Uint8Array(bufferLen);
-                this.#rawCmdBuffer.reduce((offset, arr) => {
-                    buffer.set(arr, offset);
-                    return arr.byteLength + offset;
-                }, 0);
-
-                return buffer;
-            }
-
-            get commandBuffer() {
-                return new TextDecoder("ascii").decode(this.rawCommandBuffer);
-            }
-
-            get labelWidth() { return this.#labelWidthIn; }
-            set labelWidth(value) {
-                this.#labelWidthIn = value;
-                this.#xLabel = Math.trunc(value * this.#dpi);
-            }
-            get labelWidthDots() { return this.#xLabel; }
-
-            get labelHeight() { return this.#labelHeightIn; }
-            set labelHeight(value) {
-                this.#labelHeightIn = value;
-                this.#yLabel = Math.trunc(value * this.#dpi);
-            }
-            get labelHeightDots() { return this.#yLabel; }
-
-            get speed() { return this.#speed; }
-            get density() { return this.#density; }
-
-            /**
-             * Get a label based on this printer's configuration.
-             */
-            getLabel() {
-                return new LabelEpl(this.#xLabel, this.#yLabel, this.#dpi, this.lineSpacing, this.color);
-            }
-
-            /**
-             * Clear the image buffer. Must be called before printing a new label.
-             */
-            clearImageBuffer() {
-                return this.addCmd("\nN");
-            }
-
-            /**
-             * Add a P command. Must be called to print a label.
-             *
-             * @param (int) count - The number of labels to print, 1 or higher.
-             */
-            addPrintCmd(count) {
-                count = Math.trunc(count) || 1;
-                count = (count < 1) ? 1 : count;
-
-                return this.addCmd(`P${count}`);
-            }
-
-            /**
-             * Buffer a label's commands into the command buffer. Handy for batches! Does not add a print command.
-             *
-             * @param label - The label to load into the command buffer.
-             */
-            bufferLabel(label) {
-                if (!(label instanceof (this.#labelType))) {
-                    console.log(`Printer can only print ${this.#labelType} labels.`);
-                }
-
-                this.addRawCmd(label.rawCommandBuffer);
-
-                return this;
-            }
-
-            /**
-             * Print a label
-             *
-             * @param label - The label to print.
-             * @param (int) count - The number of copies to print.
-             */
-            async printLabel(label, count) {
-                this.bufferLabel(label);
-                this.addPrintCmd(count);
-
-                await this.print();
-            }
-
-            /**
-             * Send the commands in the command buffer to the printer, clearing the buffer.
-             */
-            async print() {
-                console.debug("Sending print command to printer..");
-                if (this.debug) {
-                    console.debug(this.commandBuffer);
-                }
-                try {
-                    await this.#device.transferOut(this.#deviceOut.endpointNumber, this.rawCommandBuffer);
-                    console.debug("Completed sending print command.");
-                } catch (e) {
-                    console.error(`Print error: ${e.name}: ${e.message}`);
-                } finally {
-                    this.clearCommandBuffer();
-                }
-            }
-
-            /**
-             * Feed a blank label.
-             */
-            async feed() {
-                this.clearImageBuffer().addPrintCmd().print();
-            }
-
-            /**
-             * Set up the printer connection. Must be done before calling any
-             * other methods.
-             */
-            async connect(debugByLoggingPrinterToConsole) {
-                const d = this.#device;
-
-                // Each printer will have one input and one output interface
-                // Go find them.
-                let o, i;
-                for (let endpoint of d.configuration.interfaces[0].alternates[0].endpoints) {
-                    if (endpoint.direction == 'out') {
-                        o = endpoint;
-                    } else if (endpoint.direction == 'in') {
-                        i = endpoint;
-                    }
-                }
-
-                if (!o) {
-                    console.error("Failed to find an output for printer, cannot communicate!");
-                } else {
-                    this.#deviceOut = o;
-                }
-
-                if (!i) {
-                    console.warn("Failed to find an input endpoint for printer, using unidirectinal mode.");
-                } else {
-                    this.#deviceIn = i;
-                }
-
-                this.#commMode = PrinterCommunicationMode.getCommunicationMode(this.#deviceOut, this.#deviceIn);
-                if (this.#commMode === PrinterCommunicationMode.None) {
-                    // Can't talk to the printer so don't try.
-                    return;
-                }
-
-                // And wire 'em up!
-                await d.open();
-                await d.selectConfiguration(1);
-                await d.claimInterface(0);
-
-                if (this.#commMode === PrinterCommunicationMode.Bidirectional) {
-                    this.#inputStream = new ReadableStream({
-                        pull: async (controller) => {
-                            const result = await this.#device.transferIn(this.#deviceIn.endpointNumber, 64);
-                            const chunk = new Uint8Array(result.data.buffer, result.data.byteOffset, result.data.byteLength);
-                            controller.enqueue(chunk);
-                        },
-                    }).pipeThrough(new TextDecoderStream())
-                    .pipeThrough(new TransformStream(new LineBreakTransformer()));
-
-                    // Test the connection by pulling the current configuration.
-                    await this.configGetFromPrinter();
-
-                    if (debugByLoggingPrinterToConsole) {
-                        // Whatever messages arrive will be dumped straight to the
-                        // console. Note that this eats up the incoming data so
-                        // other listening commands won't work while this is active.
-                        this.#listenForDataAndConsoleLogAlways();
-                    }
-                } else {
-                    this.#serialNumber = "Manual Setup";
-                }
-
-                return this.#commMode;
-            }
-
-            /**
-             * Get the current configuration from the printer, overwriting any
-             * uncommitted configuration changes.
-             */
-            async configGetFromPrinter() {
-                var config;
-                var validConfig = false;
-                var retryLimit = 3;
-                do {
-                    retryLimit--;
-
-                    // Start listening for the response we're about to generate
-                    let listenResult = this.#listenForData();
-
-                    await this.clearImageBuffer().addCmd("UQ").print();
-
-                    let rawText = await listenResult;
-                    config = this.#parseConfigInquiry(rawText);
-
-                    if (this.debug) {
-                        console.debug(config);
-                    }
-
-                    // All firmwares return these values, if they failed to parse
-                    // out for any reason it means we got an error reading the
-                    // config and we should try again.
-                    validConfig = config.hasOwnProperty("labelWidthDots") &&
-                        config.hasOwnProperty("firmware") &&
-                        config.hasOwnProperty("speed");
-                } while (!validConfig && retryLimit > 0)
-
-                this.#density = config.density;
-                this.#doubleBuffering = config.doubleBuffering;
-                this.#speed = config.speed;
-                this.#serialNumber = config.serial;
-                this.#firmware = config.firmware;
-                this.#gLabel = config.labelGapDots;
-
-                let rawX = config.labelWidthDots / this.#dpi;
-                let rawY = config.labelHeightDots / this.#dpi;
-                let inverse = 1.0 / this.labelDimensionRoundingStep
-
-                this.labelWidth = Math.round(rawX * inverse) / inverse;
-                this.labelHeight = Math.round(rawY * inverse) / inverse;
-            }
-
-            /**
-             * Parse the configuration coming from the printer
-             */
-            #parseConfigInquiry(rawText) {
-                const lines = rawText
-                    .replaceAll('\r', '')
-                    .split('\n')
-                    .filter(i => i);
-
-                // UKQ1935HLU     V4.29    # ID code and firmware version
-                // First line determines firmware version to read and is consistent
-                // across observed dumps.
-                const header = lines[0].split(' ').filter(i => i);
-                // First element is always the model ID
-                const modelId = header[0];
-                // Header may include "FDX", indicating a nonstandard unit.
-                // We ignore this and jump to the last element, which will be
-                // the firmware version
-                const firmware = header[header.length - 1];
-
-                let result = {
-                    model: modelId,
-                    firmware: firmware,
-                    serial: "no_serial"
-                };
-
-                // All the rest of these follow some kind of standard pattern for
-                // each value which we can pick up with regex. The cases here are
-                // built out of observed configuration dumps.
-                for (let i = 1; i < lines.length; i++) {
-                    let str = lines[i]
-                    switch (true) {
-                        case /^S\/N.*/.test(str):
-                            // S/N: 42A000000000       # Serial number
-                            result.serial = str.substring(5).trim();
-                            break;
-                        case /^Serial\sport/.test(str):
-                            // Serial port:96,N,8,1    # Serial port config
-                            result.serialPort = str.substring(12).trim();
-                            break;
-                        case /^q\d+\sQ/.test(str):
-                            // q600 Q208,25            # Form width (q) and length (Q). See those commands.
-                            let settingsForm = str.trim().split(' ');
-                            let length = settingsForm[1].split(',');
-                            result.labelWidthDots = parseInt(settingsForm[0].substring(1));
-                            result.labelHeightDots = parseInt(length[0].substring(1));
-                            result.labelGapDots = parseInt(length[1].trim());
-                            break;
-                        case /^S\d\sD\d\d\sR/.test(str):
-                            // S4 D08 R112,000 ZB UN   # Config settings 2
-                            let settings2 = str.trim().split(' ');
-                            let ref = settings2[2].split(',');
-                            result.speed = parseInt(settings2[0].substring(1));
-                            result.density = parseInt(settings2[1].substring(1));
-                            result.xRef = parseInt(ref[0].substring(1));
-                            result.yRef = parseInt(ref[1]);
-                            break;
-                        case /^I\d,.,\d\d\d\sr[YN]/.test(str):
-                            // I8,A,001 rY JF WY       # Config settings 1
-                            let settings1 = str.split(' ');
-                            result.doubleBuffering = settings1[1][1] === 'Y'
-                            break;
-                        case /^HEAD\s\s\s\susage\s=/.test(str):
-                            // HEAD    usage =     249,392"    # Odometer of the head
-                            let headsplit = str.substring(15).split(' ');
-                            result.headDistanceIn = headsplit[headsplit.length - 1];
-                            break;
-                        case /^PRINTER\susage\s=/.test(str):
-                            // PRINTER usage =     249,392"    # Odometer of the printer
-                            let printsplit = str.substring(15).split(' ');
-                            result.printerDistanceIn = printsplit[printsplit.length - 1];
-                            break;
-                        case /^\d\d\s\d\d\s\d\d\s$/.test(str):
-                            // 06 10 14                # AutoSense settings, see below
-                        case /^oE.,/.test(str):
-                            // oEv,w,x,y,z             # Config settings 4, see below
-                        case /^Option:/.test(str):
-                            // Option:D,Ff             # Config settings 3, see below
-                        case /^Emem:/.test(str):
-                            // Emem:031K,0037K avl     # Soft font storage
-                        case /^Gmem:/.test(str):
-                            // Gmem:000K,0037K avl     # Graphics storage
-                        case /^Fmem:/.test(str):
-                            // Fmem:000.0K,060.9K avl  # Form storage
-                        case /^Emem used:/.test(str):
-                            // Emem used: 0     # Soft font storage
-                        case /^Gmem used:/.test(str):
-                            // Gmem used: 0            # Graphics storage
-                        case /^Fmem used:/.test(str):
-                            // Fmem used: 0 (bytes)    # Form storage
-                        case /^Available:/.test(str):
-                            // Available: 130559       # Total memory for Forms, Fonts, or Graphics
-                        case /^Cover:/.test(str):
-                            // Cover: T=118, C=129     # (T)reshold and (C)urrent Head Up (open) sensor.
-                        case /^Image buffer size:/.test(str):
-                            // Image buffer size:0245K # Image buffer size in use
-                        case /^Page\sMode/.test(str):
-                            // Page mode               # Printer is in page mode
-                            // These are status details and are uninteresting, so we skip them.
-                            break;
-                        default:
-                            console.log("Unhandled config line '" + str + "', consider reporting a bug!");
-                            break;
-                    }
-                }
-
-                return result;
-            }
-
-            async #nextLine() {
-                if (this.#nextLineCache) {
-                    const line = this.#nextLineCache;
-                    this.#nextLineCache = null;
-                    return line;
-                }
-
-                let timedOut = false;
-                const nextLinePromise = (async () => {
-                    const reader = this.#inputStream.getReader();
-                    const { value, done } = await reader.read();
-                    reader.releaseLock();
-
-                    if (done) {
-                        return;
-                    }
-
-                    if (timedOut) {
-                        this.#nextLineCache = value;
-                        return;
-                    }
-
-                    return value;
-                })();
-
-                const timeoutPromise = new Promise((resolve) => {
-                    setTimeout(() => {
-                        timedOut = true;
-                        resolve();
-                    }, 200);
-                });
-
-                return Promise.race([nextLinePromise, timeoutPromise]);
-            }
-
-            async #listenForDataAndConsoleLogAlways() {
-                while (true) {
-                    const line = await this.#nextLine();
-                    console.log("PRINTER SAYS TEXT IN SINGLE QUOTES\n'" + line + "'");
-                }
-            }
-
-            async #listenForData() {
-                let aggregate = "";
-                while (true) {
-                    const line = await this.#nextLine();
-                    if (line === undefined) {
-                        return aggregate;
-                    }
-                    aggregate += line + '\n';
-                }
-            }
-
-            /**
-             * Disconnect from the printer. Further commands will fail. Create a
-             * new instance instead of trying to re-use this one after disposal.
-             */
-            async dispose() {
-                await this.#device.close();
-            }
-
-            /**
-             * Draw a test pattern that looks like
-             * ████████████
-             * ███
-             *    ███
-             *       ███
-             *          ███
-             * ////////////
-             */
-            async printTestPage() {
-                await this.configLabelWidth();
-
-                const label = this.getLabel();
-
-                let quarter = (label.labelWidthDots / 4);
-                let lineHeight = 20;
-
-                label.setOffset(0, 0)
-                    .addLine(label.labelWidthDots, lineHeight * 2)
-                    .setOffset(0, lineHeight * 2)
-                    .addLine(quarter, lineHeight)
-                    .setOffset(quarter, lineHeight * 3)
-                    .addLine(quarter, lineHeight)
-                    .setOffset(quarter * 2, lineHeight * 4)
-                    .addLine(quarter, lineHeight)
-                    .setOffset(quarter * 3, lineHeight * 5)
-                    .addLine(quarter, lineHeight)
-                    .setOffset(0, lineHeight * 6);
-
-                let slashStart = (lineHeight * 6) + 5;
-                let slashHeight = 8;
-                for (let i = 0; i <= label.labelWidthDots; i += 4) {
-                    label.setOffset(i + 0, slashStart + 0)
-                        .addLine(1, slashHeight)
-                        .setOffset(i + 1, slashStart + slashHeight)
-                        .addLine(1, slashHeight)
-                        .setOffset(i + 2, slashStart + (slashHeight * 2))
-                        .addLine(1, slashHeight)
-                        .setOffset(i + 3, slashStart + (slashHeight * 3))
-                        .addLine(1, slashHeight)
-                }
-                await this.printLabel(label, 1);
-            }
-
-            /**
-             * Send the configured label width to the printer
-             */
-            async configLabelWidth() {
-                await this.clearImageBuffer().addCmd("q" + this.#xLabel).print();
-            }
-
-            /**
-             * Perform an autocalibration for the label length
-             */
-            async setLabelHeightCalibration() {
-                await this.clearImageBuffer().addCmd("xa").print();
-            }
-
-            /**
-             * Configure the density (darkness) of the print.
-             *
-             * @param (int) density - 0 (light) through 15 (dark) print density.
-             */
-            async configDensity(density) {
-                density = parseInt(density) || 8;
-                density = (density < 0 || density > 15) ? 8 : density;
-
-                await this.clearImageBuffer().addCmd("D" + density).print();
-            }
-
-            /**
-             * Reset the printer, same as turning it off and on.
-             */
-            async configReset(){
-                await this.clearImageBuffer().addCmd("^@").print();
-            }
-
-            /**
-             * Set the direction the label prints (top to bottom or bottom to top)
-             *
-             * @param (bool) upsideDown - True to print upside down, otherwise rightside up.
-             */
-            async configPrintDirection(upsideDown) {
-                upsideDown = upsideDown || false;
-                let dir = upsideDown ? "T" : "B"
-                await this.clearImageBuffer().addCmd("Z" + dir).print();
-            }
-
-            /**
-             * Configure the speed of the print.
-             *
-             * @param (int) speed - 1 (slow) to 4 (fast) print speed.
-             */
-            async configSpeed(speed) {
-                speed = parseInt(speed) || 4;
-                speed = (speed < 1 || speed > 4) ? 4 : speed;
-
-                await this.clearImageBuffer().addCmd("S" + speed).print();
-            }
-
-            /**
-             * Add command, concatenating given parameters with a comma.
-             *
-             * @param (array) parameters - The command and parameters to add, first element should be the command and the first parameter.
-             *
-             * @example
-             * addCmd("A10", 10, 0, 1, 1, 1, "N", "Hello World!");
-             */
-            addCmd(...parameters) {
-                this.addRawCmd(new TextEncoder().encode(parameters.join(',') + "\n"));
-                return this;
-            }
-
-            /**
-             * Add a raw byte array to the command buffer.
-             *
-             * @param (Uint8Array) array - Array of ASCII characters for the command to add.
-             */
-            addRawCmd(array) {
-                this.#rawCmdBuffer.push(array);
-                return this;
-            }
-
-            /**
-             * Empty the command buffer.
-             */
-            clearCommandBuffer() {
-                this.#rawCmdBuffer = [];
-                return this;
-            }
-        }
-
-        var printerMgr;
-
-        document.addEventListener('readystatechange', function (event) {
-            if (document.readyState === "complete") {
-
-                const btnContainer = document.getElementById("printerlist");
-                const labelForm = document.getElementById("labelForm");
-                const addPrinterBtn = document.getElementById("addprinter");
-                const modalElement = document.getElementById("printerOptionModal");
-                printerMgr = new PrinterManager(lp2844, btnContainer, labelForm, addPrinterBtn, modalElement);
-
-                printerMgr.printerReloadAll();
-
-                let c = document.getElementById("canvas").getContext('2d');
-
-                let fontName = "emojisymbols";
-
-                // EmojiSymbols Font (c)blockworks - Kenichi Kaneko http://emojisymbols.com/
-                let font = new FontFace(fontName, 'url(fonts/EmojiSymbols-Regular.woff)');
-                font.load().then(() => {
-                    document.fonts.add(font);
-                    c.font = `72pt ${fontName}`;
-                    c.imageSmoothingEnabled = false;
-                    //c.fillStyle = "#FFFFFF";
-                    c.fillText("👏", 0, 100);
-                    c.font = '24pt Sans-serif';
-                    c.fillText("BOTTOM TEXT", 100, 130);
-                });
-            }
-        });
-    </script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.10.2/dist/umd/popper.min.js"
         integrity="sha384-7+zCNj/IqJ95wo16oMtfsKbZ9ccEh31eOz1HGyDuCQ6wgnyJNSYdrPa03rtR1zdB"
         crossorigin="anonymous"></script>
