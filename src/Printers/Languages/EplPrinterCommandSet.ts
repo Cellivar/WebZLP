@@ -11,7 +11,7 @@ import { PrinterModel, PrinterModelDb } from '../Models/PrinterModel';
 import { DocumentValidationError, PrinterCommandSet } from './PrinterCommandSet';
 import * as Commands from '../../Documents/Commands';
 import { match, P } from 'ts-pattern';
-import { NumericRange } from '../../NumericRange';
+import { DarknessPercent } from '../../NumericRange';
 import { PrinterCommunicationOptions } from '../Communication/PrinterCommunication';
 
 /** Command set for communicating with an EPL II printer. */
@@ -279,7 +279,7 @@ export class EplPrinterCommandSet extends PrinterCommandSet {
         const options = new PrinterOptions(printerInfo.serial, expectedModel, printerInfo.firmware);
 
         const rawDarkness = Math.ceil(labelInfo.density * (100 / expectedModel.maxDarkness));
-        options.darknessPercent = Math.max(0, Math.min(rawDarkness, 99)) as NumericRange<0, 99>;
+        options.darknessPercent = Math.max(0, Math.min(rawDarkness, 99)) as DarknessPercent;
 
         options.speed = new PrintSpeedSettings(options.model.fromRawSpeed(printerInfo.speed));
 
@@ -333,16 +333,17 @@ export class EplPrinterCommandSet extends PrinterCommandSet {
             options.mediaPrintMode = MediaPrintMode.peelWithButtonTap;
         }
 
-        // TODO: morehardware options:
+        // TODO: more hardware options:
         // - Form feed button mode (Ff, Fr, Fi)
         // - Figure out what reverse gap sensor mode S means
         // - Figure out how to encode C{num} for cut-after-label-count
 
         // TODO other options:
         // Autosense settings?
-        // Print orientation?
         // Character set?
         // Error handling?
+        // Continuous media?
+        // Black mark printing?
 
         return options;
     }

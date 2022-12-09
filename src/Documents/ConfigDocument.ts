@@ -1,4 +1,4 @@
-import { NumericRange } from '../NumericRange';
+import { DarknessPercent } from '../NumericRange';
 import * as Commands from './Commands';
 import { PrinterOptions, PrintSpeed } from '../Printers/Configuration/PrinterOptions';
 import { WebZlpError } from '../WebZlpError';
@@ -46,7 +46,7 @@ export class ConfigDocumentBuilder
 
     ///////////////////// ALTER PRINTER CONFIG
 
-    setDarknessConfig(darknessPercent: NumericRange<1, 100>) {
+    setDarknessConfig(darknessPercent: DarknessPercent) {
         return this.then(
             new Commands.SetDarknessCommand(darknessPercent, this._config.model.maxDarkness)
         );
@@ -124,7 +124,7 @@ export interface IPrinterConfigBuilder {
 
 export interface IPrinterLabelConfigBuilder {
     /** Set the darkness of the printer in the stored configuration. */
-    setDarknessConfig(darknessPercent: NumericRange<1, 100>): IConfigDocumentBuilder;
+    setDarknessConfig(darknessPercent: DarknessPercent): IConfigDocumentBuilder;
 
     /** Set the direction labels print out of the printer. */
     setPrintDirection(upsideDown?: boolean): IConfigDocumentBuilder;

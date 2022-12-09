@@ -5,7 +5,7 @@ import {
     LabelDocumentBuilder,
     LabelDocumentType
 } from '../Documents/LabelDocument';
-import { NumericRange } from '../NumericRange';
+import { DarknessPercent } from '../NumericRange';
 import { WebZlpError } from '../WebZlpError';
 import {
     IPrinterDeviceChannel,
@@ -139,6 +139,7 @@ export class Printer {
         }
 
         if (!this._printerConfig?.valid) {
+            this.dispose();
             throw new WebZlpError(
                 'Failed to detect the printer information, either the printer is unknown or the config can not be parsed. This printer can not be used.'
             );
@@ -361,7 +362,7 @@ export class ReadyToPrintDocuments {
     static configLabelSettings(
         printer: Printer,
         labelWidthInches: number,
-        darknessPercent: NumericRange<1, 100>
+        darknessPercent: DarknessPercent
     ) {
         return printer
             .getConfigDocument()

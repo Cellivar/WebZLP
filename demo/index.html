@@ -37,6 +37,7 @@
     <!-- Here's some actual demo code. Note that it is typescript, not javascript. -->
     <script type="text/typescript">
         import {
+            DarknessPercent,
             IDocument,
             ILabelDocumentBuilder,
             PrinterUsbManager,
@@ -414,7 +415,7 @@
                 form.modalCancel.setAttribute("disabled", "");
 
                 // Pull the values out of the form.
-                const darkness = parseInt(form.modalDarkness.value) as NumericRange<1, 100>;
+                const darkness = parseInt(form.modalDarkness.value) as DarknessPercent;
                 const rawSpeed = parseInt(form.modalSpeed.value) as PrintSpeed;
                 const labelWidthInches = parseFloat(form.modalLabelWidth.value);
                 const autosense = form.modalWithAutosense.checked;
