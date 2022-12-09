@@ -38,6 +38,7 @@ export class PrinterModelDb {
                 return PrinterModel.lp2844ups;
             })
             .with('LP2844-Z-200dpi', () => PrinterModel.lp2844z)
+            .with('LP2844-Z', () => PrinterModel.lp2824z)
             .otherwise(() => PrinterModel.unknown);
     }
 
@@ -51,6 +52,44 @@ export class PrinterModelDb {
             .otherwise(() => new UnknownPrinter());
         // TODO: Switch to this once I have a better way of handling switches..
         // .exhaustive();
+    }
+
+    /** Look up a speed enum from a given whole number */
+    public static getSpeedFromWholeNumber(speed: number): PrintSpeed {
+        switch (speed) {
+            case 0:
+                return PrintSpeed.auto;
+            case 1:
+                return PrintSpeed.ips1;
+            case 2:
+                return PrintSpeed.ips2;
+            case 3:
+                return PrintSpeed.ips3;
+            case 4:
+                return PrintSpeed.ips4;
+            case 5:
+                return PrintSpeed.ips5;
+            case 6:
+                return PrintSpeed.ips6;
+            case 7:
+                return PrintSpeed.ips7;
+            case 8:
+                return PrintSpeed.ips8;
+            case 9:
+                return PrintSpeed.ips9;
+            case 10:
+                return PrintSpeed.ips10;
+            case 11:
+                return PrintSpeed.ips11;
+            case 12:
+                return PrintSpeed.ips12;
+            case 13:
+                return PrintSpeed.ips13;
+            case 14:
+                return PrintSpeed.ips14;
+            default:
+                return PrintSpeed.unknown;
+        }
     }
 
     public static guessLanguageFromModelHint(modelHint?: string): PrinterCommandLanguage {
@@ -160,6 +199,45 @@ export abstract class BasicPrinterInfo implements IPrinterModelInfo {
             }
         }
         return PrintSpeed.auto;
+    }
+}
+
+/** A printer model object that was autodetected from the printer itself. */
+export class AutodetectedPrinter extends BasicPrinterInfo {
+    private _commandLanugage: PrinterCommandLanguage;
+    get commandLanguage(): PrinterCommandLanguage {
+        return this._commandLanugage;
+    }
+    private _dpi: number;
+    get dpi(): number {
+        return this._dpi;
+    }
+    private _model: PrinterModel;
+    get model(): PrinterModel {
+        return this._model;
+    }
+    private _speedTable: ReadonlyMap<PrintSpeed, number>;
+    get speedTable(): ReadonlyMap<PrintSpeed, number> {
+        return this._speedTable;
+    }
+    private _maxDarkness: number;
+    get maxDarkness(): number {
+        return this._maxDarkness;
+    }
+
+    constructor(
+        commandLanugage: PrinterCommandLanguage,
+        dpi: number,
+        model: PrinterModel,
+        speedTable: ReadonlyMap<PrintSpeed, number>,
+        maxDarkness: number
+    ) {
+        super();
+        this._commandLanugage = commandLanugage;
+        this._dpi = dpi;
+        this._model = model;
+        this._maxDarkness = maxDarkness;
+        this._speedTable = speedTable;
     }
 }
 
