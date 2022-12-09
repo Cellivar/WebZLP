@@ -150,6 +150,10 @@
                 emojiOnlyFont.load().then(() => {
                     document.fonts.add(emojiOnlyFont);
                 });
+                // We then set our fallback font as part of the font family we use in the canvas.
+                // The order matters, we'll use emoji first (for all of the unicode in the listed ranges)
+                // and fall back to the next font in the family, in this case whatever the system
+                // default is for Sans-serif.
                 this.fontName = `${emojiFontName}, Sans-serif`
             }
 
