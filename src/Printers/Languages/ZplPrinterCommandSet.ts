@@ -1,7 +1,18 @@
-import { PrinterCommandLanguage, PrinterOptions } from '../Configuration/PrinterOptions';
+import {
+    MediaPrintMode,
+    PrinterCommandLanguage,
+    PrinterOptions,
+    PrintOrientation,
+    PrintSpeed,
+    PrintSpeedSettings,
+    ThermalPrintMode
+} from '../Configuration/PrinterOptions';
 import { PrinterCommandSet, DocumentValidationError } from './PrinterCommandSet';
 import * as Commands from '../../Documents/Commands';
 import { match, P } from 'ts-pattern';
+import { AutodetectedPrinter, PrinterModelDb } from '../Models/PrinterModel';
+import { DarknessPercent } from '../../NumericRange';
+import { PrinterCommunicationOptions } from '../Communication/PrinterCommunication';
 
 export class ZplPrinterCommandSet extends PrinterCommandSet {
     private encoder = new TextEncoder();
@@ -53,7 +64,8 @@ export class ZplPrinterCommandSet extends PrinterCommandSet {
             })
             .with(P.instanceOf(Commands.RebootPrinterCommand), () => this.encodeCommand('~JR'))
             .with(P.instanceOf(Commands.QueryConfigurationCommand), () =>
-                this.encodeCommand('^HZa')
+                // HH returns serial, HZA gets everything but the serial in XML.
+                this.encodeCommand('^HZA\r\n^HH')
             )
             .with(P.instanceOf(Commands.PrintConfigurationCommand), () => this.encodeCommand('~WC'))
             .with(P.instanceOf(Commands.SetPrintDirectionCommand), (cmd) => {
@@ -104,15 +116,208 @@ export class ZplPrinterCommandSet extends PrinterCommandSet {
             });
     }
 
-    parseConfigurationResponse(rawText: string): PrinterOptions {
+    parseConfigurationResponse(
+        rawText: string,
+        commOpts: PrinterCommunicationOptions
+    ): PrinterOptions {
         if (rawText.length <= 0) {
             return PrinterOptions.invalid();
         }
 
-        // ZPL returns xml (!) which makes this far easier to do!
-        // .. if it was implemented
-        // TODO: ZPL config support.
-        return PrinterOptions.invalid();
+        // The two commands run were ^HH to get the raw two-column config label, and ^HZA to get the
+        // full XML configuration block. Unfortunately ZPL doesn't seem to put the serial number in
+        // the XML so we must pull it from the first line of the raw two-column config.
+
+        // Fascinatingly, it doesn't matter what order the two commands appear in. The XML will be
+        // presented first and the raw label afterwards.
+        const pivotText = '</ZEBRA-ELTRON-PERSONALITY>\r\n';
+        const pivot = rawText.lastIndexOf(pivotText) + pivotText.length;
+        if (pivot == pivotText.length - 1) {
+            return PrinterOptions.invalid();
+        }
+
+        const rawConfig = rawText.substring(pivot);
+        // First line of the raw config should be the serial, which should be alphanumeric.
+        const serial = rawConfig.match(/[A-Z0-9]+/i)[0];
+        console.log('SERIAL', serial);
+
+        // ZPL configuration is just XML, parse it into an object and then into config.
+
+        // For reasons I do not understand printers will tend to send _one_ invalid XML line
+        // and it looks like
+        // ` ENUM='NONE, AUTO DETECT, TAG-IT, ICODE, PICO, ISO15693, EPC, UID'>`
+        // This is supposed to look like
+        // `<RFID-TYPE ENUM='NONE, AUTO DETECT, TAG-IT, ICODE, PICO, ISO15693, EPC, UID'>`
+        // I don't have the appropriate equipment to determine where the XML tag prefix is being
+        // lost. Do a basic find + replace to replace an instance of the exact text with a fixed
+        // version instead.
+        // TODO: Deeper investigation with more printers?
+        const xmlStart = rawText.indexOf("<?xml version='1.0'?>");
+        const rawXml = rawText
+            .substring(xmlStart, pivot)
+            .replace(
+                "\n ENUM='NONE, AUTO DETECT, TAG-IT, ICODE, PICO, ISO15693, EPC, UID'>",
+                "<RFID-TYPE ENUM='NONE, AUTO DETECT, TAG-IT, ICODE, PICO, ISO15693, EPC, UID'>"
+            );
+
+        // The rest is straightforward: parse it as an XML document and pull out
+        // the data. The format is standardized and semi-self-documenting.
+        const parser = new DOMParser();
+        const xmldoc = parser.parseFromString(rawXml, 'application/xml');
+        const errorNode = xmldoc.querySelector('parsererror');
+        console.log(xmldoc);
+        if (errorNode) {
+            // TODO: Log? Throw?
+            console.log('lol failed');
+            return PrinterOptions.invalid();
+        }
+
+        return this.docToOptions(xmldoc, serial, commOpts);
+    }
+
+    private docToOptions(
+        doc: Document,
+        serial: string,
+        commOpts: PrinterCommunicationOptions
+    ): PrinterOptions {
+        // ZPL includes enough information in the document to autodetect the printer's capabilities.
+        const model = PrinterModelDb.getModel(this.getXmlText(doc, 'MODEL'));
+        // ZPL rounds, multiplying by 25 gets us to 'inches' in their book.
+        // 8 DPM == 200 DPI, for example.
+        const dpi = parseInt(this.getXmlText(doc, 'DOTS-PER-MM')) * 25;
+        // Max darkness is an attribute on the element
+        const maxDarkness = parseInt(
+            doc.getElementsByTagName('MEDIA-DARKNESS')[0].getAttribute('MAX').valueOf()
+        );
+
+        // Speed table is specially constructed with a few rules.
+        // Each table should have at least an auto, min, and max value. We assume we can use the whole
+        // number speeds between the min and max values. If the min and max values are the same though
+        // that indicates a mobile printer.
+        const printSpeedElement = doc.getElementsByTagName('PRINT-RATE')[0];
+        const slewSpeedElement = doc.getElementsByTagName('SLEW-RATE')[0];
+        // Highest minimum wins
+        const printMin = parseInt(printSpeedElement.getAttribute('MIN').valueOf());
+        const slewMin = parseInt(slewSpeedElement.getAttribute('MIN').valueOf());
+        const speedMin = printMin >= slewMin ? printMin : slewMin;
+        const printMax = parseInt(printSpeedElement.getAttribute('MAX').valueOf());
+        const slewMax = parseInt(slewSpeedElement.getAttribute('MAX').valueOf());
+        const speedMax = printMax <= slewMax ? printMax : slewMax;
+
+        const modelInfo = new AutodetectedPrinter(
+            PrinterCommandLanguage.zpl,
+            dpi,
+            model,
+            this.getSpeedTable(speedMin, speedMax),
+            maxDarkness
+        );
+
+        const options = new PrinterOptions(
+            serial,
+            modelInfo,
+            this.getXmlText(doc, 'FIRMWARE-VERSION')
+        );
+
+        const currentDarkness = parseInt(this.getXmlCurrent(doc, 'MEDIA-DARKNESS'));
+        const rawDarkness = Math.ceil(currentDarkness * (100 / maxDarkness));
+        options.darknessPercent = Math.max(0, Math.min(rawDarkness, 99)) as DarknessPercent;
+
+        options.speed = new PrintSpeedSettings(
+            parseInt(this.getXmlText(doc, 'PRINT-RATE')),
+            parseInt(this.getXmlText(doc, 'SLEW-RATE'))
+        );
+
+        // Always in dots
+        const labelWidth = parseInt(this.getXmlCurrent(doc, 'PRINT-WIDTH'));
+        const labelLength = parseInt(this.getXmlText(doc, 'LABEL-LENGTH'));
+        const labelRoundingStep = commOpts.labelDimensionRoundingStep ?? 0;
+        if (labelRoundingStep > 0) {
+            // Label size should be rounded to the step value by round-tripping the value to an inch
+            // then rounding, then back to dots.
+            const roundedWidth = this.roundToNearestStep(
+                labelWidth / options.model.dpi,
+                labelRoundingStep
+            );
+            options.labelWidthDots = roundedWidth * options.model.dpi;
+            const roundedHeight = this.roundToNearestStep(
+                labelLength / options.model.dpi,
+                labelRoundingStep
+            );
+            options.labelHeightDots = roundedHeight * options.model.dpi;
+        } else {
+            // No rounding
+            options.labelWidthDots = labelWidth;
+            options.labelHeightDots = labelLength;
+        }
+
+        options.printOrientation =
+            this.getXmlText(doc, 'LABEL-REVERSE') === 'Y'
+                ? PrintOrientation.inverted
+                : PrintOrientation.normal;
+
+        options.thermalPrintMode =
+            this.getXmlCurrent(doc, 'MEDIA-TYPE') === 'DIRECT-THERMAL'
+                ? ThermalPrintMode.direct
+                : ThermalPrintMode.transfer;
+
+        options.mediaPrintMode = this.parsePrintMode(this.getXmlCurrent(doc, 'PRINT-MODE'));
+
+        options.mediaPrintMode =
+            this.getXmlCurrent(doc, 'PRE-PEEL') === 'Y'
+                ? MediaPrintMode.peelWithPrepeel
+                : options.mediaPrintMode;
+
+        // TODO: more hardware options:
+        // - Figure out how to encode C{num} for cut-after-label-count
+
+        // TODO other options:
+        // Autosense settings?
+        // Character set?
+        // Error handling?
+        // Continuous media?
+        // Black mark printing?
+        // Media feed on powerup settings?
+        // Prepeel rewind?
+
+        return options;
+    }
+
+    private range(start: number, stop: number, step = 1) {
+        return Array.from({ length: (stop - start) / step + 1 }, (_, i) => start + i * step);
+    }
+
+    private getXmlText(doc: Document, tag: string) {
+        return doc.getElementsByTagName(tag)[0].textContent;
+    }
+
+    private getXmlCurrent(doc: Document, tag: string) {
+        return doc.getElementsByTagName(tag)[0].getElementsByTagName('CURRENT')[0].textContent;
+    }
+
+    private parsePrintMode(str: string) {
+        switch (str) {
+            case 'REWIND':
+                return MediaPrintMode.rewind;
+            case 'PEEL OFF':
+                return MediaPrintMode.peel;
+            case 'CUTTER':
+                return MediaPrintMode.cutter;
+            default:
+            case 'TEAR OFF':
+                return MediaPrintMode.tearoff;
+        }
+    }
+
+    private getSpeedTable(min: number, max: number) {
+        const table = new Map<PrintSpeed, number>([
+            [PrintSpeed.auto, 0],
+            [PrintSpeed.ipsPrinterMin, min],
+            [PrintSpeed.ipsPrinterMax, max]
+        ]);
+        this.range(min, max).forEach((s) =>
+            table.set(PrinterModelDb.getSpeedFromWholeNumber(s), s)
+        );
+        return table;
     }
 
     private lineOrBoxToCmd(
