@@ -1,7 +1,5 @@
-export * from './PrinterUsbManager';
 export * from './Color';
-export * from './WebZlpError';
-export * from './Printers/Printer';
+export * from './Documents/ReadyToPrintDocuments';
 export * from './Printers/Communication/LineBreakTransformer';
 export * from './Printers/Communication/PrinterCommunication';
 export * from './Printers/Communication/UsbPrinterDeviceChannel';
@@ -9,3 +7,6 @@ export * from './Printers/Configuration/PrinterOptions';
 export * from './Printers/Languages/EplPrinterCommandSet';
 export * from './Printers/Languages/PrinterCommandSet';
 export * from './Printers/Models/PrinterModel';
+export * from './Printers/Printer';
+export * from './PrinterUsbManager';
+export * from './WebZlpError';
