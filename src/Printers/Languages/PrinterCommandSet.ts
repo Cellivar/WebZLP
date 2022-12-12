@@ -13,6 +13,17 @@ export abstract class PrinterCommandSet {
         return new Uint8Array();
     }
 
+    // TODO: Move this state somewhere better?
+    private documents: Array<TranspilationDocumentMetadata> = [new TranspilationDocumentMetadata()];
+    private activeDocumentIdx = 0;
+    protected get currentDocument() {
+        return this.documents[this.activeDocumentIdx];
+    }
+    private resetDocumentTracking() {
+        this.activeDocumentIdx = 0;
+        this.documents = [new TranspilationDocumentMetadata()];
+    }
+
     /** Gets the command to start a new document. */
     abstract get documentStartCommand(): Uint8Array;
     /** Gets the command to end a document. */
@@ -23,12 +34,13 @@ export abstract class PrinterCommandSet {
     /** Transpile a document into a document ready to be sent to the printer. */
     transpileDoc(doc: IDocument): Readonly<CompiledDocument> {
         const validationErrors = [];
-        const state = new CompiledDocument(this.commandLanugage);
-        state.addRawCmd(this.documentStartCommand);
+        this.resetDocumentTracking();
+
+        this.currentDocument.addRawCommand(this.documentStartCommand);
         doc.commands.forEach((c) => {
             try {
-                state.addRawCmd(this.transpileCommand(c, state));
-                state.commandEffectFlags |=
+                this.currentDocument.addRawCommand(this.transpileCommand(c, this.currentDocument));
+                this.currentDocument.commandEffectFlags |=
                     c.printerEffectFlags ?? Commands.PrinterCommandEffectFlags.none;
             } catch (e) {
                 if (e instanceof DocumentValidationError) {
@@ -38,11 +50,21 @@ export abstract class PrinterCommandSet {
                 }
             }
         });
-        state.addRawCmd(this.documentEndCommand);
+        this.currentDocument.addRawCommand(this.documentEndCommand);
         if (validationErrors.length > 0) {
             throw new DocumentValidationError('One or more validation errors', validationErrors);
         }
-        return Object.freeze(state);
+
+        // Combine the separate individual documents into a single command array.
+        const { flags, buffer } = this.documents.reduce(
+            (accumulator, doc) => {
+                accumulator.buffer = this.combineCommands(accumulator.buffer, doc.combinedBuffer);
+                return { ...accumulator, flags: accumulator.flags | doc.commandEffectFlags };
+            },
+            { buffer: this.noop, flags: Commands.PrinterCommandEffectFlags.none }
+        );
+        const out = new CompiledDocument(this.commandLanugage, flags, buffer);
+        return Object.freeze(out);
     }
 
     /**
@@ -61,13 +83,17 @@ export abstract class PrinterCommandSet {
             .replace(/[\r\n]+/gi, ' ');
     }
 
-    /** Start a new label within the same command batch. */
+    /** Start a new label document within the same command batch. */
     protected startNewDocument() {
-        return this.combineCommands(this.documentEndCommand, this.documentStartCommand);
+        this.currentDocument.addRawCommand(this.documentEndCommand);
+        this.documents.push(new TranspilationDocumentMetadata());
+        this.activeDocumentIdx = this.documents.length - 1;
+        this.currentDocument.addRawCommand(this.documentStartCommand);
+        return this.noop;
     }
 
     /** Apply an offset command to a document. */
-    protected modifyOffset(cmd: Commands.Offset, outDoc: CompiledDocument) {
+    protected modifyOffset(cmd: Commands.Offset, outDoc: TranspilationDocumentMetadata) {
         const newHoriz = cmd.absolute ? cmd.horizontal : outDoc.horizontalOffset + cmd.horizontal;
         outDoc.horizontalOffset = newHoriz < 0 ? 0 : newHoriz;
         if (cmd.vertical) {
@@ -86,13 +112,48 @@ export abstract class PrinterCommandSet {
     }
 
     /** Transpile a command to its native command equivalent. */
-    abstract transpileCommand(cmd: Commands.IPrinterCommand, outDoc: CompiledDocument): Uint8Array;
+    abstract transpileCommand(
+        cmd: Commands.IPrinterCommand,
+        outDoc: TranspilationDocumentMetadata
+    ): Uint8Array;
 
     /** Parse the response of a configuration inqury in the command set language. */
     abstract parseConfigurationResponse(
         rawText: string,
         commOpts: PrinterCommunicationOptions
     ): PrinterOptions;
+}
+
+/** Class for storing in-progress document generation information */
+export class TranspilationDocumentMetadata {
+    horizontalOffset = 0;
+    verticalOffset = 0;
+    lineSpacingDots = 5;
+
+    dpi;
+
+    commandEffectFlags = Commands.PrinterCommandEffectFlags.none;
+
+    rawCmdBuffer: Array<Uint8Array> = [];
+
+    /** Add a raw command to the internal buffer. */
+    addRawCommand(array: Uint8Array) {
+        this.rawCmdBuffer.push(array);
+    }
+
+    /**
+     * Gets a single buffer of the internal command set.
+     */
+    get combinedBuffer(): Uint8Array {
+        const bufferLen = this.rawCmdBuffer.reduce((sum, arr) => sum + arr.byteLength, 0);
+        return this.rawCmdBuffer.reduce(
+            (accumulator, arr) => {
+                accumulator.buffer.set(arr, accumulator.offset);
+                return { ...accumulator, offset: arr.byteLength + accumulator.offset };
+            },
+            { buffer: new Uint8Array(bufferLen), offset: 0 }
+        ).buffer;
+    }
 }
 
 /** Represents an error when validating a document against a printer's capabilties. */
