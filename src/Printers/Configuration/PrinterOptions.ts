@@ -1,10 +1,12 @@
 import { IPrinterModelInfo, PrinterModel, PrinterModelDb } from '../Models/PrinterModel';
-import { NumericRange } from '../../NumericRange';
+import { Percent } from '../../NumericRange';
+
+export type DarknessPercent = Percent;
 
 /** Printer options related to the label media being printed */
 export interface IPrinterLabelMediaOptions {
     /** How dark to print. 0 is blank, 99 is max darkness */
-    darknessPercent: NumericRange<0, 100>;
+    darknessPercent: DarknessPercent;
     /** Mode the printer uses to detect separate labels when printing. */
     labelGapDetectMode: LabelMediaGapDetectionMode;
     /**
@@ -83,7 +85,7 @@ export class PrinterOptions implements IPrinterFactoryInformation, IPrinterLabel
 
     speed: PrintSpeedSettings;
 
-    darknessPercent: NumericRange<0, 100>;
+    darknessPercent: DarknessPercent;
     thermalPrintMode: ThermalPrintMode;
     mediaPrintMode: MediaPrintMode;
     printOrientation: PrintOrientation;

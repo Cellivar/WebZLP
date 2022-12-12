@@ -1,8 +1,8 @@
-import { NumericRange } from '../NumericRange';
 import {
     PrintSpeed,
     PrinterOptions,
-    PrinterCommandLanguage
+    PrinterCommandLanguage,
+    DarknessPercent
 } from '../Printers/Configuration/PrinterOptions';
 
 /** A prepared document, ready to be compiled and sent. */
@@ -267,13 +267,13 @@ export class SetDarknessCommand implements IPrinterCommand {
         return `Set darkness to ${this.darknessPercent}%`;
     }
 
-    constructor(darknessPercent: NumericRange<0, 100>, darknessMax: number) {
+    constructor(darknessPercent: DarknessPercent, darknessMax: number) {
         this.darknessPercent = darknessPercent;
         this.darknessMax = darknessMax;
         this.darknessSetting = Math.ceil((darknessPercent * darknessMax) / 100);
     }
 
-    darknessPercent: NumericRange<0, 100>;
+    darknessPercent: DarknessPercent;
     darknessMax: number;
     darknessSetting: number;
 
