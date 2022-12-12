@@ -252,8 +252,8 @@ export class Offset implements IPrinterCommand {
     }
 
     constructor(horizontal: number, vertical?: number, absolute = false) {
-        this.horizontal = horizontal;
-        this.vertical = vertical;
+        this.horizontal = Math.floor(horizontal);
+        this.vertical = Math.floor(vertical);
         this.absolute = absolute;
     }
 
