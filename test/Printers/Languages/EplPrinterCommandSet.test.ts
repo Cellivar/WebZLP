@@ -1,5 +1,5 @@
 import { EplPrinterCommandSet, PrinterCommandLanguage } from '../../../src';
-import { CompiledDocument } from '../../../src/Documents/Commands';
+import { CompiledDocument } from '../../../src/Documents/Document';
 
 // Class pulled from jest-mock-canvas which I can't seem to actually import.
 class ImageData {
