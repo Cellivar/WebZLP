@@ -3,3 +3,5 @@ type Enumerate<N extends number, Acc extends number[] = []> = Acc['length'] exte
     : Enumerate<N, [...Acc, Acc['length']]>;
 
 export type NumericRange<F extends number, T extends number> = Exclude<Enumerate<T>, Enumerate<F>>;
+
+export type Percent = NumericRange<0, 101>;

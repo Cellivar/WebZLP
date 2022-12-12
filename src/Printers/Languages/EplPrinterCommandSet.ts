@@ -1,5 +1,6 @@
 import { WebZlpError } from '../../WebZlpError';
 import {
+    DarknessPercent,
     MediaPrintMode,
     PrinterCommandLanguage,
     PrintOrientation,
@@ -11,7 +12,6 @@ import { PrinterModel, PrinterModelDb } from '../Models/PrinterModel';
 import { DocumentValidationError, PrinterCommandSet } from './PrinterCommandSet';
 import * as Commands from '../../Documents/Commands';
 import { match, P } from 'ts-pattern';
-import { NumericRange } from '../../NumericRange';
 import { PrinterCommunicationOptions } from '../Communication/PrinterCommunication';
 
 /** Command set for communicating with an EPL II printer. */
@@ -279,7 +279,7 @@ export class EplPrinterCommandSet extends PrinterCommandSet {
         const options = new PrinterOptions(printerInfo.serial, expectedModel, printerInfo.firmware);
 
         const rawDarkness = Math.ceil(labelInfo.density * (100 / expectedModel.maxDarkness));
-        options.darknessPercent = Math.max(0, Math.min(rawDarkness, 99)) as NumericRange<0, 99>;
+        options.darknessPercent = Math.max(0, Math.min(rawDarkness, 100)) as DarknessPercent;
 
         options.speed = new PrintSpeedSettings(options.model.fromRawSpeed(printerInfo.speed));
 

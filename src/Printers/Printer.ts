@@ -5,7 +5,6 @@ import {
     LabelDocumentBuilder,
     LabelDocumentType
 } from '../Documents/LabelDocument';
-import { NumericRange } from '../NumericRange';
 import { WebZlpError } from '../WebZlpError';
 import {
     IPrinterDeviceChannel,
@@ -13,7 +12,12 @@ import {
     PrinterCommunicationOptions
 } from './Communication/PrinterCommunication';
 import { UsbPrinterDeviceChannel } from './Communication/UsbPrinterDeviceChannel';
-import { PrinterCommandLanguage, PrinterOptions, PrintSpeed } from './Configuration/PrinterOptions';
+import {
+    DarknessPercent,
+    PrinterCommandLanguage,
+    PrinterOptions,
+    PrintSpeed
+} from './Configuration/PrinterOptions';
 import { EplPrinterCommandSet } from './Languages/EplPrinterCommandSet';
 import { PrinterCommandSet } from './Languages/PrinterCommandSet';
 import { ZplPrinterCommandSet } from './Languages/ZplPrinterCommandSet';
@@ -361,7 +365,7 @@ export class ReadyToPrintDocuments {
     static configLabelSettings(
         printer: Printer,
         labelWidthInches: number,
-        darknessPercent: NumericRange<1, 100>
+        darknessPercent: DarknessPercent
     ) {
         return printer
             .getConfigDocument()

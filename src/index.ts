@@ -1,6 +1,5 @@
 export * from './PrinterUsbManager';
 export * from './Color';
-export * from './NumericRange';
 export * from './WebZlpError';
 export * from './Printers/Printer';
 export * from './Printers/Communication/LineBreakTransformer';
