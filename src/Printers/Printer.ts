@@ -1,4 +1,4 @@
-import { IDocument } from '../Documents/Commands';
+import { IDocument } from '../Documents/Document';
 import { ConfigDocumentBuilder, IConfigDocumentBuilder } from '../Documents/ConfigDocument';
 import {
     ILabelDocumentBuilder,

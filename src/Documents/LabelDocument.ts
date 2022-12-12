@@ -1,23 +1,21 @@
 import * as Commands from './Commands';
-import { PrinterOptions } from '../Printers/Configuration/PrinterOptions';
+import { IDocumentBuilder, DocumentBuilder } from './Document';
+import * as Options from '../Printers/Configuration/PrinterOptions';
 
 export interface ILabelDocumentBuilder
-    extends Commands.IDocumentBuilder,
+    extends IDocumentBuilder,
         ILabelActionCommandBuilder,
         ILabelPositionCommandBuilder,
         ILabelContentCommandBuilder {}
 
-export class LabelDocumentBuilder
-    extends Commands.DocumentBuilder
-    implements ILabelDocumentBuilder
-{
+export class LabelDocumentBuilder extends DocumentBuilder implements ILabelDocumentBuilder {
     // TOOD: Implement other document types, such as stored forms, with type safety
     // so that only certain commands can be used on them.
     // Maybe different types??
     private _docType: LabelDocumentType = LabelDocumentType.instanceForm;
 
     constructor(
-        config: PrinterOptions,
+        config: Options.PrinterOptions,
         docType: LabelDocumentType = LabelDocumentType.instanceForm
     ) {
         super(config);
