@@ -1,4 +1,4 @@
-import { IPrinterModelInfo, PrinterModel, PrinterModelDb } from '../Models/PrinterModel';
+import { IPrinterModelInfo, UnknownPrinter } from '../Models/PrinterModel';
 import { Percent } from '../../NumericRange';
 
 export type DarknessPercent = Percent;
@@ -115,7 +115,7 @@ export class PrinterOptions implements IPrinterFactoryInformation, IPrinterLabel
 
     /** Get a default invalid config. */
     public static invalid() {
-        return new PrinterOptions('', PrinterModelDb.getModelInfo(PrinterModel.unknown), '', false);
+        return new PrinterOptions('', new UnknownPrinter(), '', false);
     }
 
     private dotToInch(dots: number) {

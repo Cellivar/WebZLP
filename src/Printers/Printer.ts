@@ -17,7 +17,7 @@ import { PrinterCommandLanguage, PrinterOptions } from './Configuration/PrinterO
 import { EplPrinterCommandSet } from './Languages/EplPrinterCommandSet';
 import { PrinterCommandSet } from './Languages/PrinterCommandSet';
 import { ZplPrinterCommandSet } from './Languages/ZplPrinterCommandSet';
-import { PrinterModelDb } from './Models/PrinterModel';
+import { PrinterModelDb } from './Models/PrinterModelDb';
 
 /**
  * A class for working with a label printer.
