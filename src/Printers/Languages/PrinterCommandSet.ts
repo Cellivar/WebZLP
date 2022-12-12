@@ -1,4 +1,4 @@
-import { CompiledDocument, IPrinterCommand } from '../../Documents/Commands';
+import { CompiledDocument, IDocument } from '../../Documents/Document';
 import { WebZlpError } from '../../WebZlpError';
 import { PrinterCommandLanguage, PrinterOptions } from '../Configuration/PrinterOptions';
 import * as Commands from '../../Documents/Commands';
@@ -21,9 +21,9 @@ export abstract class PrinterCommandSet {
     abstract get commandLanugage(): PrinterCommandLanguage;
 
     /** Transpile a document into a document ready to be sent to the printer. */
-    transpileDoc(doc: Commands.IDocument): Readonly<Commands.CompiledDocument> {
+    transpileDoc(doc: IDocument): Readonly<CompiledDocument> {
         const validationErrors = [];
-        const state = new Commands.CompiledDocument(this.commandLanugage);
+        const state = new CompiledDocument(this.commandLanugage);
         state.addRawCmd(this.documentStartCommand);
         doc.commands.forEach((c) => {
             try {
@@ -67,7 +67,7 @@ export abstract class PrinterCommandSet {
     }
 
     /** Apply an offset command to a document. */
-    protected modifyOffset(cmd: Commands.Offset, outDoc: Commands.CompiledDocument) {
+    protected modifyOffset(cmd: Commands.Offset, outDoc: CompiledDocument) {
         const newHoriz = cmd.absolute ? cmd.horizontal : outDoc.horizontalOffset + cmd.horizontal;
         outDoc.horizontalOffset = newHoriz < 0 ? 0 : newHoriz;
         if (cmd.vertical) {
@@ -86,7 +86,7 @@ export abstract class PrinterCommandSet {
     }
 
     /** Transpile a command to its native command equivalent. */
-    abstract transpileCommand(cmd: IPrinterCommand, outDoc: CompiledDocument): Uint8Array;
+    abstract transpileCommand(cmd: Commands.IPrinterCommand, outDoc: CompiledDocument): Uint8Array;
 
     /** Parse the response of a configuration inqury in the command set language. */
     abstract parseConfigurationResponse(

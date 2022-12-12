@@ -1,124 +1,4 @@
-import {
-    PrintSpeed,
-    PrinterOptions,
-    PrinterCommandLanguage,
-    DarknessPercent
-} from '../Printers/Configuration/PrinterOptions';
-
-/** A prepared document, ready to be compiled and sent. */
-export interface IDocument {
-    /** Gets the series of commands this document contains. */
-    get commands(): readonly IPrinterCommand[];
-
-    /** Return the list of commands that will be performed in human-readable format. */
-    showCommands(): string;
-}
-
-export class Document implements IDocument {
-    private _commands: readonly IPrinterCommand[];
-    get commands() {
-        return this._commands;
-    }
-
-    constructor(commandList: IPrinterCommand[]) {
-        this._commands = commandList;
-    }
-
-    /** Display the commands that will be performed in a human-readable format. */
-    public showCommands(): string {
-        let result = '';
-        this._commands.forEach((c) => (result += `${c.toDisplay()}\n`));
-        return result;
-    }
-}
-
-/** A document of raw commands, ready to be sent to a printer. */
-export class CompiledDocument {
-    private rawCmdBuffer: Array<Uint8Array> = [];
-    private _commandLanugage: PrinterCommandLanguage;
-    get commandLanguage() {
-        return this._commandLanugage;
-    }
-
-    horizontalOffset = 0;
-    verticalOffset = 0;
-    lineSpacingDots = 5;
-
-    commandEffectFlags = PrinterCommandEffectFlags.none;
-
-    constructor(commandLang: PrinterCommandLanguage) {
-        this._commandLanugage = commandLang;
-    }
-
-    /**
-     * Gets a single buffer of the internal command set.
-     */
-    get commandBufferRaw(): Uint8Array {
-        const bufferLen = this.rawCmdBuffer.reduce((sum, arr) => sum + arr.byteLength, 0);
-        const buffer = new Uint8Array(bufferLen);
-        this.rawCmdBuffer.reduce((offset, arr) => {
-            buffer.set(arr, offset);
-            return arr.byteLength + offset;
-        }, 0);
-
-        return buffer;
-    }
-
-    /**
-     * Gets the text view of the command buffer. Do not send this to the printer, the encoding
-     * will break and commands will fail.
-     */
-    get commandBufferString(): string {
-        return new TextDecoder('ascii').decode(this.commandBufferRaw);
-    }
-
-    /** Add a raw command to the internal buffer. */
-    addRawCmd(array: Uint8Array): CompiledDocument {
-        this.rawCmdBuffer.push(array);
-        return this;
-    }
-
-    /** Clear the internal buffer. */
-    clearCommandBuffer(): CompiledDocument {
-        this.rawCmdBuffer = [];
-        return this;
-    }
-}
-
-/** A basic document builder, containing internal state to construct a document. */
-export abstract class DocumentBuilder implements IDocumentBuilder {
-    private _commands: IPrinterCommand[] = [];
-    protected _config: PrinterOptions;
-
-    constructor(config: PrinterOptions) {
-        this._config = config;
-    }
-
-    /** Gets the read-only config information */
-    get currentConfig() {
-        return structuredClone(this._config);
-    }
-
-    clear(): IDocumentBuilder {
-        this._commands = [];
-        return this;
-    }
-
-    showCommands(): string {
-        let result = '';
-        this._commands.forEach((c) => (result += `${c.name} - ${c.toDisplay()}\n`));
-        return result;
-    }
-
-    finalize(): IDocument {
-        return new Document(this._commands);
-    }
-
-    then(command: IPrinterCommand): IDocumentBuilder {
-        this._commands.push(command);
-        return this;
-    }
-}
+import * as Options from '../Printers/Configuration/PrinterOptions';
 
 /** Flags to indicate special operations a command might cause. */
 export enum PrinterCommandEffectFlags {
@@ -132,24 +12,6 @@ export enum PrinterCommandEffectFlags {
     lossOfConnection = 1 << 2,
     /** Causes something sharp to move */
     actuatesCutter = 1 << 3
-}
-
-/** The basic functionality of a document builder to arrange document commands. */
-export interface IDocumentBuilder {
-    /** Gets a read-only copy of the current label configuration. */
-    get currentConfig(): PrinterOptions;
-
-    /** Clear the commands in this document and reset it to the starting blank. */
-    clear(): IDocumentBuilder;
-
-    /** Return the list of commands that will be performed in human-readable format. */
-    showCommands(): string;
-
-    /** Return the final built document. */
-    finalize(): IDocument;
-
-    /** Add a command to the list of commands. */
-    then(command: IPrinterCommand): IDocumentBuilder;
 }
 
 /** A command that can be sent to a printer. */
@@ -267,13 +129,13 @@ export class SetDarknessCommand implements IPrinterCommand {
         return `Set darkness to ${this.darknessPercent}%`;
     }
 
-    constructor(darknessPercent: DarknessPercent, darknessMax: number) {
+    constructor(darknessPercent: Options.DarknessPercent, darknessMax: number) {
         this.darknessPercent = darknessPercent;
         this.darknessMax = darknessMax;
         this.darknessSetting = Math.ceil((darknessPercent * darknessMax) / 100);
     }
 
-    darknessPercent: DarknessPercent;
+    darknessPercent: Options.DarknessPercent;
     darknessMax: number;
     darknessSetting: number;
 
@@ -305,13 +167,13 @@ export class SetPrintSpeedCommand implements IPrinterCommand {
         return 'Set print speed';
     }
     toDisplay(): string {
-        return `Set print speed to ${PrintSpeed[this.speed]} (inches per second).`;
+        return `Set print speed to ${Options.PrintSpeed[this.speed]} (inches per second).`;
     }
 
     constructor(
-        speed: PrintSpeed,
+        speed: Options.PrintSpeed,
         speedVal: number,
-        mediaSlewSpeed: PrintSpeed,
+        mediaSlewSpeed: Options.PrintSpeed,
         mediaSpeedVal: number
     ) {
         this.speed = speed;
@@ -320,9 +182,9 @@ export class SetPrintSpeedCommand implements IPrinterCommand {
         this.mediaSpeedVal = mediaSpeedVal;
     }
 
-    speed: PrintSpeed;
+    speed: Options.PrintSpeed;
     speedVal: number;
-    mediaSlewSpeed: PrintSpeed;
+    mediaSlewSpeed: Options.PrintSpeed;
     mediaSpeedVal: number;
 
     printerEffectFlags = PrinterCommandEffectFlags.altersPrinterConfig;

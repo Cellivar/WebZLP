@@ -1,24 +1,18 @@
 import * as Commands from './Commands';
-import {
-    DarknessPercent,
-    PrinterOptions,
-    PrintSpeed
-} from '../Printers/Configuration/PrinterOptions';
+import { IDocumentBuilder, IDocument, DocumentBuilder } from './Document';
+import * as Options from '../Printers/Configuration/PrinterOptions';
 import { WebZlpError } from '../WebZlpError';
 
 /** A series of printer commands that results in configuration changes. */
 export interface IConfigDocumentBuilder
-    extends Commands.IDocumentBuilder,
+    extends IDocumentBuilder,
         IPrinterBasicCommandBuilder,
         IPrinterConfigBuilder,
         IPrinterLabelConfigBuilder {}
 
 /** Builder to generate a configuration to apply to a printer. */
-export class ConfigDocumentBuilder
-    extends Commands.DocumentBuilder
-    implements IConfigDocumentBuilder
-{
-    constructor(config: PrinterOptions) {
+export class ConfigDocumentBuilder extends DocumentBuilder implements IConfigDocumentBuilder {
+    constructor(config: Options.PrinterOptions) {
         super(config);
     }
 
@@ -33,7 +27,7 @@ export class ConfigDocumentBuilder
         return this.then(new Commands.ClearImageBufferCommand());
     }
 
-    rebootPrinter(): Commands.IDocument {
+    rebootPrinter(): IDocument {
         return this.then(new Commands.RebootPrinterCommand()).finalize();
     }
 
@@ -43,13 +37,13 @@ export class ConfigDocumentBuilder
         return this.then(new Commands.QueryConfigurationCommand());
     }
 
-    printConfiguration(): Commands.IDocument {
+    printConfiguration(): IDocument {
         return this.then(new Commands.PrintConfigurationCommand()).finalize();
     }
 
     ///////////////////// ALTER PRINTER CONFIG
 
-    setDarknessConfig(darknessPercent: DarknessPercent) {
+    setDarknessConfig(darknessPercent: Options.DarknessPercent) {
         return this.then(
             new Commands.SetDarknessCommand(darknessPercent, this._config.model.maxDarkness)
         );
@@ -59,22 +53,22 @@ export class ConfigDocumentBuilder
         return this.then(new Commands.SetPrintDirectionCommand(upsideDown));
     }
 
-    setPrintSpeed(speed: PrintSpeed, mediaSlewSpeed = PrintSpeed.auto) {
+    setPrintSpeed(speed: Options.PrintSpeed, mediaSlewSpeed = Options.PrintSpeed.auto) {
         if (!this._config.model.isSpeedValid(speed)) {
             throw new UnsupportedPrinterConfigError(
                 'setPrintSpeed',
-                `Print speed ${PrintSpeed[speed]} is not valid for ${this._config.model.model}`
+                `Print speed ${Options.PrintSpeed[speed]} is not valid for ${this._config.model.model}`
             );
         }
         if (mediaSlewSpeed && !this._config.model.isSpeedValid(mediaSlewSpeed)) {
             throw new UnsupportedPrinterConfigError(
                 'setPrintSpeed',
-                `Media slew speed ${PrintSpeed[speed]} is not valid for ${this._config.model.model}`
+                `Media slew speed ${Options.PrintSpeed[speed]} is not valid for ${this._config.model.model}`
             );
         }
 
         // If the media slew speed is auto just copy the print speed.
-        if (mediaSlewSpeed === PrintSpeed.auto) {
+        if (mediaSlewSpeed === Options.PrintSpeed.auto) {
             mediaSlewSpeed = speed;
         }
         return this.then(
@@ -114,7 +108,7 @@ export interface IPrinterBasicCommandBuilder {
     clearImageBuffer(): IConfigDocumentBuilder;
 
     /** Simulate turning the printer off and back on. Must be the final command. */
-    rebootPrinter(): Commands.IDocument;
+    rebootPrinter(): IDocument;
 }
 
 export interface IPrinterConfigBuilder {
@@ -122,18 +116,18 @@ export interface IPrinterConfigBuilder {
     queryConfiguration(): IConfigDocumentBuilder;
 
     /** Print the configuration directly on labels. Must be final command. */
-    printConfiguration(): Commands.IDocument;
+    printConfiguration(): IDocument;
 }
 
 export interface IPrinterLabelConfigBuilder {
     /** Set the darkness of the printer in the stored configuration. */
-    setDarknessConfig(darknessPercent: DarknessPercent): IConfigDocumentBuilder;
+    setDarknessConfig(darknessPercent: Options.DarknessPercent): IConfigDocumentBuilder;
 
     /** Set the direction labels print out of the printer. */
     setPrintDirection(upsideDown?: boolean): IConfigDocumentBuilder;
 
     /** Set the speed at which the labels print. */
-    setPrintSpeed(speed: PrintSpeed): IConfigDocumentBuilder;
+    setPrintSpeed(speed: Options.PrintSpeed): IConfigDocumentBuilder;
 
     /**
      * Set the size of the labels in the printer.
@@ -168,7 +162,7 @@ export interface IPrinterLabelConfigBuilder {
     ): IConfigDocumentBuilder;
 
     /** Run the autosense operation to get label length. Must be last command. */
-    autosenseLabelLength(): Commands.IDocument;
+    autosenseLabelLength(): IDocument;
 }
 
 /** Error indicating setting a config value failed. */

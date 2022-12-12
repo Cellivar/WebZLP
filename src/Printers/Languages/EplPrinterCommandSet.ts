@@ -1,14 +1,9 @@
 import { WebZlpError } from '../../WebZlpError';
-import {
-    DarknessPercent,
-    MediaPrintMode,
-    PrinterCommandLanguage,
-    PrintOrientation,
-    PrintSpeedSettings,
-    ThermalPrintMode
-} from '../Configuration/PrinterOptions';
+import * as Options from '../Configuration/PrinterOptions';
+import { CompiledDocument } from '../../Documents/Document';
 import { PrinterOptions } from '../Configuration/PrinterOptions';
-import { PrinterModel, PrinterModelDb } from '../Models/PrinterModel';
+import { PrinterModelDb } from '../Models/PrinterModelDb';
+import { PrinterModel } from '../Models/PrinterModel';
 import { DocumentValidationError, PrinterCommandSet } from './PrinterCommandSet';
 import * as Commands from '../../Documents/Commands';
 import { match, P } from 'ts-pattern';
@@ -18,8 +13,8 @@ import { PrinterCommunicationOptions } from '../Communication/PrinterCommunicati
 export class EplPrinterCommandSet extends PrinterCommandSet {
     private encoder = new TextEncoder();
 
-    get commandLanugage(): PrinterCommandLanguage {
-        return PrinterCommandLanguage.epl;
+    get commandLanugage(): Options.PrinterCommandLanguage {
+        return Options.PrinterCommandLanguage.epl;
     }
 
     get documentStartCommand(): Uint8Array {
@@ -39,7 +34,7 @@ export class EplPrinterCommandSet extends PrinterCommandSet {
         return this.encoder.encode(str + (withNewline ? '\r\n' : ''));
     }
 
-    transpileCommand(cmd: Commands.IPrinterCommand, outDoc: Commands.CompiledDocument): Uint8Array {
+    transpileCommand(cmd: Commands.IPrinterCommand, outDoc: CompiledDocument): Uint8Array {
         return match<Commands.IPrinterCommand, Uint8Array>(cmd)
             .with(P.instanceOf(Commands.NewLabelCommand), () => this.startNewDocument())
             .with(P.instanceOf(Commands.Offset), (cmd) => this.modifyOffset(cmd, outDoc))
@@ -279,9 +274,14 @@ export class EplPrinterCommandSet extends PrinterCommandSet {
         const options = new PrinterOptions(printerInfo.serial, expectedModel, printerInfo.firmware);
 
         const rawDarkness = Math.ceil(labelInfo.density * (100 / expectedModel.maxDarkness));
-        options.darknessPercent = Math.max(0, Math.min(rawDarkness, 100)) as DarknessPercent;
+        options.darknessPercent = Math.max(
+            0,
+            Math.min(rawDarkness, 100)
+        ) as Options.DarknessPercent;
 
-        options.speed = new PrintSpeedSettings(options.model.fromRawSpeed(printerInfo.speed));
+        options.speed = new Options.PrintSpeedSettings(
+            options.model.fromRawSpeed(printerInfo.speed)
+        );
 
         const labelRoundingStep = commOpts.labelDimensionRoundingStep ?? 0;
         if (labelRoundingStep > 0) {
@@ -309,28 +309,30 @@ export class EplPrinterCommandSet extends PrinterCommandSet {
         options.labelPrintOriginOffsetDots = { left: labelInfo.xRef, top: labelInfo.yRef };
 
         options.printOrientation =
-            labelInfo.orientation === 'T' ? PrintOrientation.inverted : PrintOrientation.normal;
+            labelInfo.orientation === 'T'
+                ? Options.PrintOrientation.inverted
+                : Options.PrintOrientation.normal;
 
         // Hardware options are listed as various flags.
         // Presence of d or D indicates direct thermal printing, absence indicates transfer.
         if (printerInfo.hardwareOptions.some((o) => o === 'd' || o === 'D')) {
-            options.thermalPrintMode = ThermalPrintMode.direct;
+            options.thermalPrintMode = Options.ThermalPrintMode.direct;
         } else {
-            options.thermalPrintMode = ThermalPrintMode.transfer;
+            options.thermalPrintMode = Options.ThermalPrintMode.transfer;
         }
 
         // EPL spreads print mode across multiple settings that are mutually exclusive.
         if (printerInfo.hardwareOptions.some((o) => o === 'C')) {
-            options.mediaPrintMode = MediaPrintMode.cutter;
+            options.mediaPrintMode = Options.MediaPrintMode.cutter;
         }
         if (printerInfo.hardwareOptions.some((o) => o === 'Cp')) {
-            options.mediaPrintMode = MediaPrintMode.cutterWaitForCommand;
+            options.mediaPrintMode = Options.MediaPrintMode.cutterWaitForCommand;
         }
         if (printerInfo.hardwareOptions.some((o) => o === 'P')) {
-            options.mediaPrintMode = MediaPrintMode.peel;
+            options.mediaPrintMode = Options.MediaPrintMode.peel;
         }
         if (printerInfo.hardwareOptions.some((o) => o === 'L')) {
-            options.mediaPrintMode = MediaPrintMode.peelWithButtonTap;
+            options.mediaPrintMode = Options.MediaPrintMode.peelWithButtonTap;
         }
 
         // TODO: morehardware options:
@@ -347,7 +349,7 @@ export class EplPrinterCommandSet extends PrinterCommandSet {
         return options;
     }
 
-    private imageBufferToCmd(imageData: ImageData, outDoc: Commands.CompiledDocument) {
+    private imageBufferToCmd(imageData: ImageData, outDoc: CompiledDocument) {
         if (imageData == null) {
             return this.noop;
         }
@@ -451,7 +453,7 @@ export class EplPrinterCommandSet extends PrinterCommandSet {
         height: number,
         length: number,
         color: Commands.DrawColor,
-        outDoc: Commands.CompiledDocument
+        outDoc: CompiledDocument
     ) {
         length = Math.trunc(length) || 0;
         height = Math.trunc(height) || 0;
@@ -470,12 +472,7 @@ export class EplPrinterCommandSet extends PrinterCommandSet {
         );
     }
 
-    private boxToCmd(
-        height: number,
-        length: number,
-        thickness: number,
-        outDoc: Commands.CompiledDocument
-    ) {
+    private boxToCmd(height: number, length: number, thickness: number, outDoc: CompiledDocument) {
         length = Math.trunc(length) || 0;
         height = Math.trunc(height) || 0;
         thickness = Math.trunc(thickness) || 0;
