@@ -10,6 +10,9 @@ export interface IDocument {
     /** Gets the series of commands this document contains. */
     get commands(): readonly IPrinterCommand[];
 
+    /** Whether the document uses explicit start/stop commands instead of automatic. */
+    get withExplicitDocumentStartStopCommands(): boolean;
+
     /** Return the list of commands that will be performed in human-readable format. */
     showCommands(): string;
 }
@@ -19,9 +22,14 @@ export class Document implements IDocument {
     get commands() {
         return this._commands;
     }
+    private _withExplicitDocumentStartStopCommands: boolean;
+    get withExplicitDocumentStartStopCommands() {
+        return this._withExplicitDocumentStartStopCommands;
+    }
 
-    constructor(commandList: IPrinterCommand[]) {
+    constructor(commandList: IPrinterCommand[], withExplicitDocumentStartStopCommands = false) {
         this._commands = commandList;
+        this._withExplicitDocumentStartStopCommands = withExplicitDocumentStartStopCommands;
     }
 
     /** Display the commands that will be performed in a human-readable format. */
@@ -34,26 +42,31 @@ export class Document implements IDocument {
 
 /** A document of raw commands, ready to be sent to a printer. */
 export class CompiledDocument {
-    private rawCmdBuffer: Array<Uint8Array> = [];
+    private rawCmdBuffer: Uint8Array;
     private _commandLanugage: PrinterCommandLanguage;
     get commandLanguage() {
         return this._commandLanugage;
     }
+    private _documentEffectFlags: PrinterCommandEffectFlags;
+    get documentEffectFlags(): PrinterCommandEffectFlags {
+        return this._documentEffectFlags;
+    }
 
-    horizontalOffset = 0;
-    verticalOffset = 0;
-    lineSpacingDots = 5;
-
-    commandEffectFlags = PrinterCommandEffectFlags.none;
-
-    constructor(commandLang: PrinterCommandLanguage) {
+    constructor(
+        commandLang: PrinterCommandLanguage,
+        flags: PrinterCommandEffectFlags,
+        commandBuffer: Uint8Array
+    ) {
         this._commandLanugage = commandLang;
+        this._documentEffectFlags = flags;
+        this.rawCmdBuffer = commandBuffer;
     }
 
     /**
      * Gets a single buffer of the internal command set.
      */
     get commandBufferRaw(): Uint8Array {
+        return this.rawCmdBuffer;
         const bufferLen = this.rawCmdBuffer.reduce((sum, arr) => sum + arr.byteLength, 0);
         const buffer = new Uint8Array(bufferLen);
         this.rawCmdBuffer.reduce((offset, arr) => {
@@ -69,19 +82,7 @@ export class CompiledDocument {
      * will break and commands will fail.
      */
     get commandBufferString(): string {
-        return new TextDecoder('ascii').decode(this.commandBufferRaw);
-    }
-
-    /** Add a raw command to the internal buffer. */
-    addRawCmd(array: Uint8Array): CompiledDocument {
-        this.rawCmdBuffer.push(array);
-        return this;
-    }
-
-    /** Clear the internal buffer. */
-    clearCommandBuffer(): CompiledDocument {
-        this.rawCmdBuffer = [];
-        return this;
+        return new TextDecoder('ascii').decode(this.rawCmdBuffer);
     }
 }
 
@@ -131,7 +132,9 @@ export enum PrinterCommandEffectFlags {
     /** Causes the printer to disconnect or otherwise need reconnecting. */
     lossOfConnection = 1 << 2,
     /** Causes something sharp to move */
-    actuatesCutter = 1 << 3
+    actuatesCutter = 1 << 3,
+    /** Indicates multiple different documents are present in this document */
+    hasMultipleDocuments = 1 << 4
 }
 
 /** The basic functionality of a document builder to arrange document commands. */
@@ -171,6 +174,27 @@ export class NewLabelCommand implements IPrinterCommand {
     toDisplay(): string {
         return this.name;
     }
+    printerEffectFlags = PrinterCommandEffectFlags.hasMultipleDocuments;
+}
+
+export class DocumentStartCommand implements IPrinterCommand {
+    get name(): string {
+        return 'Begin a new document';
+    }
+    toDisplay(): string {
+        return this.name;
+    }
+    printerEffectFlags?: PrinterCommandEffectFlags;
+}
+
+export class DocumentEndCommand implements IPrinterCommand {
+    get name(): string {
+        return 'End a document';
+    }
+    toDisplay(): string {
+        return this.name;
+    }
+    printerEffectFlags?: PrinterCommandEffectFlags;
 }
 
 export class PrintCommand implements IPrinterCommand {

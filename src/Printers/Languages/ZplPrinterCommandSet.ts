@@ -26,7 +26,7 @@ export class ZplPrinterCommandSet extends PrinterCommandSet {
         return this.encoder.encode(str + '\n');
     }
 
-    transpileCommand(cmd: Commands.IPrinterCommand, outDoc: Commands.CompiledDocument): Uint8Array {
+    transpileCommand(cmd: Commands.IPrinterCommand, outDoc: CompiledDocumentMetadata): Uint8Array {
         return match<Commands.IPrinterCommand, Uint8Array>(cmd)
             .with(P.instanceOf(Commands.NewLabelCommand), () => this.startNewDocument())
             .with(P.instanceOf(Commands.Offset), (cmd) => this.modifyOffset(cmd, outDoc))
