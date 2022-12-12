@@ -22,62 +22,24 @@ export class Document implements IDocument {
 
     /** Display the commands that will be performed in a human-readable format. */
     public showCommands(): string {
-        let result = '';
-        this._commands.forEach((c) => (result += `${c.toDisplay()}\n`));
-        return result;
+        return this._commands.map((c) => c.toDisplay()).join('\n');
     }
 }
 
 /** A document of raw commands, ready to be sent to a printer. */
 export class CompiledDocument {
-    private rawCmdBuffer: Array<Uint8Array> = [];
-    private _commandLanugage: Options.PrinterCommandLanguage;
-    get commandLanguage() {
-        return this._commandLanugage;
-    }
-
-    horizontalOffset = 0;
-    verticalOffset = 0;
-    lineSpacingDots = 5;
-
-    commandEffectFlags = Commands.PrinterCommandEffectFlags.none;
-
-    constructor(commandLang: Options.PrinterCommandLanguage) {
-        this._commandLanugage = commandLang;
-    }
-
-    /**
-     * Gets a single buffer of the internal command set.
-     */
-    get commandBufferRaw(): Uint8Array {
-        const bufferLen = this.rawCmdBuffer.reduce((sum, arr) => sum + arr.byteLength, 0);
-        const buffer = new Uint8Array(bufferLen);
-        this.rawCmdBuffer.reduce((offset, arr) => {
-            buffer.set(arr, offset);
-            return arr.byteLength + offset;
-        }, 0);
-
-        return buffer;
-    }
+    constructor(
+        public commandLanguage: Options.PrinterCommandLanguage,
+        public effectFlags: Commands.PrinterCommandEffectFlags,
+        public commandBuffer: Uint8Array
+    ) {}
 
     /**
      * Gets the text view of the command buffer. Do not send this to the printer, the encoding
      * will break and commands will fail.
      */
     get commandBufferString(): string {
-        return new TextDecoder('ascii').decode(this.commandBufferRaw);
-    }
-
-    /** Add a raw command to the internal buffer. */
-    addRawCmd(array: Uint8Array): CompiledDocument {
-        this.rawCmdBuffer.push(array);
-        return this;
-    }
-
-    /** Clear the internal buffer. */
-    clearCommandBuffer(): CompiledDocument {
-        this.rawCmdBuffer = [];
-        return this;
+        return new TextDecoder('ascii').decode(this.commandBuffer);
     }
 }
 
@@ -119,9 +81,7 @@ export abstract class DocumentBuilder implements IDocumentBuilder {
     }
 
     showCommands(): string {
-        let result = '';
-        this._commands.forEach((c) => (result += `${c.name} - ${c.toDisplay()}\n`));
-        return result;
+        return this._commands.map((c) => c.toDisplay()).join('\n');
     }
 
     finalize(): IDocument {
