@@ -1,10 +1,13 @@
 import { WebZlpError } from '../../WebZlpError';
 import * as Options from '../Configuration/PrinterOptions';
-import { CompiledDocument } from '../../Documents/Document';
 import { PrinterOptions } from '../Configuration/PrinterOptions';
 import { PrinterModelDb } from '../Models/PrinterModelDb';
 import { PrinterModel } from '../Models/PrinterModel';
-import { DocumentValidationError, PrinterCommandSet } from './PrinterCommandSet';
+import {
+    DocumentValidationError,
+    PrinterCommandSet,
+    TranspilationDocumentMetadata
+} from './PrinterCommandSet';
 import * as Commands from '../../Documents/Commands';
 import { match, P } from 'ts-pattern';
 import { PrinterCommunicationOptions } from '../Communication/PrinterCommunication';
@@ -34,7 +37,10 @@ export class EplPrinterCommandSet extends PrinterCommandSet {
         return this.encoder.encode(str + (withNewline ? '\r\n' : ''));
     }
 
-    transpileCommand(cmd: Commands.IPrinterCommand, outDoc: CompiledDocument): Uint8Array {
+    transpileCommand(
+        cmd: Commands.IPrinterCommand,
+        outDoc: TranspilationDocumentMetadata
+    ): Uint8Array {
         return match<Commands.IPrinterCommand, Uint8Array>(cmd)
             .with(P.instanceOf(Commands.NewLabelCommand), () => this.startNewDocument())
             .with(P.instanceOf(Commands.Offset), (cmd) => this.modifyOffset(cmd, outDoc))
@@ -349,7 +355,7 @@ export class EplPrinterCommandSet extends PrinterCommandSet {
         return options;
     }
 
-    private imageBufferToCmd(imageData: ImageData, outDoc: CompiledDocument) {
+    private imageBufferToCmd(imageData: ImageData, outDoc: TranspilationDocumentMetadata) {
         if (imageData == null) {
             return this.noop;
         }
@@ -453,7 +459,7 @@ export class EplPrinterCommandSet extends PrinterCommandSet {
         height: number,
         length: number,
         color: Commands.DrawColor,
-        outDoc: CompiledDocument
+        outDoc: TranspilationDocumentMetadata
     ) {
         length = Math.trunc(length) || 0;
         height = Math.trunc(height) || 0;
@@ -472,7 +478,12 @@ export class EplPrinterCommandSet extends PrinterCommandSet {
         );
     }
 
-    private boxToCmd(height: number, length: number, thickness: number, outDoc: CompiledDocument) {
+    private boxToCmd(
+        height: number,
+        length: number,
+        thickness: number,
+        outDoc: TranspilationDocumentMetadata
+    ) {
         length = Math.trunc(length) || 0;
         height = Math.trunc(height) || 0;
         thickness = Math.trunc(thickness) || 0;

@@ -1,8 +1,11 @@
 import { PrinterCommandLanguage, PrinterOptions } from '../Configuration/PrinterOptions';
-import { PrinterCommandSet, DocumentValidationError } from './PrinterCommandSet';
+import {
+    PrinterCommandSet,
+    DocumentValidationError,
+    TranspilationDocumentMetadata
+} from './PrinterCommandSet';
 import * as Commands from '../../Documents/Commands';
 import { match, P } from 'ts-pattern';
-import { CompiledDocument } from '../../Documents/Document';
 
 export class ZplPrinterCommandSet extends PrinterCommandSet {
     private encoder = new TextEncoder();
@@ -27,7 +30,10 @@ export class ZplPrinterCommandSet extends PrinterCommandSet {
         return this.encoder.encode(str + '\n');
     }
 
-    transpileCommand(cmd: Commands.IPrinterCommand, outDoc: CompiledDocument): Uint8Array {
+    transpileCommand(
+        cmd: Commands.IPrinterCommand,
+        outDoc: TranspilationDocumentMetadata
+    ): Uint8Array {
         return match<Commands.IPrinterCommand, Uint8Array>(cmd)
             .with(P.instanceOf(Commands.NewLabelCommand), () => this.startNewDocument())
             .with(P.instanceOf(Commands.Offset), (cmd) => this.modifyOffset(cmd, outDoc))

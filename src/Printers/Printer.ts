@@ -121,7 +121,7 @@ export class Printer {
             console.debug(compiled.commandBufferString);
         }
 
-        await this.printerChannel.sendCommands(compiled.commandBufferRaw);
+        await this.printerChannel.sendCommands(compiled.commandBuffer);
     }
 
     /** Close the connection to this printer, preventing future communication from working. */
@@ -204,7 +204,7 @@ export class Printer {
             const listenEpl = this.listenForData();
 
             // Config isn't set up yet, send command directly without the send command.
-            await this.printerChannel.sendCommands(compiled.commandBufferRaw);
+            await this.printerChannel.sendCommands(compiled.commandBuffer);
             const rawResult = await listenEpl;
             config = cmdSet.parseConfigurationResponse(
                 rawResult,
