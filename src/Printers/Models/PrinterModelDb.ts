@@ -18,6 +18,8 @@ export class PrinterModelDb {
         // Hard mode: Model correlation between observed values and output.
         // This is pretty much all based off of observed values, I can't find a mapping
         // of the config's model number vs the hardware model number.
+        // TODO: Make this extensible so it's possible for consumers to add their own
+        // printers to the enum, match list, etc.
         return match<string, PrinterModel>(rawModelId)
             .with('UKQ1935HLU', () => PrinterModel.lp2844)
             .with('UKQ1935HMU', () => {
@@ -26,11 +28,14 @@ export class PrinterModelDb {
                 return PrinterModel.lp2844ups;
             })
             .with('LP2844-Z-200dpi', () => PrinterModel.lp2844z)
+            .with('LP2824-Z-200dpi', () => PrinterModel.lp2824z)
             .otherwise(() => PrinterModel.unknown);
     }
 
     /** Look up the model information for a given printer model. */
     public static getModelInfo(model: PrinterModel): IPrinterModelInfo {
+        // TODO: Make this extensible so it's possible for consumers to add their own
+        // printers to the enum, match list, etc.
         return match(model)
             .with(PrinterModel.lp2824, () => new EPL.LP2824())
             .with(PrinterModel.lp2844, () => new EPL.LP2844())

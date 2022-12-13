@@ -341,16 +341,17 @@ export class EplPrinterCommandSet extends PrinterCommandSet {
             options.mediaPrintMode = Options.MediaPrintMode.peelWithButtonTap;
         }
 
-        // TODO: morehardware options:
+        // TODO: more hardware options:
         // - Form feed button mode (Ff, Fr, Fi)
         // - Figure out what reverse gap sensor mode S means
         // - Figure out how to encode C{num} for cut-after-label-count
 
         // TODO other options:
         // Autosense settings?
-        // Print orientation?
         // Character set?
         // Error handling?
+        // Continuous media?
+        // Black mark printing?
 
         return options;
     }

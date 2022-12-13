@@ -123,3 +123,32 @@ export class UnknownPrinter extends BasePrinterInfo {
         throw new WebZlpError('Unknown printer, cannot read metadata.');
     }
 }
+
+/** A printer model object that was autodetected from the printer itself. */
+export class AutodetectedPrinter extends BasePrinterInfo {
+    get commandLanguage(): PrinterCommandLanguage {
+        return this._commandLanugage;
+    }
+    get dpi(): number {
+        return this._dpi;
+    }
+    get model(): PrinterModel {
+        return this._model;
+    }
+    get speedTable(): ReadonlyMap<PrintSpeed, number> {
+        return this._speedTable;
+    }
+    get maxDarkness(): number {
+        return this._maxDarkness;
+    }
+
+    constructor(
+        private _commandLanugage: PrinterCommandLanguage,
+        private _dpi: number,
+        private _model: PrinterModel,
+        private _speedTable: ReadonlyMap<PrintSpeed, number>,
+        private _maxDarkness: number
+    ) {
+        super();
+    }
+}
