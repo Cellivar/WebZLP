@@ -43,26 +43,8 @@ export class CompiledDocument {
     }
 }
 
-/** The basic functionality of a document builder to arrange document commands. */
-export interface IDocumentBuilder {
-    /** Gets a read-only copy of the current label configuration. */
-    get currentConfig(): Options.PrinterOptions;
-
-    /** Clear the commands in this document and reset it to the starting blank. */
-    clear(): IDocumentBuilder;
-
-    /** Return the list of commands that will be performed in human-readable format. */
-    showCommands(): string;
-
-    /** Return the final built document. */
-    finalize(): IDocument;
-
-    /** Add a command to the list of commands. */
-    then(command: Commands.IPrinterCommand): IDocumentBuilder;
-}
-
 /** A basic document builder, containing internal state to construct a document. */
-export abstract class DocumentBuilder implements IDocumentBuilder {
+export abstract class DocumentBuilder<TBuilder extends DocumentBuilder<TBuilder>> {
     private _commands: Commands.IPrinterCommand[] = [];
     protected _config: Options.PrinterOptions;
 
@@ -70,26 +52,29 @@ export abstract class DocumentBuilder implements IDocumentBuilder {
         this._config = config;
     }
 
-    /** Gets the read-only config information */
+    /** Gets a read-only copy of the current label configuration. */
     get currentConfig() {
         return structuredClone(this._config);
     }
 
-    clear(): IDocumentBuilder {
+    /** Clear the commands in this document and reset it to the starting blank. */
+    clear(): TBuilder {
         this._commands = [];
-        return this;
+        return this as unknown as TBuilder;
     }
 
+    /** Return the list of commands that will be performed in human-readable format. */
     showCommands(): string {
         return this._commands.map((c) => c.toDisplay()).join('\n');
     }
 
-    finalize(): IDocument {
+    /** Return the final built document. */
+    finalize(): Document {
         return new Document(this._commands);
     }
 
-    then(command: Commands.IPrinterCommand): IDocumentBuilder {
+    protected then(command: Commands.IPrinterCommand): TBuilder {
         this._commands.push(command);
-        return this;
+        return this as unknown as TBuilder;
     }
 }

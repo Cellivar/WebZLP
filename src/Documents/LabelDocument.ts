@@ -1,14 +1,17 @@
 import * as Commands from './Commands';
-import { IDocumentBuilder, DocumentBuilder } from './Document';
+import { DocumentBuilder } from './Document';
 import * as Options from '../Printers/Configuration/PrinterOptions';
 
 export interface ILabelDocumentBuilder
-    extends IDocumentBuilder,
+    extends DocumentBuilder<ILabelDocumentBuilder>,
         ILabelActionCommandBuilder,
         ILabelPositionCommandBuilder,
         ILabelContentCommandBuilder {}
 
-export class LabelDocumentBuilder extends DocumentBuilder implements ILabelDocumentBuilder {
+export class LabelDocumentBuilder
+    extends DocumentBuilder<ILabelDocumentBuilder>
+    implements ILabelDocumentBuilder
+{
     // TOOD: Implement other document types, such as stored forms, with type safety
     // so that only certain commands can be used on them.
     // Maybe different types??
@@ -20,11 +23,6 @@ export class LabelDocumentBuilder extends DocumentBuilder implements ILabelDocum
     ) {
         super(config);
         this._docType = docType;
-    }
-
-    then(command: Commands.IPrinterCommand): ILabelDocumentBuilder {
-        super.then(command);
-        return this;
     }
 
     ///////////////////// GENERAL LABEL HANDLING
