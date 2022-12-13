@@ -58,15 +58,17 @@ export class PrinterUsbManager extends EventTarget {
     }
 
     /** Display the USB device connection dialog to select a printer. */
-    public async promptToConnectUsbPrinter() {
+    public async promptToConnectUsbPrinter(options?: USBDeviceRequestOptions) {
         try {
-            const device = await this.nav.usb.requestDevice({
-                filters: [
-                    {
-                        vendorId: 0x0a5f // Zebra
-                    }
-                ]
-            });
+            const device = await this.nav.usb.requestDevice(
+                options ?? {
+                    filters: [
+                        {
+                            vendorId: 0x0a5f // Zebra
+                        }
+                    ]
+                }
+            );
             await this.handleConnectPrinter({ device });
         } catch (e) {
             if (
@@ -87,43 +89,44 @@ export class PrinterUsbManager extends EventTarget {
     /** Simulate all printers being disconnected and reconnected. */
     public async reconnectAllPrinters() {
         this.devices = [];
-        this._printers.forEach(async (p) => await p.dispose());
+        await Promise.all(this._printers.map(async (p) => await p.dispose()));
         this._printers = [];
 
-        navigator.usb.getDevices().then((devices) => {
-            devices.forEach(async (device) => {
-                await this.handleConnectPrinter({ device });
-            });
-        });
+        const devices = await navigator.usb.getDevices();
+        await Promise.all(
+            devices.map(async (device) => await this.handleConnectPrinter({ device }))
+        );
     }
 
     /** Handler for printer connection events. */
     public async handleConnectPrinter({ device }): Promise<void> {
         // Reconnection events may fire for known printers, exclude them.
-        if (!this.devices.includes(device)) {
-            this.devices.push(device);
-            const printer = Printer.fromUSBDevice(device, this.printerCommunicationOptions);
-            this._printers.push(printer);
-
-            // Don't notify that the printer exists until it's ready to exist.
-            await printer.ready;
-
-            const event = new CustomEvent<Printer>('connectedPrinter', { detail: printer });
-            this.dispatchEvent(event);
+        if (this.devices.includes(device)) {
+            return;
         }
+        this.devices.push(device);
+        const printer = Printer.fromUSBDevice(device, this.printerCommunicationOptions);
+        this._printers.push(printer);
+
+        // Don't notify that the printer exists until it's ready to exist.
+        await printer.ready;
+
+        const event = new CustomEvent<Printer>('connectedPrinter', { detail: printer });
+        this.dispatchEvent(event);
     }
 
     /** Handler for printer disconnection events. */
     public async handleDisconnectPrinter({ device }): Promise<void> {
         const idx = this.devices.findIndex((i) => i == device);
-        if (idx > -1) {
-            const printer = this._printers[idx];
-            this.devices.splice(idx, 1);
-            this._printers.splice(idx, 1);
-            await printer.dispose();
-
-            const event = new CustomEvent<Printer>('disconnectedPrinter', { detail: printer });
-            this.dispatchEvent(event);
+        if (idx < 0) {
+            return;
         }
+        const printer = this._printers[idx];
+        this.devices.splice(idx, 1);
+        this._printers.splice(idx, 1);
+        await printer.dispose();
+
+        const event = new CustomEvent<Printer>('disconnectedPrinter', { detail: printer });
+        this.dispatchEvent(event);
     }
 }
