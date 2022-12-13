@@ -1,5 +1,4 @@
-import { EplPrinterCommandSet, PrinterCommandLanguage } from '../../../src';
-import { CompiledDocument } from '../../../src/Documents/Document';
+import { EplPrinterCommandSet, TranspilationDocumentMetadata } from '../../../src';
 
 // Class pulled from jest-mock-canvas which I can't seem to actually import.
 class ImageData {
@@ -189,7 +188,7 @@ describe('EplImageConversion', () => {
 describe('EplImageConversionToFullCommand', () => {
   it('Should convert blank images to valid command', () => {
     const imageData = new ImageData(getImageDataInput(8, 1, 0), 8, 1);
-    const doc = new CompiledDocument(PrinterCommandLanguage.epl);
+    const doc = new TranspilationDocumentMetadata();
     const resultCmd = cmdSet['imageBufferToCmd'](imageData, doc);
 
     const expectedCmd = Uint8Array.from([
@@ -204,7 +203,7 @@ describe('EplImageConversionToFullCommand', () => {
   it('Should apply offsets in command', () => {
     const imageData = new ImageData(getImageDataInput(8, 1, 0), 8, 1);
     const appliedOffset = 10;
-    const doc = new CompiledDocument(PrinterCommandLanguage.epl);
+    const doc = new TranspilationDocumentMetadata();
     doc.horizontalOffset = appliedOffset;
     doc.verticalOffset = appliedOffset * 2;
     const resultCmd = cmdSet['imageBufferToCmd'](imageData, doc);
@@ -219,7 +218,7 @@ describe('EplImageConversionToFullCommand', () => {
   });
 
   it('Should return noop for blank imageData', () => {
-    const doc = new CompiledDocument(PrinterCommandLanguage.epl);
+    const doc = new TranspilationDocumentMetadata();
     const resultCmd = cmdSet['imageBufferToCmd'](null, doc);
 
     expect(resultCmd).toEqual(new Uint8Array());

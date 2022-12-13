@@ -1,24 +1,22 @@
 import * as Commands from './Commands';
-import { IDocumentBuilder, IDocument, DocumentBuilder } from './Document';
+import { IDocument, DocumentBuilder } from './Document';
 import * as Options from '../Printers/Configuration/PrinterOptions';
 import { WebZlpError } from '../WebZlpError';
 
 /** A series of printer commands that results in configuration changes. */
 export interface IConfigDocumentBuilder
-    extends IDocumentBuilder,
+    extends DocumentBuilder<IConfigDocumentBuilder>,
         IPrinterBasicCommandBuilder,
         IPrinterConfigBuilder,
         IPrinterLabelConfigBuilder {}
 
 /** Builder to generate a configuration to apply to a printer. */
-export class ConfigDocumentBuilder extends DocumentBuilder implements IConfigDocumentBuilder {
+export class ConfigDocumentBuilder
+    extends DocumentBuilder<IConfigDocumentBuilder>
+    implements IConfigDocumentBuilder
+{
     constructor(config: Options.PrinterOptions) {
         super(config);
-    }
-
-    then(command: Commands.IPrinterCommand): IConfigDocumentBuilder {
-        super.then(command);
-        return this;
     }
 
     ///////////////////// GENERAL LABEL HANDLING

@@ -22,85 +22,29 @@ export class Document implements IDocument {
 
     /** Display the commands that will be performed in a human-readable format. */
     public showCommands(): string {
-        let result = '';
-        this._commands.forEach((c) => (result += `${c.toDisplay()}\n`));
-        return result;
+        return this._commands.map((c) => c.toDisplay()).join('\n');
     }
 }
 
 /** A document of raw commands, ready to be sent to a printer. */
 export class CompiledDocument {
-    private rawCmdBuffer: Array<Uint8Array> = [];
-    private _commandLanugage: Options.PrinterCommandLanguage;
-    get commandLanguage() {
-        return this._commandLanugage;
-    }
-
-    horizontalOffset = 0;
-    verticalOffset = 0;
-    lineSpacingDots = 5;
-
-    commandEffectFlags = Commands.PrinterCommandEffectFlags.none;
-
-    constructor(commandLang: Options.PrinterCommandLanguage) {
-        this._commandLanugage = commandLang;
-    }
-
-    /**
-     * Gets a single buffer of the internal command set.
-     */
-    get commandBufferRaw(): Uint8Array {
-        const bufferLen = this.rawCmdBuffer.reduce((sum, arr) => sum + arr.byteLength, 0);
-        const buffer = new Uint8Array(bufferLen);
-        this.rawCmdBuffer.reduce((offset, arr) => {
-            buffer.set(arr, offset);
-            return arr.byteLength + offset;
-        }, 0);
-
-        return buffer;
-    }
+    constructor(
+        public commandLanguage: Options.PrinterCommandLanguage,
+        public effectFlags: Commands.PrinterCommandEffectFlags,
+        public commandBuffer: Uint8Array
+    ) {}
 
     /**
      * Gets the text view of the command buffer. Do not send this to the printer, the encoding
      * will break and commands will fail.
      */
     get commandBufferString(): string {
-        return new TextDecoder('ascii').decode(this.commandBufferRaw);
+        return new TextDecoder('ascii').decode(this.commandBuffer);
     }
-
-    /** Add a raw command to the internal buffer. */
-    addRawCmd(array: Uint8Array): CompiledDocument {
-        this.rawCmdBuffer.push(array);
-        return this;
-    }
-
-    /** Clear the internal buffer. */
-    clearCommandBuffer(): CompiledDocument {
-        this.rawCmdBuffer = [];
-        return this;
-    }
-}
-
-/** The basic functionality of a document builder to arrange document commands. */
-export interface IDocumentBuilder {
-    /** Gets a read-only copy of the current label configuration. */
-    get currentConfig(): Options.PrinterOptions;
-
-    /** Clear the commands in this document and reset it to the starting blank. */
-    clear(): IDocumentBuilder;
-
-    /** Return the list of commands that will be performed in human-readable format. */
-    showCommands(): string;
-
-    /** Return the final built document. */
-    finalize(): IDocument;
-
-    /** Add a command to the list of commands. */
-    then(command: Commands.IPrinterCommand): IDocumentBuilder;
 }
 
 /** A basic document builder, containing internal state to construct a document. */
-export abstract class DocumentBuilder implements IDocumentBuilder {
+export abstract class DocumentBuilder<TBuilder extends DocumentBuilder<TBuilder>> {
     private _commands: Commands.IPrinterCommand[] = [];
     protected _config: Options.PrinterOptions;
 
@@ -108,28 +52,29 @@ export abstract class DocumentBuilder implements IDocumentBuilder {
         this._config = config;
     }
 
-    /** Gets the read-only config information */
+    /** Gets a read-only copy of the current label configuration. */
     get currentConfig() {
         return structuredClone(this._config);
     }
 
-    clear(): IDocumentBuilder {
+    /** Clear the commands in this document and reset it to the starting blank. */
+    clear(): TBuilder {
         this._commands = [];
-        return this;
+        return this as unknown as TBuilder;
     }
 
+    /** Return the list of commands that will be performed in human-readable format. */
     showCommands(): string {
-        let result = '';
-        this._commands.forEach((c) => (result += `${c.name} - ${c.toDisplay()}\n`));
-        return result;
+        return this._commands.map((c) => c.toDisplay()).join('\n');
     }
 
-    finalize(): IDocument {
+    /** Return the final built document. */
+    finalize(): Document {
         return new Document(this._commands);
     }
 
-    then(command: Commands.IPrinterCommand): IDocumentBuilder {
+    protected then(command: Commands.IPrinterCommand): TBuilder {
         this._commands.push(command);
-        return this;
+        return this as unknown as TBuilder;
     }
 }
