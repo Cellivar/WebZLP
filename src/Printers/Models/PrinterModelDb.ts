@@ -19,6 +19,7 @@ export class PrinterModelDb {
         // This is pretty much all based off of observed values, I can't find a mapping
         // of the config's model number vs the hardware model number.
         return match<string, PrinterModel>(rawModelId)
+            .with('UKQ1915HLU', () => PrinterModel.lp2824)
             .with('UKQ1935HLU', () => PrinterModel.lp2844)
             .with('UKQ1935HMU', () => {
                 // HMU units that do not have FDX in the version string appear to be UPS
