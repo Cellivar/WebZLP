@@ -89,6 +89,24 @@ export class BitmapGRF {
         return this._bitmap;
     }
 
+    /** Gets a bitmap GRF that has its colors inverted.
+     *
+     * EPL uses 1 as white. ZPL uses 1 as black. Use this to convert between them.
+     */
+    public toInvertedGRF(): BitmapGRF {
+        const buffer = new Uint8Array(this._bitmap.length);
+        for (let i = 0, n = this._bitmap.length; i < n; i++) {
+            buffer[i] = ~this._bitmap[i];
+        }
+
+        return new BitmapGRF(
+            buffer,
+            this.width,
+            this.height,
+            this.bytesPerRow,
+            structuredClone(this.boundingBox));
+    }
+
     /** Get a compressed representation of this GRF. This is not compatible with EPL.
      * This is also referred to as the "Alternate Compression Scheme" or "Zebra Compression".
      *
@@ -105,8 +123,9 @@ export class BitmapGRF {
         // https://github.com/metafloor/zpl-image/blob/491f4d6887294d71dcfa859957d43b3be28ce1e5/zpl-image.js
 
         // The Zebra ACS compression scheme is a form of run-length encoding. Sequential runs of values
-        // are replaced with a marker for the length of the run.
-        // ZACS / ACS uses this encoding table:
+        // are replaced with a marker for the length of the run. This is referred to in the documentation
+        // alternatively as "Zebra Compression" and "Alternative Compression Scheme".
+        // ZACS uses this encoding table:
         //
         // G   H   I   J   K   L   M   N   O   P   Q   R   S   T   U   V   W   X   Y
         // 1   2   3   4   5   6   7   8   9  10  11  12  13  14  15  16  17  18  19
@@ -177,7 +196,7 @@ export class BitmapGRF {
             { grayThreshold, trimWhitespace }
         );
 
-        const { grfData, bytesPerRow } = this.toGRF(monochromeData, imageWidth, imageHeight);
+        const { grfData, bytesPerRow } = this.monochromeToGRF(monochromeData, imageWidth, imageHeight);
 
         return new BitmapGRF(grfData, imageWidth, imageHeight, bytesPerRow, boundingBox);
     }
@@ -210,7 +229,7 @@ export class BitmapGRF {
     }
 
     /** Converts monochrome data to GRF format. */
-    private static toGRF(monochromeData: Uint8Array, width: number, height: number) {
+    private static monochromeToGRF(monochromeData: Uint8Array, width: number, height: number) {
         // Method (c) 2022 metafloor
         // https://github.com/metafloor/zpl-image/blob/491f4d6887294d71dcfa859957d43b3be28ce1e5/zpl-image.js
 
