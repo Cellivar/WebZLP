@@ -2,69 +2,175 @@ import { CompiledDocument, IDocument } from '../../Documents/Document';
 import { WebZlpError } from '../../WebZlpError';
 import { PrinterCommandLanguage, PrinterOptions } from '../Configuration/PrinterOptions';
 import * as Commands from '../../Documents/Commands';
-import { PrinterCommunicationOptions } from '../Communication/PrinterCommunication';
+import { PrinterCommunicationOptions } from '../PrinterCommunicationOptions';
+
+export type TranspileCommandDelegate = (
+    cmd: Commands.IPrinterCommand,
+    formDoc: TranspilationFormMetadata,
+    commandSet: PrinterCommandSet
+) => Uint8Array;
+
+type RawCommandForm = { commands: Array<Commands.IPrinterCommand>; withinForm: boolean };
 
 export abstract class PrinterCommandSet {
     /** Encode a raw string command into a Uint8Array according to the command language rules. */
-    abstract encodeCommand(str: string): Uint8Array;
+    public abstract encodeCommand(str: string): Uint8Array;
 
+    private readonly _noop = new Uint8Array();
     /** Get an empty command to be used as a no-op. */
     protected get noop() {
-        return new Uint8Array();
+        return this._noop;
     }
 
-    // TODO: Move this state somewhere better?
-    private documents: Array<TranspilationDocumentMetadata> = [new TranspilationDocumentMetadata()];
-    private activeDocumentIdx = 0;
-    protected get currentDocument() {
-        return this.documents[this.activeDocumentIdx];
-    }
-    private resetDocumentTracking() {
-        this.activeDocumentIdx = 0;
-        this.documents = [new TranspilationDocumentMetadata()];
-    }
-
-    /** Gets the command to start a new document. */
-    abstract get documentStartCommand(): Uint8Array;
-    /** Gets the command to end a document. */
-    abstract get documentEndCommand(): Uint8Array;
+    /** Gets the command to start a new form. */
+    protected abstract get formStartCommand(): Uint8Array;
+    /** Gets the command to end a form. */
+    protected abstract get formEndCommand(): Uint8Array;
     /** Gets the command language this command set implements */
-    abstract get commandLanugage(): PrinterCommandLanguage;
+    abstract get commandLanguage(): PrinterCommandLanguage;
 
-    /** Transpile a document into a document ready to be sent to the printer. */
-    transpileDoc(doc: IDocument): Readonly<CompiledDocument> {
+    protected abstract transpileCommandMap: Map<
+        symbol | Commands.CommandType,
+        TranspileCommandDelegate
+    >;
+
+    /** Transpile a command to its native command equivalent. */
+    protected transpileCommand(
+        command: Commands.IPrinterCommand,
+        formMetadata: TranspilationFormMetadata
+    ) {
+        let lookup: symbol | Commands.CommandType;
+        if (
+            command.type === Commands.CommandType.CommandCustomSpecificCommand ||
+            command.type === Commands.CommandType.CommandLanguageSpecificCommand
+        ) {
+            lookup = (command as Commands.IPrinterExtendedCommand).typeExtended;
+        } else {
+            lookup = command.type;
+        }
+
+        if (!lookup) {
+            throw new DocumentValidationError(
+                `Command '${command.constructor.name}' did not have a valid lookup element. If you're trying to implement a custom command check the documentation for correct formatting.`
+            );
+        }
+
+        const func = this.transpileCommandMap.get(lookup);
+        if (func === undefined) {
+            throw new DocumentValidationError(
+                // eslint-disable-next-line prettier/prettier
+                `Unknown command '${command.constructor.name}' was not found in the command map for ${PrinterCommandLanguage[this.commandLanguage]} command language. If you're trying to implement a custom command check the documentation for correctly adding mappings.`
+            );
+        }
+
+        return func(command, formMetadata, this);
+    }
+
+    public transpileDoc(doc: IDocument): Readonly<CompiledDocument> {
         const validationErrors = [];
-        this.resetDocumentTracking();
+        const { forms, effects } = this.splitCommandsByFormInclusion(
+            doc.commands,
+            doc.commandReorderBehavior
+        );
 
-        this.currentDocument.addRawCommand(this.documentStartCommand);
-        doc.commands.forEach((c) => {
-            try {
-                this.currentDocument.addRawCommand(this.transpileCommand(c, this.currentDocument));
-                this.currentDocument.commandEffectFlags |=
-                    c.printerEffectFlags ?? Commands.PrinterCommandEffectFlags.none;
-            } catch (e) {
-                if (e instanceof DocumentValidationError) {
-                    validationErrors.push(e);
-                } else {
-                    throw e;
-                }
-            }
-        });
-        this.currentDocument.addRawCommand(this.documentEndCommand);
-        if (validationErrors.length > 0) {
-            throw new DocumentValidationError('One or more validation errors', validationErrors);
+        const commandsWithMaybeErrors = forms.flatMap((form) => this.transpileForm(form));
+        const errs = commandsWithMaybeErrors.filter<DocumentValidationError>(
+            (e): e is DocumentValidationError => !(e instanceof Uint8Array)
+        );
+        if (errs.length > 0) {
+            throw new DocumentValidationError(
+                'One or more validation errors occurred transpiling the document.',
+                validationErrors
+            );
         }
 
         // Combine the separate individual documents into a single command array.
-        const { flags, buffer } = this.documents.reduce(
-            (accumulator, doc) => {
-                accumulator.buffer = this.combineCommands(accumulator.buffer, doc.combinedBuffer);
-                return { ...accumulator, flags: accumulator.flags | doc.commandEffectFlags };
-            },
-            { buffer: this.noop, flags: Commands.PrinterCommandEffectFlags.none }
-        );
-        const out = new CompiledDocument(this.commandLanugage, flags, buffer);
+        const buffer = commandsWithMaybeErrors.reduce<Uint8Array>((accumulator, cmd) => {
+            if (!(cmd instanceof Uint8Array)) {
+                throw new DocumentValidationError(
+                    'Document validation error present after checking for one!?!? Error in WebZLP!',
+                    [cmd]
+                );
+            }
+            return this.combineCommands(accumulator as Uint8Array, cmd);
+            // We start with an explicit newline, to avoid possible previous commands partially sent
+        }, this.encodeCommand(''));
+
+        const out = new CompiledDocument(this.commandLanguage, effects, buffer);
         return Object.freeze(out);
+    }
+
+    private transpileForm({
+        commands,
+        withinForm
+    }: RawCommandForm): Array<Uint8Array | DocumentValidationError> {
+        const formMetadata = new TranspilationFormMetadata();
+        const transpiledCommands = commands.map((cmd) => this.transpileCommand(cmd, formMetadata));
+        if (withinForm) {
+            transpiledCommands.unshift(this.formStartCommand);
+            transpiledCommands.push(this.formEndCommand);
+        }
+
+        return transpiledCommands;
+    }
+
+    private splitCommandsByFormInclusion(
+        commands: ReadonlyArray<Commands.IPrinterCommand>,
+        reorderBehavior: Commands.CommandReorderBehavior
+    ): { forms: Array<RawCommandForm>; effects: Commands.PrinterCommandEffectFlags } {
+        const forms: Array<RawCommandForm> = [];
+        const nonForms: Array<RawCommandForm> = [];
+        let effects = Commands.PrinterCommandEffectFlags.none;
+        for (const command of commands) {
+            effects |= command.printerEffectFlags;
+            if (
+                this.isCommandNonFormCommand(command) &&
+                reorderBehavior === Commands.CommandReorderBehavior.nonFormCommandsAfterForms
+            ) {
+                nonForms.push({ commands: [command], withinForm: false });
+                continue;
+            }
+
+            if (command.type == Commands.CommandType.NewLabelCommand) {
+                // Since form bounding is implicit this is our indicator to break
+                // between separate forms to be printed separately.
+                forms.push({ commands: [], withinForm: true });
+                continue;
+            }
+
+            // Anything else just gets tossed onto the stack of the current form, if it exists.
+            if (forms.at(-1) === undefined) {
+                forms.push({ commands: [], withinForm: true });
+            }
+            forms.at(-1).commands.push(command);
+        }
+
+        // TODO: If the day arises we need to configure non-form commands _before_ the form
+        // this will need to be made more clever.
+        return { forms: forms.concat(nonForms), effects };
+    }
+
+    /** List of commands which must not appear within a form, according to this language's rules */
+    protected abstract nonFormCommands: Array<symbol | Commands.CommandType>;
+
+    private isCommandNonFormCommand(command: Commands.IPrinterCommand) {
+        let id: symbol | Commands.CommandType;
+        if (
+            command.type === Commands.CommandType.CommandCustomSpecificCommand ||
+            command.type === Commands.CommandType.CommandLanguageSpecificCommand
+        ) {
+            id = (command as Commands.IPrinterExtendedCommand).typeExtended;
+        } else {
+            id = command.type;
+        }
+
+        return this.nonFormCommands.includes(id);
+    }
+
+    protected unprocessedCommand(cmd: Commands.IPrinterCommand): Uint8Array {
+        throw new DocumentValidationError(
+            `Unhandled meta-command '${cmd.constructor.name}' was not preprocessed. This is a bug in WebZLP, please submit an issue.`
+        );
     }
 
     /**
@@ -83,24 +189,19 @@ export abstract class PrinterCommandSet {
             .replace(/[\r\n]+/gi, ' ');
     }
 
-    /** Start a new label document within the same command batch. */
-    protected startNewDocument() {
-        this.currentDocument.addRawCommand(this.documentEndCommand);
-        this.documents.push(new TranspilationDocumentMetadata());
-        this.activeDocumentIdx = this.documents.length - 1;
-        this.currentDocument.addRawCommand(this.documentStartCommand);
-        return this.noop;
-    }
-
     /** Apply an offset command to a document. */
-    protected modifyOffset(cmd: Commands.Offset, outDoc: TranspilationDocumentMetadata) {
+    protected modifyOffset(
+        cmd: Commands.OffsetCommand,
+        outDoc: TranspilationFormMetadata,
+        cmdSet: PrinterCommandSet
+    ) {
         const newHoriz = cmd.absolute ? cmd.horizontal : outDoc.horizontalOffset + cmd.horizontal;
         outDoc.horizontalOffset = newHoriz < 0 ? 0 : newHoriz;
         if (cmd.vertical) {
             const newVert = cmd.absolute ? cmd.vertical : outDoc.verticalOffset + cmd.vertical;
             outDoc.verticalOffset = newVert < 0 ? 0 : newVert;
         }
-        return this.noop;
+        return cmdSet.noop;
     }
 
     /** Combine two commands into one command array. */
@@ -111,12 +212,6 @@ export abstract class PrinterCommandSet {
         return merged;
     }
 
-    /** Transpile a command to its native command equivalent. */
-    abstract transpileCommand(
-        cmd: Commands.IPrinterCommand,
-        outDoc: TranspilationDocumentMetadata
-    ): Uint8Array;
-
     /** Parse the response of a configuration inqury in the command set language. */
     abstract parseConfigurationResponse(
         rawText: string,
@@ -124,13 +219,38 @@ export abstract class PrinterCommandSet {
     ): PrinterOptions;
 }
 
+/** How a command should be wrapped into a form, if at all */
+export enum CommandFormInclusionMode {
+    /** Command can appear in a shared form with other commands. */
+    sharedForm = 0,
+    /** Command should not be wrapped in a form at all. */
+    noForm
+}
+
+export class TranspilationFormList {
+    private _documents: Array<TranspilationFormMetadata> = [new TranspilationFormMetadata()];
+    public get documents(): ReadonlyArray<TranspilationFormMetadata> {
+        return this._documents;
+    }
+
+    private activeDocumentIdx = 0;
+    public get currentDocument() {
+        return this._documents[this.activeDocumentIdx];
+    }
+
+    public addNewDocument() {
+        this._documents.push(new TranspilationFormMetadata());
+        this.activeDocumentIdx = this._documents.length - 1;
+    }
+}
+
 /** Class for storing in-progress document generation information */
-export class TranspilationDocumentMetadata {
+export class TranspilationFormMetadata {
     horizontalOffset = 0;
     verticalOffset = 0;
     lineSpacingDots = 5;
 
-    dpi;
+    dpi: number;
 
     commandEffectFlags = Commands.PrinterCommandEffectFlags.none;
 
@@ -138,7 +258,9 @@ export class TranspilationDocumentMetadata {
 
     /** Add a raw command to the internal buffer. */
     addRawCommand(array: Uint8Array) {
-        this.rawCmdBuffer.push(array);
+        if (array && array.length > 0) {
+            this.rawCmdBuffer.push(array);
+        }
     }
 
     /**

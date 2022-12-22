@@ -1,123 +1,107 @@
 import * as Options from '../Configuration/PrinterOptions';
 import {
     PrinterCommandSet,
-    DocumentValidationError,
-    TranspilationDocumentMetadata
+    TranspilationFormMetadata,
+    TranspileCommandDelegate,
+    CommandFormInclusionMode
 } from './PrinterCommandSet';
 import * as Commands from '../../Documents/Commands';
-import { match, P } from 'ts-pattern';
 import { AutodetectedPrinter, PrinterModel } from '../Models/PrinterModel';
-import { PrinterCommunicationOptions } from '../Communication/PrinterCommunication';
 import { PrinterModelDb } from '../Models/PrinterModelDb';
-import { BitmapGRF } from '../../Documents/BitmapGRF';
+import { PrinterCommunicationOptions } from '../PrinterCommunicationOptions';
 
 export class ZplPrinterCommandSet extends PrinterCommandSet {
     private encoder = new TextEncoder();
 
-    get commandLanugage(): Options.PrinterCommandLanguage {
+    get commandLanguage(): Options.PrinterCommandLanguage {
         return Options.PrinterCommandLanguage.zpl;
     }
 
-    get documentStartCommand(): Uint8Array {
+    get formStartCommand(): Uint8Array {
         // All ZPL documents start with the start-of-document command.
         return this.encodeCommand('\n^XA\n');
     }
 
-    get documentEndCommand(): Uint8Array {
+    get formEndCommand(): Uint8Array {
         // All ZPL documents end with the end-of-document command.
         return this.encodeCommand('\n^XZ\n');
     }
 
-    encodeCommand(str: string): Uint8Array {
+    encodeCommand(str: string, withNewline = true): Uint8Array {
         // TODO: ZPL supports omitting the newline, figure out a clever way to
         // handle situations where newlines are optional to reduce line noise.
-        return this.encoder.encode(str + '\n');
+        return this.encoder.encode(str + (withNewline ? '\n' : ''));
     }
 
-    transpileCommand(
-        cmd: Commands.IPrinterCommand,
-        outDoc: TranspilationDocumentMetadata
-    ): Uint8Array {
-        return match<Commands.IPrinterCommand, Uint8Array>(cmd)
-            .with(P.instanceOf(Commands.NewLabelCommand), () => this.startNewDocument())
-            .with(P.instanceOf(Commands.Offset), (cmd) => this.modifyOffset(cmd, outDoc))
-            .with(P.instanceOf(Commands.ClearImageBufferCommand), () => {
-                // Clear image buffer isn't a relevant command on ZPL printers.
-                // Closest equivalent is the ~JP (pause and cancel) or ~JA (cancel all) but both
-                // affect in-progress printing operations which is unlikely to be desired operation.
-                // Translate as a no-op.
-                // TODO: Maybe ~JX is the right command here?
-                return this.noop;
-            })
-            .with(P.instanceOf(Commands.CutNowCommand), () => {
-                // ZPL doens't have an OOTB cut command except for one printer.
-                // Cutter behavior should be managed by the ^MM command instead.
-                return this.noop;
-            })
-            .with(P.instanceOf(Commands.SuppressFeedBackupCommand), () => {
-                // ZPL needs this for every form printed.
-                return this.encodeCommand('^XB');
-            })
-            .with(P.instanceOf(Commands.EnableFeedBackupCommand), () => {
-                // ZPL doesn't have an enable, it just expects XB for every label
-                // that should not back up.
-                return this.noop;
-            })
-            .with(P.instanceOf(Commands.RebootPrinterCommand), () => this.encodeCommand('~JR'))
-            .with(P.instanceOf(Commands.QueryConfigurationCommand), () =>
-                // HH returns serial, HZA gets everything but the serial in XML.
-                this.encodeCommand('^HZA\r\n^HH')
-            )
-            .with(P.instanceOf(Commands.PrintConfigurationCommand), () => this.encodeCommand('~WC'))
-            .with(P.instanceOf(Commands.SetPrintDirectionCommand), (cmd) => {
-                const dir = cmd.upsideDown ? 'I' : 'N';
-                return this.encodeCommand(`^PO${dir}`);
-            })
-            .with(P.instanceOf(Commands.SetDarknessCommand), (cmd) =>
-                this.encodeCommand(`~SD${cmd.darknessSetting}`)
-            )
-            .with(P.instanceOf(Commands.SetPrintSpeedCommand), (cmd) => {
-                // ZPL uses separate print, slew, and backfeed speeds. Re-use print for backfeed.
-                return this.encodeCommand(
-                    `^PR${cmd.speedVal},${cmd.mediaSpeedVal},${cmd.speedVal}`
-                );
-            })
-            .with(P.instanceOf(Commands.AutosenseLabelDimensionsCommand), () =>
-                this.encodeCommand('~JC')
-            )
-            .with(P.instanceOf(Commands.SetLabelDimensionsCommand), (cmd) => {
-                const width = this.encodeCommand(`^PW${cmd.widthInDots}`);
-                if (cmd.setsHeight) {
-                    const height = this.encodeCommand(`^LL${cmd.heightInDots},N`);
-                    return this.combineCommands(width, height);
-                }
-                return width;
-            })
-            .with(P.instanceOf(Commands.AddImageCommand), (cmd) => {
-                return this.imageBufferToCmd(cmd.bitmap, outDoc);
-            })
-            .with(P.instanceOf(Commands.AddLineCommand), (cmd) =>
-                this.lineOrBoxToCmd(cmd.heightInDots, cmd.lengthInDots, cmd.color)
-            )
-            .with(P.instanceOf(Commands.AddBoxCommand), (cmd) =>
-                this.lineOrBoxToCmd(
-                    cmd.heightInDots,
-                    cmd.thickness,
-                    Commands.DrawColor.black,
-                    cmd.lengthInDots
-                )
-            )
-            .with(P.instanceOf(Commands.PrintCommand), (cmd) => {
-                // TODO: Make sure this actually works this way..
-                // According to the docs the first parameter is "total" labels,
-                // while the third is duplicates.
-                const total = cmd.count * (cmd.additionalDuplicateOfEach + 1);
-                const dup = cmd.additionalDuplicateOfEach;
-                return this.encodeCommand(`^PQ${total},0,${dup},N`);
-            })
-            .otherwise((cmd) => {
-                throw new DocumentValidationError(`Unknown ZPL command '${cmd.name}'.`);
-            });
+    protected nonFormCommands: (symbol | Commands.CommandType)[] = [
+        Commands.CommandType.AutosenseLabelDimensionsCommand,
+        Commands.CommandType.PrintConfigurationCommand,
+        Commands.CommandType.RawDocumentCommand,
+        Commands.CommandType.RebootPrinterCommand,
+        Commands.CommandType.SetDarknessCommand
+    ];
+
+    protected transpileCommandMap = new Map<
+        symbol | Commands.CommandType,
+        TranspileCommandDelegate
+    >([
+        // Ghost commands which shouldn't make it this far.
+        [Commands.CommandType.NewLabelCommand, this.unprocessedCommand],
+        [Commands.CommandType.CommandCustomSpecificCommand, this.unprocessedCommand],
+        [Commands.CommandType.CommandLanguageSpecificCommand, this.unprocessedCommand],
+        // Actually valid commands to parse
+        [Commands.CommandType.OffsetCommand, this.modifyOffset],
+        // Clear image buffer isn't a relevant command on ZPL printers.
+        // Closest equivalent is the ~JP (pause and cancel) or ~JA (cancel all) but both
+        // affect in-progress printing operations which is unlikely to be desired operation.
+        // Translate as a no-op.
+        [Commands.CommandType.ClearImageBufferCommand, () => this.noop],
+        // ZPL doens't have an OOTB cut command except for one printer.
+        // Cutter behavior should be managed by the ^MM command instead.
+        [Commands.CommandType.CutNowCommand, () => this.noop],
+        // ZPL needs this for every form printed.
+        [Commands.CommandType.SuppressFeedBackupCommand, () => this.encodeCommand('^XB')],
+        // ZPL doesn't have an enable, it just expects XB for every label
+        // that should not back up.
+        [Commands.CommandType.EnableFeedBackupCommand, () => this.noop],
+        [Commands.CommandType.RebootPrinterCommand, () => this.encodeCommand('~JR')],
+        // HH returns serial as raw text, HZA gets everything but the serial in XML.
+        [Commands.CommandType.QueryConfigurationCommand, () => this.encodeCommand('^HZA\r\n^HH')],
+        [Commands.CommandType.PrintConfigurationCommand, () => this.encodeCommand('~WC')],
+        [Commands.CommandType.SaveCurrentConfigurationCommand, () => this.encodeCommand('^JUS')],
+        [Commands.CommandType.SetPrintDirectionCommand, this.setPrintDirectionCommand],
+        [Commands.CommandType.SetDarknessCommand, this.setDarknessCommand],
+        [Commands.CommandType.SetPrintSpeedCommand, this.setPrintSpeedCommand],
+        [Commands.CommandType.AutosenseLabelDimensionsCommand, () => this.encodeCommand('~JC')],
+        [Commands.CommandType.SetLabelDimensionsCommand, this.setLabelDimensionsCommand],
+        [Commands.CommandType.SetLabelHomeCommand, this.setLabelHomeCommand],
+        [Commands.CommandType.AddImageCommand, this.addImageCommand],
+        [Commands.CommandType.AddLineCommand, this.addLineCommand],
+        [Commands.CommandType.AddBoxCommand, this.addBoxCommand],
+        [Commands.CommandType.PrintCommand, this.printCommand]
+    ]);
+
+    constructor(
+        customCommands: Array<{
+            commandType: symbol;
+            applicableLanguages: Options.PrinterCommandLanguage;
+            transpileDelegate: TranspileCommandDelegate;
+            commandInclusionMode: CommandFormInclusionMode;
+        }> = []
+    ) {
+        super();
+
+        for (const newCmd of customCommands) {
+            if ((newCmd.applicableLanguages & this.commandLanguage) !== this.commandLanguage) {
+                // Command declared to not be applicable to this command set, skip it.
+                continue;
+            }
+
+            this.transpileCommandMap.set(newCmd.commandType, newCmd.transpileDelegate);
+            if (newCmd.commandInclusionMode !== CommandFormInclusionMode.sharedForm) {
+                this.nonFormCommands.push(newCmd.commandType);
+            }
+        }
     }
 
     parseConfigurationResponse(
@@ -184,9 +168,11 @@ export class ZplPrinterCommandSet extends PrinterCommandSet {
         commOpts: PrinterCommunicationOptions
     ): Options.PrinterOptions {
         // ZPL includes enough information in the document to autodetect the printer's capabilities.
-        let model = PrinterModelDb.getModel(this.getXmlText(doc, 'MODEL'));
+        const rawModel = this.getXmlText(doc, 'MODEL');
+        let model: PrinterModel | string = PrinterModelDb.getModel(rawModel);
         if (model == PrinterModel.unknown) {
-            model = PrinterModel.zplAutodetect;
+            // If the database doesn't have this one listed just use the raw name.
+            model = rawModel;
         }
         // ZPL rounds, multiplying by 25 gets us to 'inches' in their book.
         // 8 DPM == 200 DPI, for example.
@@ -326,10 +312,27 @@ export class ZplPrinterCommandSet extends PrinterCommandSet {
         return table;
     }
 
-    private imageBufferToCmd(bitmap: BitmapGRF, outDoc: TranspilationDocumentMetadata) {
-        if (bitmap == null) {
-            return this.noop;
+    private getFieldOffsetCommand(
+        formMetadata: TranspilationFormMetadata,
+        additionalHorizontal = 0,
+        additionalVertical = 0
+    ) {
+        const xOffset = Math.trunc(formMetadata.horizontalOffset + additionalHorizontal);
+        const yOffset = Math.trunc(formMetadata.verticalOffset + additionalVertical);
+        return `^FO${xOffset},${yOffset}`;
+    }
+
+    private addImageCommand(
+        cmd: Commands.AddImageCommand,
+        outDoc: TranspilationFormMetadata,
+        cmdSet: ZplPrinterCommandSet
+    ): Uint8Array {
+        if (cmd?.bitmap == null) {
+            return cmdSet.noop;
         }
+
+        // ZPL inverts colors. 1 means black, 0 means white. I don't know why.
+        const bitmap = cmd.bitmap.toInvertedGRF();
 
         // ZPL supports compressed binary on pretty much all firmwares, default to that.
         // TODO: ASCII-compressed formats are only supported on newer firmwares.
@@ -338,9 +341,11 @@ export class ZplPrinterCommandSet extends PrinterCommandSet {
         const buffer = bitmap.toZebraCompressedGRF();
 
         // Because the image may be trimmed add an offset command to position to the image data.
-        const xOffset = Math.trunc(outDoc.horizontalOffset + bitmap.boundingBox.paddingLeft);
-        const yOffset = Math.trunc(outDoc.verticalOffset + bitmap.boundingBox.paddingTop);
-        const fieldStart = `^FO${xOffset},${yOffset}`;
+        const fieldStart = cmdSet.getFieldOffsetCommand(
+            outDoc,
+            bitmap.boundingBox.paddingLeft,
+            bitmap.boundingBox.paddingTop
+        );
 
         const byteLen = bitmap.bytesUncompressed;
         const graphicCmd = `^GFA,${byteLen},${byteLen},${bitmap.bytesPerRow},${buffer}`;
@@ -350,19 +355,115 @@ export class ZplPrinterCommandSet extends PrinterCommandSet {
         // Finally, bump the document offset according to the image height.
         outDoc.verticalOffset += bitmap.boundingBox.height;
 
-        return this.encodeCommand(fieldStart + graphicCmd + fieldEnd);
+        return cmdSet.encodeCommand(fieldStart + graphicCmd + fieldEnd);
+    }
+
+    private setPrintDirectionCommand(
+        cmd: Commands.SetPrintDirectionCommand,
+        outDoc: TranspilationFormMetadata,
+        cmdSet: ZplPrinterCommandSet
+    ): Uint8Array {
+        const dir = cmd.upsideDown ? 'I' : 'N';
+        return cmdSet.encodeCommand(`^PO${dir}`);
+    }
+
+    private setDarknessCommand(
+        cmd: Commands.SetDarknessCommand,
+        outDoc: TranspilationFormMetadata,
+        cmdSet: ZplPrinterCommandSet
+    ): Uint8Array {
+        const dark = Math.trunc(cmd.darknessSetting);
+        return cmdSet.encodeCommand(`~SD${dark}`);
+    }
+
+    private setPrintSpeedCommand(
+        cmd: Commands.SetPrintSpeedCommand,
+        outDoc: TranspilationFormMetadata,
+        cmdSet: ZplPrinterCommandSet
+    ): Uint8Array {
+        // ZPL uses separate print, slew, and backfeed speeds. Re-use print for backfeed.
+        return cmdSet.encodeCommand(`^PR${cmd.speedVal},${cmd.mediaSpeedVal},${cmd.speedVal}`);
+    }
+
+    private setLabelDimensionsCommand(
+        cmd: Commands.SetLabelDimensionsCommand,
+        outDoc: TranspilationFormMetadata,
+        cmdSet: ZplPrinterCommandSet
+    ): Uint8Array {
+        const width = Math.trunc(cmd.widthInDots);
+        const widthCmd = cmdSet.encodeCommand(`^PW${width}`);
+        if (cmd.setsHeight) {
+            const height = Math.trunc(cmd.heightInDots);
+            const heightCmd = cmdSet.encodeCommand(`^LL${height},N`);
+            return cmdSet.combineCommands(widthCmd, heightCmd);
+        }
+        return widthCmd;
+    }
+
+    private setLabelHomeCommand(
+        cmd: Commands.SetLabelHomeCommand,
+        outDoc: TranspilationFormMetadata,
+        cmdSet: ZplPrinterCommandSet
+    ): Uint8Array {
+        const xOffset = Math.trunc(cmd.xOffset);
+        const yOffset = Math.trunc(cmd.yOffset);
+        return cmdSet.encodeCommand(`^LH${xOffset},${yOffset}`);
+    }
+
+    private printCommand(
+        cmd: Commands.PrintCommand,
+        outDoc: TranspilationFormMetadata,
+        cmdSet: ZplPrinterCommandSet
+    ): Uint8Array {
+        // TODO: Make sure this actually works this way..
+        // According to the docs the first parameter is "total" labels,
+        // while the third is duplicates.
+        const total = Math.trunc(cmd.count * (cmd.additionalDuplicateOfEach + 1));
+        const dup = Math.trunc(cmd.additionalDuplicateOfEach);
+        return cmdSet.encodeCommand(`^PQ${total},0,${dup},N`);
+    }
+
+    private addLineCommand(
+        cmd: Commands.AddLineCommand,
+        outDoc: TranspilationFormMetadata,
+        cmdSet: ZplPrinterCommandSet
+    ): Uint8Array {
+        return cmdSet.lineOrBoxToCmd(
+            cmdSet,
+            outDoc,
+            cmd.heightInDots,
+            cmd.lengthInDots,
+            cmd.color,
+            // A line is just a box filled in!
+            Math.min(cmd.heightInDots, cmd.lengthInDots)
+        );
+    }
+
+    private addBoxCommand(
+        cmd: Commands.AddBoxCommand,
+        outDoc: TranspilationFormMetadata,
+        cmdSet: ZplPrinterCommandSet
+    ): Uint8Array {
+        return cmdSet.lineOrBoxToCmd(
+            cmdSet,
+            outDoc,
+            cmd.heightInDots,
+            cmd.lengthInDots,
+            Commands.DrawColor.black,
+            cmd.thickness
+        );
     }
 
     private lineOrBoxToCmd(
+        cmdSet: ZplPrinterCommandSet,
+        outDoc: TranspilationFormMetadata,
         height: number,
-        thickness: number,
+        length: number,
         color: Commands.DrawColor,
-        length?: number
-    ) {
+        thickness?: number
+    ): Uint8Array {
         height = Math.trunc(height) || 0;
-        thickness = Math.trunc(length) || 0;
-
-        // Length of zero is valid, it indicates this is a line not a box.
+        thickness = Math.trunc(thickness) || 1;
         length = Math.trunc(length) || 0;
         let drawMode: string;
         switch (color) {
@@ -373,8 +474,11 @@ export class ZplPrinterCommandSet extends PrinterCommandSet {
                 drawMode = 'W';
                 break;
         }
+        const fieldStart = cmdSet.getFieldOffsetCommand(outDoc);
 
         // TODO: Support rounding?
-        return this.encodeCommand([`^GB${length}`, height, thickness, drawMode].join(','));
+        return cmdSet.encodeCommand(
+            [fieldStart, `^GB${length}`, height, thickness, drawMode, '^FS'].join(',')
+        );
     }
 }
