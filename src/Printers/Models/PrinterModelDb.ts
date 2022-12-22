@@ -21,6 +21,7 @@ export class PrinterModelDb {
         // TODO: Make this extensible so it's possible for consumers to add their own
         // printers to the enum, match list, etc.
         return match<string, PrinterModel>(rawModelId)
+            .with('UKQ1915HLU', () => PrinterModel.lp2824)
             .with('UKQ1935HLU', () => PrinterModel.lp2844)
             .with('UKQ1935HMU', () => {
                 // HMU units that do not have FDX in the version string appear to be UPS
