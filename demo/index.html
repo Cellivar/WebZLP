@@ -424,6 +424,7 @@
                 const configDoc = printer
                     .getConfigDocument()
                     .setPrintDirection()
+                    .setLabelHomeOffsetDots(0, 0)
                     .setPrintSpeed(rawSpeed)
                     .setDarknessConfig(darkness)
                     .setLabelDimensions(labelWidthInches);
