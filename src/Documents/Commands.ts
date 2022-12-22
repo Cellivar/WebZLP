@@ -1,4 +1,5 @@
 import * as Options from '../Printers/Configuration/PrinterOptions';
+import { BitmapGRF } from './BitmapGRF';
 
 /** Flags to indicate special operations a command might cause. */
 export enum PrinterCommandEffectFlags {
@@ -278,19 +279,13 @@ export class AddImageCommand implements IPrinterCommand {
         return 'Add image to label';
     }
     toDisplay(): string {
-        if (!this.imageData) {
-            return 'Adds a null image';
+        if (!this.bitmap) {
+            return 'Adds a blank image';
         }
-        return this.name;
+        return `Adds a {}`;
     }
 
-    constructor(imageData: ImageData, dithering: DitheringMethod) {
-        this.imageData = imageData;
-        this.dithering = dithering;
-    }
-
-    imageData: ImageData;
-    dithering: DitheringMethod;
+    constructor(public bitmap: BitmapGRF, public dithering: DitheringMethod) {}
 }
 
 /** Command class to draw a straight line. */

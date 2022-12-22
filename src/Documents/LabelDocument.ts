@@ -1,6 +1,7 @@
 import * as Commands from './Commands';
 import { DocumentBuilder } from './Document';
 import * as Options from '../Printers/Configuration/PrinterOptions';
+import { BitmapGRF } from './BitmapGRF';
 
 export interface ILabelDocumentBuilder
     extends DocumentBuilder<ILabelDocumentBuilder>,
@@ -67,11 +68,13 @@ export class LabelDocumentBuilder
 
     ///////////////////// LABEL IMAGE CONTENTS
 
-    addImage(
+    addImageFromImageData(
         imageData: ImageData,
         dithering = Commands.DitheringMethod.none
     ): ILabelDocumentBuilder {
-        return this.then(new Commands.AddImageCommand(imageData, dithering));
+        return this.then(
+            new Commands.AddImageCommand(BitmapGRF.fromCanvasImageData(imageData), dithering)
+        );
     }
 
     addLine(lengthInDots: number, heightInDots: number, color = Commands.DrawColor.black) {
@@ -130,7 +133,10 @@ export interface ILabelPositionCommandBuilder {
 
 export interface ILabelContentCommandBuilder {
     /** Add an ImageData object as an image to the label */
-    addImage(imageData: ImageData, dithering?: Commands.DitheringMethod): ILabelDocumentBuilder;
+    addImageFromImageData(
+        imageData: ImageData,
+        dithering?: Commands.DitheringMethod
+    ): ILabelDocumentBuilder;
 
     /** Draw a line from the current offset for the length and height. */
     addLine(

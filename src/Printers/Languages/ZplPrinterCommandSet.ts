@@ -6,9 +6,10 @@ import {
 } from './PrinterCommandSet';
 import * as Commands from '../../Documents/Commands';
 import { match, P } from 'ts-pattern';
-import { AutodetectedPrinter } from '../Models/PrinterModel';
+import { AutodetectedPrinter, PrinterModel } from '../Models/PrinterModel';
 import { PrinterCommunicationOptions } from '../Communication/PrinterCommunication';
 import { PrinterModelDb } from '../Models/PrinterModelDb';
+import { BitmapGRF } from '../../Documents/BitmapGRF';
 
 export class ZplPrinterCommandSet extends PrinterCommandSet {
     private encoder = new TextEncoder();
@@ -45,6 +46,7 @@ export class ZplPrinterCommandSet extends PrinterCommandSet {
                 // Closest equivalent is the ~JP (pause and cancel) or ~JA (cancel all) but both
                 // affect in-progress printing operations which is unlikely to be desired operation.
                 // Translate as a no-op.
+                // TODO: Maybe ~JX is the right command here?
                 return this.noop;
             })
             .with(P.instanceOf(Commands.CutNowCommand), () => {
@@ -90,6 +92,9 @@ export class ZplPrinterCommandSet extends PrinterCommandSet {
                     return this.combineCommands(width, height);
                 }
                 return width;
+            })
+            .with(P.instanceOf(Commands.AddImageCommand), (cmd) => {
+                return this.imageBufferToCmd(cmd.bitmap, outDoc);
             })
             .with(P.instanceOf(Commands.AddLineCommand), (cmd) =>
                 this.lineOrBoxToCmd(cmd.heightInDots, cmd.lengthInDots, cmd.color)
@@ -138,7 +143,6 @@ export class ZplPrinterCommandSet extends PrinterCommandSet {
         const rawConfig = rawText.substring(pivot);
         // First line of the raw config should be the serial, which should be alphanumeric.
         const serial = rawConfig.match(/[A-Z0-9]+/i)[0];
-        console.log('SERIAL', serial);
 
         // ZPL configuration is just XML, parse it into an object and then into config.
 
@@ -180,7 +184,10 @@ export class ZplPrinterCommandSet extends PrinterCommandSet {
         commOpts: PrinterCommunicationOptions
     ): Options.PrinterOptions {
         // ZPL includes enough information in the document to autodetect the printer's capabilities.
-        const model = PrinterModelDb.getModel(this.getXmlText(doc, 'MODEL'));
+        let model = PrinterModelDb.getModel(this.getXmlText(doc, 'MODEL'));
+        if (model == PrinterModel.unknown) {
+            model = PrinterModel.zplAutodetect;
+        }
         // ZPL rounds, multiplying by 25 gets us to 'inches' in their book.
         // 8 DPM == 200 DPI, for example.
         const dpi = parseInt(this.getXmlText(doc, 'DOTS-PER-MM')) * 25;
@@ -317,6 +324,33 @@ export class ZplPrinterCommandSet extends PrinterCommandSet {
             table.set(Options.PrintSpeedSettings.getSpeedFromWholeNumber(s), s)
         );
         return table;
+    }
+
+    private imageBufferToCmd(bitmap: BitmapGRF, outDoc: TranspilationDocumentMetadata) {
+        if (bitmap == null) {
+            return this.noop;
+        }
+
+        // ZPL supports compressed binary on pretty much all firmwares, default to that.
+        // TODO: ASCII-compressed formats are only supported on newer firmwares.
+        // Implement feature detection into the transpiler operation to choose the most
+        // appropriate compression format such as LZ77/DEFLATE compression for Z64.
+        const buffer = bitmap.toZebraCompressedGRF();
+
+        // Because the image may be trimmed add an offset command to position to the image data.
+        const xOffset = Math.trunc(outDoc.horizontalOffset + bitmap.boundingBox.paddingLeft);
+        const yOffset = Math.trunc(outDoc.verticalOffset + bitmap.boundingBox.paddingTop);
+        const fieldStart = `^FO${xOffset},${yOffset}`;
+
+        const byteLen = bitmap.bytesUncompressed;
+        const graphicCmd = `^GFA,${byteLen},${byteLen},${bitmap.bytesPerRow},${buffer}`;
+
+        const fieldEnd = '^FS';
+
+        // Finally, bump the document offset according to the image height.
+        outDoc.verticalOffset += bitmap.boundingBox.height;
+
+        return this.encodeCommand(fieldStart + graphicCmd + fieldEnd);
     }
 
     private lineOrBoxToCmd(

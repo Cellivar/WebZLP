@@ -11,6 +11,7 @@ import {
 import * as Commands from '../../Documents/Commands';
 import { match, P } from 'ts-pattern';
 import { PrinterCommunicationOptions } from '../Communication/PrinterCommunication';
+import { BitmapGRF } from '../../Documents/BitmapGRF';
 
 /** Command set for communicating with an EPL II printer. */
 export class EplPrinterCommandSet extends PrinterCommandSet {
@@ -82,7 +83,7 @@ export class EplPrinterCommandSet extends PrinterCommandSet {
                 return width;
             })
             .with(P.instanceOf(Commands.AddImageCommand), (cmd) => {
-                return this.imageBufferToCmd(cmd.imageData, outDoc);
+                return this.imageBufferToCmd(cmd.bitmap, outDoc);
             })
             .with(P.instanceOf(Commands.AddLineCommand), (cmd) => {
                 return this.lineToCmd(cmd.heightInDots, cmd.lengthInDots, cmd.color, outDoc);
@@ -356,104 +357,25 @@ export class EplPrinterCommandSet extends PrinterCommandSet {
         return options;
     }
 
-    private imageBufferToCmd(imageData: ImageData, outDoc: TranspilationDocumentMetadata) {
-        if (imageData == null) {
+    private imageBufferToCmd(bitmap: BitmapGRF, outDoc: TranspilationDocumentMetadata) {
+        if (bitmap == null) {
             return this.noop;
         }
 
-        const [bitmap, bitmapWidth, bitmapHeight] = this.imageDataToEplBitmap(imageData);
+        // EPL only supports raw binary, get that.
+        const buffer = bitmap.toBinaryGRF();
 
         // Add the text command prefix to the buffer data
         const parameters = [
-            'GW' + Math.trunc(outDoc.horizontalOffset),
-            Math.trunc(outDoc.verticalOffset),
-            Math.trunc(bitmapWidth / 8),
-            Math.trunc(bitmapHeight)
+            'GW' + Math.trunc(outDoc.horizontalOffset + bitmap.boundingBox.paddingLeft),
+            Math.trunc(outDoc.verticalOffset + bitmap.boundingBox.paddingTop),
+            bitmap.bytesPerRow,
+            bitmap.height
         ];
         // Bump the offset according to the image being added.
-        outDoc.verticalOffset += bitmapHeight;
+        outDoc.verticalOffset += bitmap.boundingBox.height;
         const rawCmd = this.encodeCommand(parameters.join(',') + ',', false);
-        return this.combineCommands(rawCmd, this.combineCommands(bitmap, this.encodeCommand('')));
-    }
-
-    private imageDataToEplBitmap(imageData: ImageData): [Uint8Array, number, number] {
-        // This property isn't supported in Firefox, so it isn't supported
-        // in the lib types, and I don't feel like dealing with it right now
-        // so TODO: fix this eventually
-        // Only supports sRGB as RGBA data.
-        // if (imageData.colorSpace !== 'srgb') {
-        //     throw new DocumentValidationError(
-        //         'Unknown color space for given imageData. Expected srgb but got ' +
-        //             imageData.colorSpace
-        //     );
-        // }
-
-        // EPL bitmaps are byte-packed, meaning the width must be a factor of one
-        // byte (8 bits). Pad each row (width) out to the 8 bit boundary.
-        const byteSize = 8;
-        const paddingToAdd = (byteSize - (imageData.width % byteSize)) % byteSize;
-        const outputWidth = imageData.width + paddingToAdd;
-
-        // RGBA data gets compressed down to 1 bit, then packed into a byte array.
-        // Note that the label width and height aren't relevant here, just
-        // what the imageData says.
-        const buffer = new Uint8Array((imageData.height * outputWidth) / 8);
-        const d = imageData.data;
-
-        // If the grayscale version of the pixel + alpha is above this
-        // value treat it as white, else black.
-        const threshold = 200;
-        // Assume a white background (as most labels are white)
-        const backgroundColor = 255;
-
-        /* eslint-disable prettier/prettier */
-        for (let y = 0; y < imageData.height; y++) {
-            for (let x = 0; x < imageData.width; x++) {
-                // RGBA is 4 bits, multiply everything by 4.
-                const pixelStartOffset = (y * imageData.width * 4) + (x * 4);
-
-                const mono = this.rgbaToMonochrome(
-                    d[pixelStartOffset + 0],
-                    d[pixelStartOffset + 1],
-                    d[pixelStartOffset + 2],
-                    d[pixelStartOffset + 3],
-                    backgroundColor,
-                    threshold
-                );
-                const bit = mono << (7 - (x % 8));
-
-                buffer[(y * outputWidth) / 8 + Math.floor(x / 8)] |= bit;
-            }
-            // The padding is implicitly black when it needs to be white.
-            // Set the padding bits added to the end of the row to 1.
-            buffer[(((y + 1) * outputWidth) / 8) - 1] |= (1 << paddingToAdd) - 1;
-        }
-        /* eslint-enable prettier/prettier */
-
-        return [buffer, outputWidth, imageData.height];
-    }
-
-    private rgbaToMonochrome(
-        r: number,
-        g: number,
-        b: number,
-        a: number,
-        backgroundColor: number,
-        threshold: number
-    ): number {
-        // Color to grayscale conversion factors pulled from color theory
-        // http://poynton.ca/notes/colour_and_gamma/ColorFAQ.html
-        const gray = Math.min(
-            Math.pow(
-                Math.pow(r / 255.0, 2.2) * 0.2126 +
-                    Math.pow(g / 255.0, 2.2) * 0.7152 +
-                    Math.pow(b / 255.0, 2.2) * 0.0722,
-                0.454545
-            ) * 255
-        );
-        const alpha = a / 255.0;
-        const grayAlpha = (1 - alpha) * backgroundColor + alpha * gray;
-        return grayAlpha > threshold ? 1 : 0;
+        return this.combineCommands(rawCmd, this.combineCommands(buffer, this.encodeCommand('')));
     }
 
     private lineToCmd(

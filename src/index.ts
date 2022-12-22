@@ -2,6 +2,7 @@ export * from './Color';
 export * from './Documents/Commands';
 export * from './Documents/ConfigDocument';
 export * from './Documents/Document';
+export * from './Documents/BitmapGRF';
 export * from './Documents/LabelDocument';
 export * from './Documents/ReadyToPrintDocuments';
 export * from './Printers/Communication/LineBreakTransformer';
