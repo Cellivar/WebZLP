@@ -18,6 +18,10 @@ export class LabelDocumentBuilder
     // Maybe different types??
     private _docType: LabelDocumentType = LabelDocumentType.instanceForm;
 
+    get commandReorderBehavior(): Commands.CommandReorderBehavior {
+        return Commands.CommandReorderBehavior.none;
+    }
+
     constructor(
         config: Options.PrinterOptions,
         docType: LabelDocumentType = LabelDocumentType.instanceForm
@@ -55,15 +59,15 @@ export class LabelDocumentBuilder
     ///////////////////// OFFSET AND SPACING
 
     setOffset(horizontal: number, vertical?: number): ILabelDocumentBuilder {
-        return this.then(new Commands.Offset(horizontal, vertical, true));
+        return this.then(new Commands.OffsetCommand(horizontal, vertical, true));
     }
 
     addOffset(horizontal: number, vertical?: number): ILabelDocumentBuilder {
-        return this.then(new Commands.Offset(horizontal, vertical));
+        return this.then(new Commands.OffsetCommand(horizontal, vertical));
     }
 
     resetOffset(): ILabelDocumentBuilder {
-        return this.then(new Commands.Offset(0, 0, true));
+        return this.then(new Commands.OffsetCommand(0, 0, true));
     }
 
     ///////////////////// LABEL IMAGE CONTENTS

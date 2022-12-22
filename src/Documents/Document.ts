@@ -4,34 +4,33 @@ import * as Options from '../Printers/Configuration/PrinterOptions';
 /** A prepared document, ready to be compiled and sent. */
 export interface IDocument {
     /** Gets the series of commands this document contains. */
-    get commands(): readonly Commands.IPrinterCommand[];
+    get commands(): ReadonlyArray<Commands.IPrinterCommand>;
+
+    /** Gets the behavior allowed for reordering commands in this document.  */
+    get commandReorderBehavior(): Commands.CommandReorderBehavior;
 
     /** Return the list of commands that will be performed in human-readable format. */
     showCommands(): string;
 }
 
 export class Document implements IDocument {
-    private _commands: readonly Commands.IPrinterCommand[];
-    get commands() {
-        return this._commands;
-    }
-
-    constructor(commandList: Commands.IPrinterCommand[]) {
-        this._commands = commandList;
-    }
+    constructor(
+        public readonly commands: ReadonlyArray<Commands.IPrinterCommand>,
+        public readonly commandReorderBehavior = Commands.CommandReorderBehavior.none
+    ) {}
 
     /** Display the commands that will be performed in a human-readable format. */
     public showCommands(): string {
-        return this._commands.map((c) => c.toDisplay()).join('\n');
+        return this.commands.map((c) => c.toDisplay()).join('\n');
     }
 }
 
 /** A document of raw commands, ready to be sent to a printer. */
 export class CompiledDocument {
     constructor(
-        public commandLanguage: Options.PrinterCommandLanguage,
-        public effectFlags: Commands.PrinterCommandEffectFlags,
-        public commandBuffer: Uint8Array
+        public readonly commandLanguage: Options.PrinterCommandLanguage,
+        public readonly effectFlags: Commands.PrinterCommandEffectFlags,
+        public readonly commandBuffer: Uint8Array
     ) {}
 
     /**
@@ -47,6 +46,9 @@ export class CompiledDocument {
 export abstract class DocumentBuilder<TBuilder extends DocumentBuilder<TBuilder>> {
     private _commands: Commands.IPrinterCommand[] = [];
     protected _config: Options.PrinterOptions;
+
+    /** The reordering behavior for commands that should not be present within a document. */
+    abstract get commandReorderBehavior(): Commands.CommandReorderBehavior;
 
     constructor(config: Options.PrinterOptions) {
         this._config = config;
@@ -70,7 +72,7 @@ export abstract class DocumentBuilder<TBuilder extends DocumentBuilder<TBuilder>
 
     /** Return the final built document. */
     finalize(): Document {
-        return new Document(this._commands);
+        return new Document(this._commands, this.commandReorderBehavior);
     }
 
     protected then(command: Commands.IPrinterCommand): TBuilder {

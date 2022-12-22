@@ -15,8 +15,21 @@ export class ConfigDocumentBuilder
     extends DocumentBuilder<IConfigDocumentBuilder>
     implements IConfigDocumentBuilder
 {
+    get commandReorderBehavior() {
+        return Commands.CommandReorderBehavior.nonFormCommandsAfterForms;
+    }
+
     constructor(config: Options.PrinterOptions) {
         super(config);
+    }
+
+    // The config document appends an additional command to the end of the document
+    // to commit the changes to stored memory. EPL does this automatically, ZPL does not
+    // so to bring them closer to parity this is automatically implied.
+    // TODO: Consider whether this should move to a ZPL extended command.
+    finalize() {
+        this.then(new Commands.SaveCurrentConfigurationCommand());
+        return super.finalize();
     }
 
     ///////////////////// GENERAL LABEL HANDLING
@@ -55,13 +68,13 @@ export class ConfigDocumentBuilder
         if (!this._config.model.isSpeedValid(speed)) {
             throw new UnsupportedPrinterConfigError(
                 'setPrintSpeed',
-                `Print speed ${Options.PrintSpeed[speed]} is not valid for ${this._config.model.model}`
+                `Print speed ${Options.PrintSpeed[speed]} is not valid for model ${this._config.model.model}`
             );
         }
         if (mediaSlewSpeed && !this._config.model.isSpeedValid(mediaSlewSpeed)) {
             throw new UnsupportedPrinterConfigError(
                 'setPrintSpeed',
-                `Media slew speed ${Options.PrintSpeed[speed]} is not valid for ${this._config.model.model}`
+                `Media slew speed ${Options.PrintSpeed[speed]} is not valid for model ${this._config.model.model}`
             );
         }
 
@@ -97,6 +110,12 @@ export class ConfigDocumentBuilder
     setLabelDimensionsDots(widthInDots: number, heightInDots?: number, gapLengthInDots?: number) {
         return this.then(
             new Commands.SetLabelDimensionsCommand(widthInDots, heightInDots, gapLengthInDots)
+        );
+    }
+
+    setLabelHomeOffsetDots(horizontalOffsetInDots: number, verticalOffsetInDots: number) {
+        return this.then(
+            new Commands.SetLabelHomeCommand(horizontalOffsetInDots, verticalOffsetInDots)
         );
     }
 }
@@ -157,6 +176,19 @@ export interface IPrinterLabelConfigBuilder {
         widthInDots: number,
         heightInDots?: number,
         gapLengthInDots?: number
+    ): IConfigDocumentBuilder;
+
+    /**
+     * Sets the origin offset from the top-left of the label that all other offsets
+     * are calculated from.
+     *
+     * Use this to fine-tune the alignment of your printer to your label stock.
+     *
+     * Avoid printing off the edges of a label, which can cause excessive head wear.
+     */
+    setLabelHomeOffsetDots(
+        horizontalOffsetInDots: number,
+        verticalOffsetInDots: number
     ): IConfigDocumentBuilder;
 
     /** Run the autosense operation to get label length. Must be last command. */
