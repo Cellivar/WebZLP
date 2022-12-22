@@ -5,20 +5,24 @@ import { BitmapGRF } from './BitmapGRF';
 export enum PrinterCommandEffectFlags {
     /** No special side-effects outside of what the command does. */
     none = 0,
+    /** The effects of this command cannot be determined automatically. */
+    unknownEffects = 1 << 0,
     /** Changes the printer config, necessitating an update of the cached config. */
-    altersPrinterConfig = 1 << 0,
+    altersPrinterConfig = 1 << 1,
     /** Causes the printer motor to engage, even if nothing is printed. */
-    feedsLabel = 1 << 1,
+    feedsLabel = 1 << 2,
     /** Causes the printer to disconnect or otherwise need reconnecting. */
-    lossOfConnection = 1 << 2,
+    lossOfConnection = 1 << 3,
     /** Causes something sharp to move */
-    actuatesCutter = 1 << 3
+    actuatesCutter = 1 << 4
 }
 
 /** A command that can be sent to a printer. */
 export interface IPrinterCommand {
-    /** Get the name of this command. */
+    /** Get the display name of this command. */
     get name(): string;
+    /** Get the command type of this command. */
+    get type(): CommandType;
 
     /** Get the human-readable output of this command. */
     toDisplay(): string;
@@ -27,9 +31,80 @@ export interface IPrinterCommand {
     readonly printerEffectFlags?: PrinterCommandEffectFlags;
 }
 
+/** A custom command beyond the standard command set, with command-language-specific behavior. */
+export interface IPrinterExtendedCommand extends IPrinterCommand {
+    /** The unique identifier for this command. */
+    get typeExtended(): symbol;
+
+    /** Gets the command languages this extended command can apply to. */
+    get commandLanguageApplicability(): Options.PrinterCommandLanguage;
+}
+
+/** List of available dithering methods for converting images to black/white. */
+export enum DitheringMethod {
+    /** No dithering, cutoff with  used. */
+    none
+}
+
+/** List of colors to draw elements with */
+export enum DrawColor {
+    /** Draw in black */
+    black,
+    /** Draw in white */
+    white
+}
+
+/** Behavior to take for commands that belong inside or outside of a form. */
+export enum CommandReorderBehavior {
+    /** Perform no reordering, non-form commands will be interpreted as form closing.  */
+    none = 0,
+    /** Reorder non-form commands to the end, retaining order. */
+    nonFormCommandsAfterForms
+}
+
+// My kingdom for a real type system, or at least a way to autogenerate this in the
+// type system. I have given up on TypeScript actually helping me here.
+// TODO: Figure out a way to unit test this to make sure it's complete.
+/* eslint-disable prettier/prettier */
+/* eslint-disable @typescript-eslint/naming-convention */
+/** Enum of all possible commands that can be issued. */
+export enum CommandType {
+    // Some printer commands can be command-language specific. This uses a different lookup table.
+    CommandLanguageSpecificCommand = 'CommandLanguageSpecificCommand',
+    // Users may supply printer commands. This uses a different lookup table.
+    CommandCustomSpecificCommand = 'CommandCustomSpecificCommand',
+    // Everything else is OOTB commands that should be implemented by internal implmentations.
+    AddBoxCommand = 'AddBoxCommand',
+    AddImageCommand = 'AddImageCommand',
+    AddLineCommand = 'AddLineCommand',
+    AutosenseLabelDimensionsCommand = 'AutosenseLabelDimensionsCommand',
+    ClearImageBufferCommand = 'ClearImageBufferCommand',
+    CutNowCommand = 'CutNowCommand',
+    EnableFeedBackupCommand = 'EnableFeedBackupCommand',
+    NewLabelCommand = 'NewLabelCommand',
+    OffsetCommand = 'OffsetCommand',
+    PrintCommand = 'PrintCommand',
+    PrintConfigurationCommand = 'PrintConfigurationCommand',
+    QueryConfigurationCommand = 'QueryConfigurationCommand',
+    RawDocumentCommand = 'RawDocumentCommand',
+    RebootPrinterCommand = 'RebootPrinterCommand',
+    SaveCurrentConfigurationCommand = 'SaveCurrentConfigurationCommand',
+    SetDarknessCommand = 'SetDarknessCommand',
+    SetLabelDimensionsCommand = 'SetLabelDimensionsCommand',
+    SetLabelHomeCommand = 'SetLabelHomeCommand',
+    SetPrintDirectionCommand = 'SetPrintDirectionCommand',
+    SetPrintSpeedCommand = 'SetPrintSpeedCommand',
+    SuppressFeedBackupCommand = 'SuppressFeedBackupCommand',
+}
+/* eslint-enable @typescript-eslint/naming-convention */
+/* eslint-enable prettier/prettier */
+
 export class NewLabelCommand implements IPrinterCommand {
     get name(): string {
         return 'End previous label and begin a new label.';
+    }
+    get type() {
+        return CommandType.NewLabelCommand;
     }
     toDisplay(): string {
         return this.name;
@@ -39,6 +114,9 @@ export class NewLabelCommand implements IPrinterCommand {
 export class PrintCommand implements IPrinterCommand {
     get name(): string {
         return 'Print label';
+    }
+    get type() {
+        return CommandType.PrintCommand;
     }
     toDisplay(): string {
         return `Print ${this.count} copies of label`;
@@ -65,6 +143,9 @@ export class CutNowCommand implements IPrinterCommand {
     get name(): string {
         return 'Cycle the media cutter now';
     }
+    get type() {
+        return CommandType.CutNowCommand;
+    }
     toDisplay(): string {
         return this.name;
     }
@@ -76,6 +157,9 @@ export class SuppressFeedBackupCommand implements IPrinterCommand {
     get name(): string {
         return 'Disable feed backup after printing label (be sure to re-enable!)';
     }
+    get type() {
+        return CommandType.SuppressFeedBackupCommand;
+    }
     toDisplay(): string {
         return this.name;
     }
@@ -84,6 +168,9 @@ export class SuppressFeedBackupCommand implements IPrinterCommand {
 export class EnableFeedBackupCommand implements IPrinterCommand {
     get name(): string {
         return 'Enable feed backup after printing label.';
+    }
+    get type() {
+        return CommandType.EnableFeedBackupCommand;
     }
     toDisplay(): string {
         return this.name;
@@ -95,6 +182,9 @@ export class ClearImageBufferCommand implements IPrinterCommand {
     get name(): string {
         return 'Clear image buffer';
     }
+    get type() {
+        return CommandType.ClearImageBufferCommand;
+    }
     toDisplay(): string {
         return this.name;
     }
@@ -104,6 +194,9 @@ export class ClearImageBufferCommand implements IPrinterCommand {
 export class QueryConfigurationCommand implements IPrinterCommand {
     get name(): string {
         return 'Query for printer config';
+    }
+    get type() {
+        return CommandType.QueryConfigurationCommand;
     }
     toDisplay(): string {
         return this.name;
@@ -115,16 +208,36 @@ export class PrintConfigurationCommand implements IPrinterCommand {
     get name(): string {
         return "Print printer's config onto labels";
     }
+    get type() {
+        return CommandType.PrintConfigurationCommand;
+    }
     toDisplay(): string {
         return this.name;
     }
     printerEffectFlags = PrinterCommandEffectFlags.feedsLabel;
 }
 
+/** A command to store the current configuration as the stored configuration. */
+export class SaveCurrentConfigurationCommand implements IPrinterCommand {
+    get name(): string {
+        return 'Store the current configuration as the saved configuration.';
+    }
+    get type(): CommandType {
+        return CommandType.SaveCurrentConfigurationCommand;
+    }
+    toDisplay(): string {
+        return this.name;
+    }
+    printerEffectFlags = PrinterCommandEffectFlags.altersPrinterConfig;
+}
+
 /** A command to set the darkness the printer prints at. */
 export class SetDarknessCommand implements IPrinterCommand {
     get name(): string {
         return 'Set darkness';
+    }
+    get type() {
+        return CommandType.SetDarknessCommand;
     }
     toDisplay(): string {
         return `Set darkness to ${this.darknessPercent}%`;
@@ -148,6 +261,9 @@ export class SetPrintDirectionCommand implements IPrinterCommand {
     get name(): string {
         return 'Set print direction';
     }
+    get type() {
+        return CommandType.SetPrintDirectionCommand;
+    }
     toDisplay(): string {
         return `Print labels ${this.upsideDown ? 'upside-down' : 'right-side up'}`;
     }
@@ -166,6 +282,9 @@ export class SetPrintDirectionCommand implements IPrinterCommand {
 export class SetPrintSpeedCommand implements IPrinterCommand {
     get name(): string {
         return 'Set print speed';
+    }
+    get type() {
+        return CommandType.SetPrintSpeedCommand;
     }
     toDisplay(): string {
         return `Set print speed to ${Options.PrintSpeed[this.speed]} (inches per second).`;
@@ -195,6 +314,9 @@ export class SetPrintSpeedCommand implements IPrinterCommand {
 export class SetLabelDimensionsCommand implements IPrinterCommand {
     get name(): string {
         return 'Set label dimensions';
+    }
+    get type() {
+        return CommandType.SetLabelDimensionsCommand;
     }
     toDisplay(): string {
         let str = `Set label size to ${this.widthInDots} wide`;
@@ -226,9 +348,28 @@ export class SetLabelDimensionsCommand implements IPrinterCommand {
     printerEffectFlags = PrinterCommandEffectFlags.altersPrinterConfig;
 }
 
+export class SetLabelHomeCommand implements IPrinterCommand {
+    get name(): string {
+        return 'Sets the label home (origin) offset';
+    }
+    get type(): CommandType {
+        return CommandType.SetLabelHomeCommand;
+    }
+    toDisplay(): string {
+        return `Set the label home (origin) to ${this.xOffset},${this.yOffset} from the top-left.`;
+    }
+    printerEffectFlags = PrinterCommandEffectFlags.altersPrinterConfig;
+
+    constructor(public xOffset: number, public yOffset: number) {}
+}
+
+/** Command class to cause the printer to auto-sense the media length. */
 export class AutosenseLabelDimensionsCommand implements IPrinterCommand {
     get name(): string {
         return 'Auto-sense the label length by feeding several labels.';
+    }
+    get type() {
+        return CommandType.AutosenseLabelDimensionsCommand;
     }
     toDisplay(): string {
         return this.name;
@@ -239,9 +380,12 @@ export class AutosenseLabelDimensionsCommand implements IPrinterCommand {
 }
 
 /** Command class to modify an offset. */
-export class Offset implements IPrinterCommand {
+export class OffsetCommand implements IPrinterCommand {
     get name(): string {
         return 'Modify offset';
+    }
+    get type() {
+        return CommandType.OffsetCommand;
     }
     toDisplay(): string {
         let str = `Set offset to ${this.horizontal} from the left`;
@@ -263,9 +407,13 @@ export class Offset implements IPrinterCommand {
     absolute = false;
 }
 
+/** Command class to force a printer to reset. */
 export class RebootPrinterCommand implements IPrinterCommand {
     get name(): string {
         return 'Simulate a power-cycle for the printer. This should be the final command.';
+    }
+    get type() {
+        return CommandType.RebootPrinterCommand;
     }
     toDisplay(): string {
         return this.name;
@@ -278,11 +426,14 @@ export class AddImageCommand implements IPrinterCommand {
     get name(): string {
         return 'Add image to label';
     }
+    get type() {
+        return CommandType.AddImageCommand;
+    }
     toDisplay(): string {
         if (!this.bitmap) {
             return 'Adds a blank image';
         }
-        return `Adds a {}`;
+        return `Adds a ${this.bitmap.width} wide x ${this.bitmap.height} high image.`;
     }
 
     constructor(public bitmap: BitmapGRF, public dithering: DitheringMethod) {}
@@ -292,6 +443,9 @@ export class AddImageCommand implements IPrinterCommand {
 export class AddLineCommand implements IPrinterCommand {
     get name(): string {
         return 'Add perpendicular line to label';
+    }
+    get type() {
+        return CommandType.AddLineCommand;
     }
     toDisplay(): string {
         // eslint-disable-next-line prettier/prettier
@@ -309,9 +463,13 @@ export class AddLineCommand implements IPrinterCommand {
     color: DrawColor;
 }
 
+/** Command to draw a box on a label */
 export class AddBoxCommand implements IPrinterCommand {
     get name(): string {
         return 'Add a box to label';
+    }
+    get type() {
+        return CommandType.AddBoxCommand;
     }
     toDisplay(): string {
         return `Add a box ${this.lengthInDots} wide by ${this.heightInDots} high.`;
@@ -328,16 +486,22 @@ export class AddBoxCommand implements IPrinterCommand {
     thickness: number;
 }
 
-/** List of available dithering methods for converting images to black/white. */
-export enum DitheringMethod {
-    /** No dithering, cutoff with  used. */
-    none
-}
+export class RawDocumentCommand implements IPrinterCommand {
+    get name(): string {
+        return 'Sends a raw set of commands directly to the printer unmodified.';
+    }
+    get type(): CommandType {
+        return CommandType.RawDocumentCommand;
+    }
+    toDisplay(): string {
+        throw new Error('Method not implemented.');
+    }
+    printerEffectFlags = PrinterCommandEffectFlags.unknownEffects;
 
-/** List of colors to draw elements with */
-export enum DrawColor {
-    /** Draw in black */
-    black,
-    /** Draw in white */
-    white
+    constructor(
+        public rawDocument: string,
+        printerEffectFlags = PrinterCommandEffectFlags.unknownEffects
+    ) {
+        this.printerEffectFlags = printerEffectFlags;
+    }
 }
