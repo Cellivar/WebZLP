@@ -14,6 +14,7 @@ export * from './Printers/Languages/PrinterCommandSet';
 export * from './Printers/Models/EplPrinterModels';
 export * from './Printers/Models/PrinterModel';
 export * from './Printers/Models/PrinterModelDb';
+export * from './Printers/PrinterCommunicationOptions';
 export * from './Printers/Printer';
 export * from './PrinterUsbManager';
 export * from './WebZlpError';

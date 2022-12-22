@@ -3,6 +3,7 @@ import { PrinterCommandLanguage, PrintSpeed } from '../Configuration/PrinterOpti
 
 export enum PrinterModel {
     unknown = 'unknown',
+    zplAutodetect = 'ZPL_AUTODETECT',
     lp2824 = 'LP2824',
     lp2824z = 'LP2824Z',
     lp2844 = 'LP2844',
@@ -23,7 +24,7 @@ export interface IPrinterModelInfo {
     get dpi(): number;
 
     /** Gets the model of this printer. */
-    get model(): PrinterModel;
+    get model(): PrinterModel | string;
 
     /** Gets the map of speeds this printer supports. */
     get speedTable(): ReadonlyMap<PrintSpeed, number>;
@@ -47,7 +48,7 @@ export abstract class BasePrinterInfo implements IPrinterModelInfo {
     /** Gets the DPI of this printer. */
     abstract get dpi(): number;
     /** Gets the model of this printer. */
-    abstract get model(): PrinterModel;
+    abstract get model(): PrinterModel | string;
 
     // Speed is determined by what the printer supports
     // EPL printers have a table that determines their setting and it needs to be hardcoded.
@@ -132,7 +133,7 @@ export class AutodetectedPrinter extends BasePrinterInfo {
     get dpi(): number {
         return this._dpi;
     }
-    get model(): PrinterModel {
+    get model(): PrinterModel | string {
         return this._model;
     }
     get speedTable(): ReadonlyMap<PrintSpeed, number> {
@@ -145,7 +146,7 @@ export class AutodetectedPrinter extends BasePrinterInfo {
     constructor(
         private _commandLanugage: PrinterCommandLanguage,
         private _dpi: number,
-        private _model: PrinterModel,
+        private _model: PrinterModel | string,
         private _speedTable: ReadonlyMap<PrintSpeed, number>,
         private _maxDarkness: number
     ) {
