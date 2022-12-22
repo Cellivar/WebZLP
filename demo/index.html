@@ -393,7 +393,7 @@
                 // and sending that canvas directly to a label. This allows your webpage to generate complex
                 // images and fonts (like emoji!) that EPL/ZPL can't support.
                 return builder
-                    .addImage(imgData)
+                    .addImageFromImageData(imgData)
                     .addPrintCmd()
                     .finalize();
             }
@@ -424,6 +424,7 @@
                 const configDoc = printer
                     .getConfigDocument()
                     .setPrintDirection()
+                    .setLabelHomeOffsetDots(0, 0)
                     .setPrintSpeed(rawSpeed)
                     .setDarknessConfig(darkness)
                     .setLabelDimensions(labelWidthInches);

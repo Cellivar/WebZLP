@@ -4,100 +4,100 @@ import { PrinterOptions } from '../Configuration/PrinterOptions';
 import { PrinterModelDb } from '../Models/PrinterModelDb';
 import { PrinterModel } from '../Models/PrinterModel';
 import {
-    DocumentValidationError,
+    CommandFormInclusionMode,
     PrinterCommandSet,
-    TranspilationDocumentMetadata
+    TranspilationFormMetadata,
+    TranspileCommandDelegate
 } from './PrinterCommandSet';
 import * as Commands from '../../Documents/Commands';
-import { match, P } from 'ts-pattern';
-import { PrinterCommunicationOptions } from '../Communication/PrinterCommunication';
+import { PrinterCommunicationOptions } from '../PrinterCommunicationOptions';
 
 /** Command set for communicating with an EPL II printer. */
 export class EplPrinterCommandSet extends PrinterCommandSet {
     private encoder = new TextEncoder();
 
-    get commandLanugage(): Options.PrinterCommandLanguage {
+    get commandLanguage(): Options.PrinterCommandLanguage {
         return Options.PrinterCommandLanguage.epl;
     }
 
-    get documentStartCommand(): Uint8Array {
+    get formStartCommand(): Uint8Array {
         // Start of any EPL document should include a clear image buffer to prevent
         // previous commands from affecting the document.
-        return this.encodeCommand('\r\nN\r\n');
+        return this.encodeCommand('\r\nN');
     }
 
-    get documentEndCommand(): Uint8Array {
+    get formEndCommand(): Uint8Array {
         // There's no formal command for the end of an EPL doc, but just in case
         // add a newline.
         return this.encodeCommand('');
     }
 
-    encodeCommand(str: string, withNewline = true): Uint8Array {
-        // Every command in EPL ends with a newline.
-        return this.encoder.encode(str + (withNewline ? '\r\n' : ''));
+    protected nonFormCommands: (symbol | Commands.CommandType)[] = [
+        Commands.CommandType.AutosenseLabelDimensionsCommand,
+        Commands.CommandType.PrintConfigurationCommand,
+        Commands.CommandType.QueryConfigurationCommand,
+        Commands.CommandType.RawDocumentCommand,
+        Commands.CommandType.RebootPrinterCommand
+    ];
+
+    protected transpileCommandMap = new Map<
+        symbol | Commands.CommandType,
+        TranspileCommandDelegate
+    >([
+        // Ghost commands which shouldn't make it this far.
+        [Commands.CommandType.NewLabelCommand, this.unprocessedCommand],
+        [Commands.CommandType.CommandCustomSpecificCommand, this.unprocessedCommand],
+        [Commands.CommandType.CommandLanguageSpecificCommand, this.unprocessedCommand],
+        // Actually valid commands to parse
+        [Commands.CommandType.OffsetCommand, this.modifyOffset.bind(this)],
+        [Commands.CommandType.ClearImageBufferCommand, () => this.formStartCommand],
+        [Commands.CommandType.CutNowCommand, () => this.encodeCommand('C')],
+        // EPL uses an on/off style for form backup, it'll remain off until reenabled.
+        [Commands.CommandType.SuppressFeedBackupCommand, () => this.encodeCommand('JB')],
+        // Thus EPL needs an explicit command to re-enable.
+        [Commands.CommandType.EnableFeedBackupCommand, () => this.encodeCommand('JF')],
+        [Commands.CommandType.RebootPrinterCommand, () => this.encodeCommand('^@')],
+        [Commands.CommandType.QueryConfigurationCommand, () => this.encodeCommand('UQ')],
+        [Commands.CommandType.PrintConfigurationCommand, () => this.encodeCommand('U')],
+        [Commands.CommandType.SaveCurrentConfigurationCommand, () => this.noop],
+        [Commands.CommandType.SetPrintDirectionCommand, this.setPrintDirectionCommand],
+        [Commands.CommandType.SetDarknessCommand, this.setDarknessCommand],
+        [Commands.CommandType.SetPrintSpeedCommand, this.setPrintSpeedCommand],
+        [Commands.CommandType.AutosenseLabelDimensionsCommand, () => this.encodeCommand('xa')],
+        [Commands.CommandType.SetLabelDimensionsCommand, this.setLabelDimensionsCommand],
+        [Commands.CommandType.SetLabelHomeCommand, this.setLabelHomeCommand],
+        [Commands.CommandType.AddImageCommand, this.addImageCommand],
+        [Commands.CommandType.AddLineCommand, this.addLineCommand],
+        [Commands.CommandType.AddBoxCommand, this.addBoxCommand],
+        [Commands.CommandType.PrintCommand, this.printCommand]
+    ]);
+
+    constructor(
+        customCommands: Array<{
+            commandType: symbol;
+            applicableLanguages: Options.PrinterCommandLanguage;
+            transpileDelegate: TranspileCommandDelegate;
+            commandInclusionMode: CommandFormInclusionMode;
+        }> = []
+    ) {
+        super();
+
+        for (const newCmd of customCommands) {
+            if ((newCmd.applicableLanguages & this.commandLanguage) !== this.commandLanguage) {
+                // Command declared to not be applicable to this command set, skip it.
+                continue;
+            }
+
+            this.transpileCommandMap.set(newCmd.commandType, newCmd.transpileDelegate);
+            if (newCmd.commandInclusionMode !== CommandFormInclusionMode.sharedForm) {
+                this.nonFormCommands.push(newCmd.commandType);
+            }
+        }
     }
 
-    transpileCommand(
-        cmd: Commands.IPrinterCommand,
-        outDoc: TranspilationDocumentMetadata
-    ): Uint8Array {
-        return match<Commands.IPrinterCommand, Uint8Array>(cmd)
-            .with(P.instanceOf(Commands.NewLabelCommand), () => this.startNewDocument())
-            .with(P.instanceOf(Commands.Offset), (cmd) => this.modifyOffset(cmd, outDoc))
-            .with(P.instanceOf(Commands.ClearImageBufferCommand), () => {
-                // Clearing the buffer should absolutely always be on its own
-                // line, so enforce that here.
-                return this.encodeCommand('\r\nN');
-            })
-            .with(P.instanceOf(Commands.CutNowCommand), () => this.encodeCommand('C'))
-            .with(P.instanceOf(Commands.SuppressFeedBackupCommand), () => this.encodeCommand('JB'))
-            .with(P.instanceOf(Commands.EnableFeedBackupCommand), () => this.encodeCommand('JF'))
-            .with(P.instanceOf(Commands.RebootPrinterCommand), () => this.encodeCommand('^@'))
-            .with(P.instanceOf(Commands.QueryConfigurationCommand), () => this.encodeCommand('UQ'))
-            .with(P.instanceOf(Commands.PrintConfigurationCommand), () => this.encodeCommand('U'))
-            .with(P.instanceOf(Commands.SetPrintDirectionCommand), (cmd) => {
-                const dir = cmd.upsideDown ? 'T' : 'B';
-                return this.encodeCommand(`Z${dir}`);
-            })
-            .with(P.instanceOf(Commands.SetDarknessCommand), (cmd) =>
-                this.encodeCommand(`D${cmd.darknessSetting}`)
-            )
-            .with(P.instanceOf(Commands.SetPrintSpeedCommand), (cmd) => {
-                // Validation should have happened on setup, printer will just reject
-                // invalid speeds.
-                // EPL has no separate media slew speed setting.
-                return this.encodeCommand(`S${cmd.speedVal}`);
-            })
-            .with(P.instanceOf(Commands.AutosenseLabelDimensionsCommand), () =>
-                this.encodeCommand('xa')
-            )
-            .with(P.instanceOf(Commands.SetLabelDimensionsCommand), (cmd) => {
-                const width = this.encodeCommand(`q${cmd.widthInDots}`);
-                if (cmd.setsHeight) {
-                    const height = this.encodeCommand(
-                        `Q${cmd.heightInDots},${cmd.gapLengthInDots}`
-                    );
-                    return this.combineCommands(width, height);
-                }
-                return width;
-            })
-            .with(P.instanceOf(Commands.AddImageCommand), (cmd) => {
-                return this.imageBufferToCmd(cmd.imageData, outDoc);
-            })
-            .with(P.instanceOf(Commands.AddLineCommand), (cmd) => {
-                return this.lineToCmd(cmd.heightInDots, cmd.lengthInDots, cmd.color, outDoc);
-            })
-            .with(P.instanceOf(Commands.AddBoxCommand), (cmd) => {
-                return this.boxToCmd(cmd.heightInDots, cmd.lengthInDots, cmd.thickness, outDoc);
-            })
-            .with(P.instanceOf(Commands.PrintCommand), (cmd) => {
-                const total = cmd.count;
-                const dup = cmd.additionalDuplicateOfEach;
-                return this.encodeCommand(`P${total},${dup}`);
-            })
-            .otherwise((cmd) => {
-                throw new DocumentValidationError(`Unknown EPL command ${cmd.name}.`);
-            });
+    public encodeCommand(str: string, withNewline = true): Uint8Array {
+        // Every command in EPL ends with a newline.
+        return this.encoder.encode(str + (withNewline ? '\r\n' : ''));
     }
 
     parseConfigurationResponse(
@@ -341,130 +341,124 @@ export class EplPrinterCommandSet extends PrinterCommandSet {
             options.mediaPrintMode = Options.MediaPrintMode.peelWithButtonTap;
         }
 
-        // TODO: morehardware options:
+        // TODO: more hardware options:
         // - Form feed button mode (Ff, Fr, Fi)
         // - Figure out what reverse gap sensor mode S means
         // - Figure out how to encode C{num} for cut-after-label-count
 
         // TODO other options:
         // Autosense settings?
-        // Print orientation?
         // Character set?
         // Error handling?
+        // Continuous media?
+        // Black mark printing?
 
         return options;
     }
 
-    private imageBufferToCmd(imageData: ImageData, outDoc: TranspilationDocumentMetadata) {
-        if (imageData == null) {
-            return this.noop;
+    private setPrintDirectionCommand(
+        cmd: Commands.SetPrintDirectionCommand,
+        outDoc: TranspilationFormMetadata,
+        cmdSet: EplPrinterCommandSet
+    ): Uint8Array {
+        const dir = cmd.upsideDown ? 'T' : 'B';
+        return cmdSet.encodeCommand(`Z${dir}`);
+    }
+
+    private setDarknessCommand(
+        cmd: Commands.SetDarknessCommand,
+        outDoc: TranspilationFormMetadata,
+        cmdSet: EplPrinterCommandSet
+    ): Uint8Array {
+        const dark = Math.trunc(cmd.darknessSetting);
+        return cmdSet.encodeCommand(`D${dark}`);
+    }
+
+    private setPrintSpeedCommand(
+        cmd: Commands.SetPrintSpeedCommand,
+        outDoc: TranspilationFormMetadata,
+        cmdSet: EplPrinterCommandSet
+    ): Uint8Array {
+        // Validation should have happened on setup, printer will just reject
+        // invalid speeds.
+        // EPL has no separate media slew speed setting.
+        return cmdSet.encodeCommand(`S${cmd.speedVal}`);
+    }
+
+    private setLabelDimensionsCommand(
+        cmd: Commands.SetLabelDimensionsCommand,
+        outDoc: TranspilationFormMetadata,
+        cmdSet: EplPrinterCommandSet
+    ): Uint8Array {
+        const width = Math.trunc(cmd.widthInDots);
+        const widthCmd = cmdSet.encodeCommand(`q${width}`);
+        if (cmd.setsHeight) {
+            const height = Math.trunc(cmd.heightInDots);
+            const gap = Math.trunc(cmd.gapLengthInDots);
+            const heightCmd = cmdSet.encodeCommand(`Q${height},${gap}`);
+            return cmdSet.combineCommands(widthCmd, heightCmd);
+        }
+        return widthCmd;
+    }
+
+    private setLabelHomeCommand(
+        cmd: Commands.SetLabelHomeCommand,
+        outDoc: TranspilationFormMetadata,
+        cmdSet: EplPrinterCommandSet
+    ): Uint8Array {
+        const xOffset = Math.trunc(cmd.xOffset);
+        const yOffset = Math.trunc(cmd.yOffset);
+        return cmdSet.encodeCommand(`R${xOffset},${yOffset}`);
+    }
+
+    private printCommand(
+        cmd: Commands.PrintCommand,
+        outDoc: TranspilationFormMetadata,
+        cmdSet: EplPrinterCommandSet
+    ): Uint8Array {
+        const total = Math.trunc(cmd.count);
+        const dup = Math.trunc(cmd.additionalDuplicateOfEach);
+        return cmdSet.encodeCommand(`P${total},${dup}`);
+    }
+
+    private addImageCommand(
+        cmd: Commands.AddImageCommand,
+        outDoc: TranspilationFormMetadata,
+        cmdSet: EplPrinterCommandSet
+    ): Uint8Array {
+        if (cmd?.bitmap == null) {
+            return cmdSet.noop;
         }
 
-        const [bitmap, bitmapWidth, bitmapHeight] = this.imageDataToEplBitmap(imageData);
+        // EPL only supports raw binary, get that.
+        const bitmap = cmd.bitmap;
+        const buffer = bitmap.toBinaryGRF();
 
         // Add the text command prefix to the buffer data
         const parameters = [
-            'GW' + Math.trunc(outDoc.horizontalOffset),
-            Math.trunc(outDoc.verticalOffset),
-            Math.trunc(bitmapWidth / 8),
-            Math.trunc(bitmapHeight)
+            'GW' + Math.trunc(outDoc.horizontalOffset + bitmap.boundingBox.paddingLeft),
+            Math.trunc(outDoc.verticalOffset + bitmap.boundingBox.paddingTop),
+            bitmap.bytesPerRow,
+            bitmap.height
         ];
         // Bump the offset according to the image being added.
-        outDoc.verticalOffset += bitmapHeight;
-        const rawCmd = this.encodeCommand(parameters.join(',') + ',', false);
-        return this.combineCommands(rawCmd, this.combineCommands(bitmap, this.encodeCommand('')));
-    }
-
-    private imageDataToEplBitmap(imageData: ImageData): [Uint8Array, number, number] {
-        // This property isn't supported in Firefox, so it isn't supported
-        // in the lib types, and I don't feel like dealing with it right now
-        // so TODO: fix this eventually
-        // Only supports sRGB as RGBA data.
-        // if (imageData.colorSpace !== 'srgb') {
-        //     throw new DocumentValidationError(
-        //         'Unknown color space for given imageData. Expected srgb but got ' +
-        //             imageData.colorSpace
-        //     );
-        // }
-
-        // EPL bitmaps are byte-packed, meaning the width must be a factor of one
-        // byte (8 bits). Pad each row (width) out to the 8 bit boundary.
-        const byteSize = 8;
-        const paddingToAdd = (byteSize - (imageData.width % byteSize)) % byteSize;
-        const outputWidth = imageData.width + paddingToAdd;
-
-        // RGBA data gets compressed down to 1 bit, then packed into a byte array.
-        // Note that the label width and height aren't relevant here, just
-        // what the imageData says.
-        const buffer = new Uint8Array((imageData.height * outputWidth) / 8);
-        const d = imageData.data;
-
-        // If the grayscale version of the pixel + alpha is above this
-        // value treat it as white, else black.
-        const threshold = 200;
-        // Assume a white background (as most labels are white)
-        const backgroundColor = 255;
-
-        /* eslint-disable prettier/prettier */
-        for (let y = 0; y < imageData.height; y++) {
-            for (let x = 0; x < imageData.width; x++) {
-                // RGBA is 4 bits, multiply everything by 4.
-                const pixelStartOffset = (y * imageData.width * 4) + (x * 4);
-
-                const mono = this.rgbaToMonochrome(
-                    d[pixelStartOffset + 0],
-                    d[pixelStartOffset + 1],
-                    d[pixelStartOffset + 2],
-                    d[pixelStartOffset + 3],
-                    backgroundColor,
-                    threshold
-                );
-                const bit = mono << (7 - (x % 8));
-
-                buffer[(y * outputWidth) / 8 + Math.floor(x / 8)] |= bit;
-            }
-            // The padding is implicitly black when it needs to be white.
-            // Set the padding bits added to the end of the row to 1.
-            buffer[(((y + 1) * outputWidth) / 8) - 1] |= (1 << paddingToAdd) - 1;
-        }
-        /* eslint-enable prettier/prettier */
-
-        return [buffer, outputWidth, imageData.height];
-    }
-
-    private rgbaToMonochrome(
-        r: number,
-        g: number,
-        b: number,
-        a: number,
-        backgroundColor: number,
-        threshold: number
-    ): number {
-        // Color to grayscale conversion factors pulled from color theory
-        // http://poynton.ca/notes/colour_and_gamma/ColorFAQ.html
-        const gray = Math.min(
-            Math.pow(
-                Math.pow(r / 255.0, 2.2) * 0.2126 +
-                    Math.pow(g / 255.0, 2.2) * 0.7152 +
-                    Math.pow(b / 255.0, 2.2) * 0.0722,
-                0.454545
-            ) * 255
+        outDoc.verticalOffset += bitmap.boundingBox.height;
+        const rawCmd = cmdSet.encodeCommand(parameters.join(',') + ',', false);
+        return cmdSet.combineCommands(
+            rawCmd,
+            cmdSet.combineCommands(buffer, cmdSet.encodeCommand(''))
         );
-        const alpha = a / 255.0;
-        const grayAlpha = (1 - alpha) * backgroundColor + alpha * gray;
-        return grayAlpha > threshold ? 1 : 0;
     }
 
-    private lineToCmd(
-        height: number,
-        length: number,
-        color: Commands.DrawColor,
-        outDoc: TranspilationDocumentMetadata
-    ) {
-        length = Math.trunc(length) || 0;
-        height = Math.trunc(height) || 0;
+    private addLineCommand(
+        cmd: Commands.AddLineCommand,
+        outDoc: TranspilationFormMetadata,
+        cmdSet: EplPrinterCommandSet
+    ): Uint8Array {
+        const length = Math.trunc(cmd.lengthInDots) || 0;
+        const height = Math.trunc(cmd.heightInDots) || 0;
         let drawMode = 'LO';
-        switch (color) {
+        switch (cmd.color) {
             case Commands.DrawColor.black:
                 drawMode = 'LO';
                 break;
@@ -473,25 +467,22 @@ export class EplPrinterCommandSet extends PrinterCommandSet {
                 break;
         }
 
-        return this.encodeCommand(
-            [drawMode + outDoc.horizontalOffset, outDoc.verticalOffset, length, height].join(',')
+        return cmdSet.encodeCommand(
+            `${drawMode}${outDoc.horizontalOffset},${outDoc.verticalOffset},${length},${height}`
         );
     }
 
-    private boxToCmd(
-        height: number,
-        length: number,
-        thickness: number,
-        outDoc: TranspilationDocumentMetadata
-    ) {
-        length = Math.trunc(length) || 0;
-        height = Math.trunc(height) || 0;
-        thickness = Math.trunc(thickness) || 0;
+    private addBoxCommand(
+        cmd: Commands.AddBoxCommand,
+        outDoc: TranspilationFormMetadata,
+        cmdSet: EplPrinterCommandSet
+    ): Uint8Array {
+        const length = Math.trunc(cmd.lengthInDots) || 0;
+        const height = Math.trunc(cmd.heightInDots) || 0;
+        const thickness = Math.trunc(cmd.thickness) || 0;
 
-        return this.encodeCommand(
-            ['X' + outDoc.horizontalOffset, outDoc.verticalOffset, thickness, length, height].join(
-                ','
-            )
+        return cmdSet.encodeCommand(
+            `X${outDoc.horizontalOffset},${outDoc.verticalOffset},${thickness},${length},${height}`
         );
     }
 }

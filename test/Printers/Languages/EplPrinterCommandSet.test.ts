@@ -1,4 +1,5 @@
-import { EplPrinterCommandSet, TranspilationDocumentMetadata } from '../../../src';
+import { AddImageCommand, DitheringMethod, EplPrinterCommandSet, TranspilationFormMetadata } from '../../../src';
+import { BitmapGRF } from '../../../src/Documents/BitmapGRF';
 
 // Class pulled from jest-mock-canvas which I can't seem to actually import.
 class ImageData {
@@ -82,114 +83,13 @@ function getImageDataInput(width: number, height: number, fill: number, alpha?: 
 
 const cmdSet = new EplPrinterCommandSet();
 
-describe('ConversationRgbaToMonochrome', () => {
-  it('Converts white to 1', () => {
-    const result = cmdSet['rgbaToMonochrome'](255, 255, 255, 255, 255, 200);
-    const expected = 1;
-
-    expect(result).toBe(expected);
-  });
-  it('Converts black to 0', () => {
-    const result = cmdSet['rgbaToMonochrome'](0, 0, 0, 255, 255, 200);
-    const expected = 0;
-
-    expect(result).toBe(expected);
-  });
-  it('Converts transparent black to background white', () => {
-    const result = cmdSet['rgbaToMonochrome'](0, 0, 0, 0, 255, 200);
-    const expected = 1;
-
-    expect(result).toBe(expected);
-  });
-  it('Converts transparent white to background white', () => {
-    const result = cmdSet['rgbaToMonochrome'](255, 255, 255, 0, 255, 200);
-    const expected = 1;
-
-    expect(result).toBe(expected);
-  });
-  it('Converts transparent black to background black', () => {
-    const result = cmdSet['rgbaToMonochrome'](0, 0, 0, 0, 0, 200);
-    const expected = 0;
-
-    expect(result).toBe(expected);
-  });
-  it('Converts transparent white to background black', () => {
-    const result = cmdSet['rgbaToMonochrome'](255, 255, 255, 0, 0, 200);
-    const expected = 0;
-
-    expect(result).toBe(expected);
-  });
-});
-
-describe('EplImageConversion', () => {
-  it('Should downconvert transparent images correctly', () => {
-    const imageData = new ImageData(getImageDataInput(8, 1, 0), 8, 1);
-    const expected = new Uint8Array([(1 << 8) - 1]);
-    const [bitmap, bitmapWidth, bitmapHeight] = cmdSet['imageDataToEplBitmap'](imageData);
-
-    expect(bitmapWidth).toBe(8);
-    expect(bitmapHeight).toBe(1);
-    expect(bitmap).toEqual(expected);
-  });
-
-  it('Should downconvert black images correctly', () => {
-    const imageData = new ImageData(getImageDataInput(8, 1, 0, 255), 8, 1);
-    const expected = new Uint8Array([0]);
-    const [bitmap, bitmapWidth, bitmapHeight] = cmdSet['imageDataToEplBitmap'](imageData);
-
-    expect(bitmapWidth).toBe(8);
-    expect(bitmapHeight).toBe(1);
-    expect(bitmap).toEqual(expected);
-  });
-
-  it('Should downconvert white images correctly', () => {
-    const imageData = new ImageData(getImageDataInput(8, 1, 255), 8, 1);
-    const expected = new Uint8Array([(1 << 8) - 1]);
-    const [bitmap, bitmapWidth, bitmapHeight] = cmdSet['imageDataToEplBitmap'](imageData);
-
-    expect(bitmapWidth).toBe(8);
-    expect(bitmapHeight).toBe(1);
-    expect(bitmap).toEqual(expected);
-  });
-
-  it('Should pad and downconvert transparent images correctly', () => {
-    const imageData = new ImageData(getImageDataInput(5, 1, 0), 5, 1);
-    const expected = new Uint8Array([(1 << 8) - 1]);
-    const [bitmap, bitmapWidth, bitmapHeight] = cmdSet['imageDataToEplBitmap'](imageData);
-
-    expect(bitmapWidth).toBe(8);
-    expect(bitmapHeight).toBe(1);
-    expect(bitmap).toEqual(expected);
-  });
-
-  it('Should pad and downconvert black images correctly', () => {
-    const imgWidth = 4;
-    const imageData = new ImageData(getImageDataInput(imgWidth, 1, 0, 255), imgWidth, 1);
-    const expected = new Uint8Array([(1 << imgWidth) - 1]);
-    const [bitmap, bitmapWidth, bitmapHeight] = cmdSet['imageDataToEplBitmap'](imageData);
-
-    expect(bitmapWidth).toBe(8);
-    expect(bitmapHeight).toBe(1);
-    expect(bitmap).toEqual(expected);
-  });
-
-  it('Should pad and downconvert white images correctly', () => {
-    const imgWidth = 4;
-    const imageData = new ImageData(getImageDataInput(imgWidth, 1, 255), imgWidth, 1);
-    const expected = new Uint8Array([(1 << 8) - 1]);
-    const [bitmap, bitmapWidth, bitmapHeight] = cmdSet['imageDataToEplBitmap'](imageData);
-
-    expect(bitmapWidth).toBe(8);
-    expect(bitmapHeight).toBe(1);
-    expect(bitmap).toEqual(expected);
-  });
-});
-
 describe('EplImageConversionToFullCommand', () => {
   it('Should convert blank images to valid command', () => {
     const imageData = new ImageData(getImageDataInput(8, 1, 0), 8, 1);
-    const doc = new TranspilationDocumentMetadata();
-    const resultCmd = cmdSet['imageBufferToCmd'](imageData, doc);
+    const bitmap = BitmapGRF.fromCanvasImageData(imageData, { trimWhitespace: false });
+    const cmd = new AddImageCommand(bitmap, DitheringMethod.none);
+    const doc = new TranspilationFormMetadata();
+    const resultCmd = cmdSet['addImageCommand'](cmd, doc, cmdSet);
 
     const expectedCmd = Uint8Array.from([
       ...new TextEncoder().encode('GW0,0,1,1,'),
@@ -202,11 +102,13 @@ describe('EplImageConversionToFullCommand', () => {
 
   it('Should apply offsets in command', () => {
     const imageData = new ImageData(getImageDataInput(8, 1, 0), 8, 1);
+    const bitmap = BitmapGRF.fromCanvasImageData(imageData, { trimWhitespace: false });
+    const cmd = new AddImageCommand(bitmap, DitheringMethod.none);
     const appliedOffset = 10;
-    const doc = new TranspilationDocumentMetadata();
+    const doc = new TranspilationFormMetadata();
     doc.horizontalOffset = appliedOffset;
     doc.verticalOffset = appliedOffset * 2;
-    const resultCmd = cmdSet['imageBufferToCmd'](imageData, doc);
+    const resultCmd = cmdSet['addImageCommand'](cmd, doc, cmdSet);
 
     const expectedCmd = Uint8Array.from([
       ...new TextEncoder().encode(`GW${appliedOffset},${appliedOffset * 2},1,1,`),
@@ -218,8 +120,8 @@ describe('EplImageConversionToFullCommand', () => {
   });
 
   it('Should return noop for blank imageData', () => {
-    const doc = new TranspilationDocumentMetadata();
-    const resultCmd = cmdSet['imageBufferToCmd'](null, doc);
+    const doc = new TranspilationFormMetadata();
+    const resultCmd = cmdSet['addImageCommand'](null, doc, cmdSet);
 
     expect(resultCmd).toEqual(new Uint8Array());
   });

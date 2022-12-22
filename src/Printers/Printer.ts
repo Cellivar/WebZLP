@@ -7,17 +7,14 @@ import {
 } from '../Documents/LabelDocument';
 import { ReadyToPrintDocuments } from '../Documents/ReadyToPrintDocuments';
 import { WebZlpError } from '../WebZlpError';
-import {
-    IPrinterDeviceChannel,
-    PrinterChannelType,
-    PrinterCommunicationOptions
-} from './Communication/PrinterCommunication';
+import { IPrinterDeviceChannel, PrinterChannelType } from './Communication/PrinterCommunication';
 import { UsbPrinterDeviceChannel } from './Communication/UsbPrinterDeviceChannel';
 import { PrinterCommandLanguage, PrinterOptions } from './Configuration/PrinterOptions';
 import { EplPrinterCommandSet } from './Languages/EplPrinterCommandSet';
 import { PrinterCommandSet } from './Languages/PrinterCommandSet';
 import { ZplPrinterCommandSet } from './Languages/ZplPrinterCommandSet';
 import { PrinterModelDb } from './Models/PrinterModelDb';
+import { PrinterCommunicationOptions } from './PrinterCommunicationOptions';
 
 /**
  * A class for working with a label printer.

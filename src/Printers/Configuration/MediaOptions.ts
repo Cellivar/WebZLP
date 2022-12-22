@@ -67,10 +67,50 @@ export class PrintSpeedSettings {
     printSpeed: PrintSpeed;
     /** Speed during feeding a blank label. ZPL only, same as media speed for EPL. */
     slewSpeed: PrintSpeed;
+
+    // My kingdom for extension methods on enums in a reasonable manner.
+    /** Look up a speed enum from a given whole number */
+    public static getSpeedFromWholeNumber(speed: number): PrintSpeed {
+        switch (speed) {
+            case 0:
+                return PrintSpeed.auto;
+            case 1:
+                return PrintSpeed.ips1;
+            case 2:
+                return PrintSpeed.ips2;
+            case 3:
+                return PrintSpeed.ips3;
+            case 4:
+                return PrintSpeed.ips4;
+            case 5:
+                return PrintSpeed.ips5;
+            case 6:
+                return PrintSpeed.ips6;
+            case 7:
+                return PrintSpeed.ips7;
+            case 8:
+                return PrintSpeed.ips8;
+            case 9:
+                return PrintSpeed.ips9;
+            case 10:
+                return PrintSpeed.ips10;
+            case 11:
+                return PrintSpeed.ips11;
+            case 12:
+                return PrintSpeed.ips12;
+            case 13:
+                return PrintSpeed.ips13;
+            case 14:
+                return PrintSpeed.ips14;
+            default:
+                return PrintSpeed.unknown;
+        }
+    }
 }
 
 /** Printer speed values in inches per second (IPS). */
 export enum PrintSpeed {
+    unknown = -1,
     /** Mobile printers can't be configured otherwise. */
     auto = 0,
     /** The lowest speed a given printer supports. */

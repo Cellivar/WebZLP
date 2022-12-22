@@ -1,5 +1,5 @@
 import { Printer } from './Printers/Printer';
-import { PrinterCommunicationOptions } from './Printers/Communication/PrinterCommunication';
+import { PrinterCommunicationOptions } from './Printers/PrinterCommunicationOptions';
 
 export interface PrinterManagerEventMap {
     connectedPrinter: CustomEvent<{ detail: Printer }>;

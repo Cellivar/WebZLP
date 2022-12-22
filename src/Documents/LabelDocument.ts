@@ -1,6 +1,7 @@
 import * as Commands from './Commands';
 import { DocumentBuilder } from './Document';
 import * as Options from '../Printers/Configuration/PrinterOptions';
+import { BitmapGRF } from './BitmapGRF';
 
 export interface ILabelDocumentBuilder
     extends DocumentBuilder<ILabelDocumentBuilder>,
@@ -16,6 +17,10 @@ export class LabelDocumentBuilder
     // so that only certain commands can be used on them.
     // Maybe different types??
     private _docType: LabelDocumentType = LabelDocumentType.instanceForm;
+
+    get commandReorderBehavior(): Commands.CommandReorderBehavior {
+        return Commands.CommandReorderBehavior.none;
+    }
 
     constructor(
         config: Options.PrinterOptions,
@@ -54,24 +59,26 @@ export class LabelDocumentBuilder
     ///////////////////// OFFSET AND SPACING
 
     setOffset(horizontal: number, vertical?: number): ILabelDocumentBuilder {
-        return this.then(new Commands.Offset(horizontal, vertical, true));
+        return this.then(new Commands.OffsetCommand(horizontal, vertical, true));
     }
 
     addOffset(horizontal: number, vertical?: number): ILabelDocumentBuilder {
-        return this.then(new Commands.Offset(horizontal, vertical));
+        return this.then(new Commands.OffsetCommand(horizontal, vertical));
     }
 
     resetOffset(): ILabelDocumentBuilder {
-        return this.then(new Commands.Offset(0, 0, true));
+        return this.then(new Commands.OffsetCommand(0, 0, true));
     }
 
     ///////////////////// LABEL IMAGE CONTENTS
 
-    addImage(
+    addImageFromImageData(
         imageData: ImageData,
         dithering = Commands.DitheringMethod.none
     ): ILabelDocumentBuilder {
-        return this.then(new Commands.AddImageCommand(imageData, dithering));
+        return this.then(
+            new Commands.AddImageCommand(BitmapGRF.fromCanvasImageData(imageData), dithering)
+        );
     }
 
     addLine(lengthInDots: number, heightInDots: number, color = Commands.DrawColor.black) {
@@ -130,7 +137,10 @@ export interface ILabelPositionCommandBuilder {
 
 export interface ILabelContentCommandBuilder {
     /** Add an ImageData object as an image to the label */
-    addImage(imageData: ImageData, dithering?: Commands.DitheringMethod): ILabelDocumentBuilder;
+    addImageFromImageData(
+        imageData: ImageData,
+        dithering?: Commands.DitheringMethod
+    ): ILabelDocumentBuilder;
 
     /** Draw a line from the current offset for the length and height. */
     addLine(
