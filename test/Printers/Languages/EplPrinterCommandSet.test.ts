@@ -1,4 +1,4 @@
-import { EplPrinterCommandSet, TranspilationDocumentMetadata } from '../../../src';
+import { AddImageCommand, DitheringMethod, EplPrinterCommandSet, TranspilationFormMetadata } from '../../../src';
 import { BitmapGRF } from '../../../src/Documents/BitmapGRF';
 
 // Class pulled from jest-mock-canvas which I can't seem to actually import.
@@ -87,8 +87,9 @@ describe('EplImageConversionToFullCommand', () => {
   it('Should convert blank images to valid command', () => {
     const imageData = new ImageData(getImageDataInput(8, 1, 0), 8, 1);
     const bitmap = BitmapGRF.fromCanvasImageData(imageData, { trimWhitespace: false });
-    const doc = new TranspilationDocumentMetadata();
-    const resultCmd = cmdSet['imageBufferToCmd'](bitmap, doc);
+    const cmd = new AddImageCommand(bitmap, DitheringMethod.none);
+    const doc = new TranspilationFormMetadata();
+    const resultCmd = cmdSet['addImageCommand'](cmd, doc, cmdSet);
 
     const expectedCmd = Uint8Array.from([
       ...new TextEncoder().encode('GW0,0,1,1,'),
@@ -102,11 +103,12 @@ describe('EplImageConversionToFullCommand', () => {
   it('Should apply offsets in command', () => {
     const imageData = new ImageData(getImageDataInput(8, 1, 0), 8, 1);
     const bitmap = BitmapGRF.fromCanvasImageData(imageData, { trimWhitespace: false });
+    const cmd = new AddImageCommand(bitmap, DitheringMethod.none);
     const appliedOffset = 10;
-    const doc = new TranspilationDocumentMetadata();
+    const doc = new TranspilationFormMetadata();
     doc.horizontalOffset = appliedOffset;
     doc.verticalOffset = appliedOffset * 2;
-    const resultCmd = cmdSet['imageBufferToCmd'](bitmap, doc);
+    const resultCmd = cmdSet['addImageCommand'](cmd, doc, cmdSet);
 
     const expectedCmd = Uint8Array.from([
       ...new TextEncoder().encode(`GW${appliedOffset},${appliedOffset * 2},1,1,`),
@@ -118,8 +120,8 @@ describe('EplImageConversionToFullCommand', () => {
   });
 
   it('Should return noop for blank imageData', () => {
-    const doc = new TranspilationDocumentMetadata();
-    const resultCmd = cmdSet['imageBufferToCmd'](null, doc);
+    const doc = new TranspilationFormMetadata();
+    const resultCmd = cmdSet['addImageCommand'](null, doc, cmdSet);
 
     expect(resultCmd).toEqual(new Uint8Array());
   });

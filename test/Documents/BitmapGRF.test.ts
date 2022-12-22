@@ -90,7 +90,7 @@ describe('rgbaImageConversion', () => {
       imageData.height,
       { grayThreshold: 75, trimWhitespace: false }
     );
-    const { grfData, bytesPerRow } = BitmapGRF['toGRF'](monochromeData, imageWidth, imageHeight);
+    const { grfData, bytesPerRow } = BitmapGRF['monochromeToGRF'](monochromeData, imageWidth, imageHeight);
 
     expect(imageWidth).toBe(8);
     expect(imageHeight).toBe(1);
@@ -107,7 +107,7 @@ describe('rgbaImageConversion', () => {
       imageData.height,
       { grayThreshold: 75, trimWhitespace: false }
     );
-    const { grfData, bytesPerRow } = BitmapGRF['toGRF'](monochromeData, imageWidth, imageHeight);
+    const { grfData, bytesPerRow } = BitmapGRF['monochromeToGRF'](monochromeData, imageWidth, imageHeight);
 
     expect(imageWidth).toBe(8);
     expect(imageHeight).toBe(1);
@@ -124,7 +124,7 @@ describe('rgbaImageConversion', () => {
       imageData.height,
       { grayThreshold: 75, trimWhitespace: false }
     );
-    const { grfData, bytesPerRow } = BitmapGRF['toGRF'](monochromeData, imageWidth, imageHeight);
+    const { grfData, bytesPerRow } = BitmapGRF['monochromeToGRF'](monochromeData, imageWidth, imageHeight);
 
     expect(imageWidth).toBe(8);
     expect(imageHeight).toBe(1);
@@ -141,7 +141,7 @@ describe('rgbaImageConversion', () => {
       imageData.height,
       { grayThreshold: 75, trimWhitespace: false }
     );
-    const { grfData, bytesPerRow } = BitmapGRF['toGRF'](monochromeData, imageWidth, imageHeight);
+    const { grfData, bytesPerRow } = BitmapGRF['monochromeToGRF'](monochromeData, imageWidth, imageHeight);
 
     expect(imageWidth).toBe(5);
     expect(imageHeight).toBe(1);
@@ -159,7 +159,7 @@ describe('rgbaImageConversion', () => {
       imageData.height,
       { grayThreshold: 75, trimWhitespace: false }
     );
-    const { grfData, bytesPerRow } = BitmapGRF['toGRF'](monochromeData, imageWidth, imageHeight);
+    const { grfData, bytesPerRow } = BitmapGRF['monochromeToGRF'](monochromeData, imageWidth, imageHeight);
 
     expect(imageWidth).toBe(4);
     expect(imageHeight).toBe(1);
@@ -177,7 +177,7 @@ describe('rgbaImageConversion', () => {
       imageData.height,
       { grayThreshold: 75, trimWhitespace: false }
     );
-    const { grfData, bytesPerRow } = BitmapGRF['toGRF'](monochromeData, imageWidth, imageHeight);
+    const { grfData, bytesPerRow } = BitmapGRF['monochromeToGRF'](monochromeData, imageWidth, imageHeight);
 
     expect(imageWidth).toBe(4);
     expect(imageHeight).toBe(1);
