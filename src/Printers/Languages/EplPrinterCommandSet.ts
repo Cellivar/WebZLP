@@ -228,16 +228,19 @@ export class EplPrinterCommandSet extends PrinterCommandSet {
                 case /^oE.,/.test(str):
                 // oEv,w,x,y,z             # Config settings 5
                 // Line mode font substitution settings, ignored in WebZLP
+                case /^oU.,/.test(str):
+                // oUs,t,u                 # UNKNOWN!
+                // Unknown information, only seen on a UPS model so far.
                 case /^\d\d\s\d\d\s\d\d\s$/.test(str):
                 // 06 10 14                # Config setting 6
                 // Not useful information, ignored in WebZLP
-                case /^Emem:/.test(str):
+                case /^Emem[:\s]/.test(str):
                 // Emem:031K,0037K avl     # Soft font storage
                 // Emem used: 0            # Soft font storage
-                case /^Gmem:/.test(str):
+                case /^Gmem[:\s]/.test(str):
                 // Gmem:000K,0037K avl     # Graphics storage
                 // Gmem used: 0            # Graphics storage
-                case /^Fmem:/.test(str):
+                case /^Fmem[:\s]/.test(str):
                 // Fmem:000.0K,060.9K avl  # Form storage
                 // Fmem used: 0 (bytes)    # Form storage
                 case /^Available:/.test(str):
