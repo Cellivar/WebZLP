@@ -1,3 +1,4 @@
+/// <reference types="jest" />
 import { BitmapGRF } from '../../src/Documents/BitmapGRF';
 
 // Class pulled from jest-mock-canvas which I can't seem to actually import.
@@ -90,7 +91,11 @@ describe('rgbaImageConversion', () => {
       imageData.height,
       { grayThreshold: 75, trimWhitespace: false }
     );
-    const { grfData, bytesPerRow } = BitmapGRF['monochromeToGRF'](monochromeData, imageWidth, imageHeight);
+    const { grfData, bytesPerRow } = BitmapGRF['monochromeToGRF'](
+      monochromeData,
+      imageWidth,
+      imageHeight
+    );
 
     expect(imageWidth).toBe(8);
     expect(imageHeight).toBe(1);
@@ -107,7 +112,11 @@ describe('rgbaImageConversion', () => {
       imageData.height,
       { grayThreshold: 75, trimWhitespace: false }
     );
-    const { grfData, bytesPerRow } = BitmapGRF['monochromeToGRF'](monochromeData, imageWidth, imageHeight);
+    const { grfData, bytesPerRow } = BitmapGRF['monochromeToGRF'](
+      monochromeData,
+      imageWidth,
+      imageHeight
+    );
 
     expect(imageWidth).toBe(8);
     expect(imageHeight).toBe(1);
@@ -124,7 +133,11 @@ describe('rgbaImageConversion', () => {
       imageData.height,
       { grayThreshold: 75, trimWhitespace: false }
     );
-    const { grfData, bytesPerRow } = BitmapGRF['monochromeToGRF'](monochromeData, imageWidth, imageHeight);
+    const { grfData, bytesPerRow } = BitmapGRF['monochromeToGRF'](
+      monochromeData,
+      imageWidth,
+      imageHeight
+    );
 
     expect(imageWidth).toBe(8);
     expect(imageHeight).toBe(1);
@@ -141,7 +154,11 @@ describe('rgbaImageConversion', () => {
       imageData.height,
       { grayThreshold: 75, trimWhitespace: false }
     );
-    const { grfData, bytesPerRow } = BitmapGRF['monochromeToGRF'](monochromeData, imageWidth, imageHeight);
+    const { grfData, bytesPerRow } = BitmapGRF['monochromeToGRF'](
+      monochromeData,
+      imageWidth,
+      imageHeight
+    );
 
     expect(imageWidth).toBe(5);
     expect(imageHeight).toBe(1);
@@ -159,7 +176,11 @@ describe('rgbaImageConversion', () => {
       imageData.height,
       { grayThreshold: 75, trimWhitespace: false }
     );
-    const { grfData, bytesPerRow } = BitmapGRF['monochromeToGRF'](monochromeData, imageWidth, imageHeight);
+    const { grfData, bytesPerRow } = BitmapGRF['monochromeToGRF'](
+      monochromeData,
+      imageWidth,
+      imageHeight
+    );
 
     expect(imageWidth).toBe(4);
     expect(imageHeight).toBe(1);
@@ -177,7 +198,11 @@ describe('rgbaImageConversion', () => {
       imageData.height,
       { grayThreshold: 75, trimWhitespace: false }
     );
-    const { grfData, bytesPerRow } = BitmapGRF['monochromeToGRF'](monochromeData, imageWidth, imageHeight);
+    const { grfData, bytesPerRow } = BitmapGRF['monochromeToGRF'](
+      monochromeData,
+      imageWidth,
+      imageHeight
+    );
 
     expect(imageWidth).toBe(4);
     expect(imageHeight).toBe(1);

@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
     "module": "es6",
+    "types": [],
     "lib": ["dom", "esnext"],
     "outDir": "./dist/",
     "sourceMap": true,

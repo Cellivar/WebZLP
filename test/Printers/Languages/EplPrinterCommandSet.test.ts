@@ -1,4 +1,10 @@
-import { AddImageCommand, DitheringMethod, EplPrinterCommandSet, TranspilationFormMetadata } from '../../../src';
+/// <reference types="jest" />
+import {
+  AddImageCommand,
+  DitheringMethod,
+  EplPrinterCommandSet,
+  TranspilationFormMetadata
+} from '../../../src';
 import { BitmapGRF } from '../../../src/Documents/BitmapGRF';
 
 // Class pulled from jest-mock-canvas which I can't seem to actually import.
