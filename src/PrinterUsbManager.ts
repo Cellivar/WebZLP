@@ -1,3 +1,4 @@
+/// <reference types="w3c-web-usb" />
 import { Printer } from './Printers/Printer';
 import { PrinterCommunicationOptions } from './Printers/PrinterCommunicationOptions';
 

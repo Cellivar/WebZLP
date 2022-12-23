@@ -104,7 +104,8 @@ export class BitmapGRF {
             this.width,
             this.height,
             this.bytesPerRow,
-            structuredClone(this.boundingBox));
+            structuredClone(this.boundingBox)
+        );
     }
 
     /** Get a compressed representation of this GRF. This is not compatible with EPL.
@@ -175,7 +176,7 @@ export class BitmapGRF {
      * Create a GRF bitmap from a raw RGBA array-like object.
      */
     public static fromRGBA(
-        data: Uint8Array | Uint8ClampedArray | Buffer | Array<number>,
+        data: Uint8Array | Uint8ClampedArray | Array<number>,
         width: number,
         { grayThreshold = 75, trimWhitespace = true }: ImageConversionOptions = {}
     ): BitmapGRF {
@@ -196,7 +197,11 @@ export class BitmapGRF {
             { grayThreshold, trimWhitespace }
         );
 
-        const { grfData, bytesPerRow } = this.monochromeToGRF(monochromeData, imageWidth, imageHeight);
+        const { grfData, bytesPerRow } = this.monochromeToGRF(
+            monochromeData,
+            imageWidth,
+            imageHeight
+        );
 
         return new BitmapGRF(grfData, imageWidth, imageHeight, bytesPerRow, boundingBox);
     }
@@ -262,7 +267,7 @@ export class BitmapGRF {
      * bounding box information for the bitmap.
      */
     private static toMonochrome(
-        rgba: Uint8Array | Uint8ClampedArray | Buffer | Array<number>,
+        rgba: Uint8Array | Uint8ClampedArray | Array<number>,
         width: number,
         height: number,
         { grayThreshold = 75, trimWhitespace = true }: ImageConversionOptions
