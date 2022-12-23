@@ -1,5 +1,5 @@
-import * as Commands from './Commands';
-import * as Options from '../Printers/Configuration/PrinterOptions';
+import * as Commands from './Commands.js';
+import * as Options from '../Printers/Configuration/PrinterOptions.js';
 
 /** A prepared document, ready to be compiled and sent. */
 export interface IDocument {

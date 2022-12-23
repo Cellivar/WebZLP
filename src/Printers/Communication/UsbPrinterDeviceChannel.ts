@@ -1,11 +1,11 @@
-import { WebZlpError } from '../../WebZlpError';
-import { LineBreakTransformer } from './LineBreakTransformer';
+import { WebZlpError } from '../../WebZlpError.js';
+import { LineBreakTransformer } from './LineBreakTransformer.js';
 import {
     PrinterChannelType,
     IPrinterDeviceChannel,
     PrinterCommMode,
     PrinterCommunicationError
-} from './PrinterCommunication';
+} from './PrinterCommunication.js';
 
 /** Class for managing the WebUSB communication with a printer. */
 export class UsbPrinterDeviceChannel extends EventTarget implements IPrinterDeviceChannel {

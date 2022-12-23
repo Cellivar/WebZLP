@@ -1,4 +1,4 @@
-import { WebZlpError } from '../../WebZlpError';
+import { WebZlpError } from '../../WebZlpError.js';
 /** A communication channel for talking to a printer device. */
 export interface IPrinterDeviceChannel {
     /** Whether to print communications to the console. */

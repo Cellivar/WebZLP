@@ -1,5 +1,5 @@
-import * as Options from '../Printers/Configuration/PrinterOptions';
-import { BitmapGRF } from './BitmapGRF';
+import * as Options from '../Printers/Configuration/PrinterOptions.js';
+import { BitmapGRF } from './BitmapGRF.js';
 
 /** Flags to indicate special operations a command might cause. */
 export enum PrinterCommandEffectFlags {

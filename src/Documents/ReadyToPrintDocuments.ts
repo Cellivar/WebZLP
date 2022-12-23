@@ -1,7 +1,7 @@
-import { ConfigDocumentBuilder } from '../Documents/ConfigDocument';
-import { LabelDocumentBuilder } from '../Documents/LabelDocument';
-import { Printer } from '../Printers/Printer';
-import { DarknessPercent, PrintSpeed } from '../Printers/Configuration/PrinterOptions';
+import { ConfigDocumentBuilder } from '../Documents/ConfigDocument.js';
+import { LabelDocumentBuilder } from '../Documents/LabelDocument.js';
+import { Printer } from '../Printers/Printer.js';
+import { DarknessPercent, PrintSpeed } from '../Printers/Configuration/PrinterOptions.js';
 
 /** Collection of handy documents ready to go. */
 export class ReadyToPrintDocuments {

@@ -1,7 +1,7 @@
-import * as Commands from './Commands';
-import { DocumentBuilder } from './Document';
-import * as Options from '../Printers/Configuration/PrinterOptions';
-import { BitmapGRF } from './BitmapGRF';
+import * as Commands from './Commands.js';
+import { DocumentBuilder } from './Document.js';
+import * as Options from '../Printers/Configuration/PrinterOptions.js';
+import { BitmapGRF } from './BitmapGRF.js';
 
 export interface ILabelDocumentBuilder
     extends DocumentBuilder<ILabelDocumentBuilder>,

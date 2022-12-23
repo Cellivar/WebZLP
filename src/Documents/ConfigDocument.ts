@@ -1,7 +1,7 @@
-import * as Commands from './Commands';
-import { IDocument, DocumentBuilder } from './Document';
-import * as Options from '../Printers/Configuration/PrinterOptions';
-import { WebZlpError } from '../WebZlpError';
+import * as Commands from './Commands.js';
+import { IDocument, DocumentBuilder } from './Document.js';
+import * as Options from '../Printers/Configuration/PrinterOptions.js';
+import { WebZlpError } from '../WebZlpError.js';
 
 /** A series of printer commands that results in configuration changes. */
 export interface IConfigDocumentBuilder
