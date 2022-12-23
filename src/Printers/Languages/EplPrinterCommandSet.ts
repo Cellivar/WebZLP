@@ -123,19 +123,19 @@ export class EplPrinterCommandSet extends PrinterCommandSet {
 
         // See the docs folder for more information on this format.
 
-        // First line determines firmware version, mostly consistent. Looks like
+        // First line determines firmware version and model number. When splitting
+        // the string by spaces the last element should always be the version and
+        // the rest of the elements are the model number.
         // UKQ1935HLU     V4.29   // Normal LP244
         // UKQ1935HMU  FDX V4.45  // FedEx modified LP2844
+        // UKQ1935H U UPS V4.14   // UPS modified LP2844
         const header = lines[0].split(' ').filter((i) => i);
-        let rawModelId = header[0];
-        if (header.length === 3) {
-            // Append FDX to model number for FedEx printer detect.
-            rawModelId = header[0] + header[1];
-        }
+        const firmwareVersion = header.pop();
+        const rawModelId = header.join(' ');
 
         const printerInfo = {
             model: PrinterModelDb.getModel(rawModelId),
-            firmware: header[header.length - 1],
+            firmware: firmwareVersion,
             serial: 'no_serial_nm',
             serialPort: undefined,
             speed: undefined,
@@ -228,16 +228,19 @@ export class EplPrinterCommandSet extends PrinterCommandSet {
                 case /^oE.,/.test(str):
                 // oEv,w,x,y,z             # Config settings 5
                 // Line mode font substitution settings, ignored in WebZLP
+                case /^oU.,/.test(str):
+                // oUs,t,u                 # UNKNOWN!
+                // Unknown information, only seen on a UPS model so far.
                 case /^\d\d\s\d\d\s\d\d\s$/.test(str):
                 // 06 10 14                # Config setting 6
                 // Not useful information, ignored in WebZLP
-                case /^Emem:/.test(str):
+                case /^Emem[:\s]/.test(str):
                 // Emem:031K,0037K avl     # Soft font storage
                 // Emem used: 0            # Soft font storage
-                case /^Gmem:/.test(str):
+                case /^Gmem[:\s]/.test(str):
                 // Gmem:000K,0037K avl     # Graphics storage
                 // Gmem used: 0            # Graphics storage
-                case /^Fmem:/.test(str):
+                case /^Fmem[:\s]/.test(str):
                 // Fmem:000.0K,060.9K avl  # Form storage
                 // Fmem used: 0 (bytes)    # Form storage
                 case /^Available:/.test(str):

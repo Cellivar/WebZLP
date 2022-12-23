@@ -14,6 +14,9 @@ export class PrinterModelDb {
         if (rawModelId.endsWith('FDX')) {
             return PrinterModel.lp2844fedex;
         }
+        if (rawModelId.endsWith('UPS')) {
+            return PrinterModel.lp2844ups;
+        }
 
         // Hard mode: Model correlation between observed values and output.
         // This is pretty much all based off of observed values, I can't find a mapping

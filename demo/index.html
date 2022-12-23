@@ -452,6 +452,8 @@
         const app = new BasicLabelDesignerApp(printerMgr, btnContainer, labelForm, labelFormInstructions, configModal);
         // and let it take over the UI.
         await app.init();
+        // Then hang it on the window object so we can play with it elsewhere, like the dev console.
+        window.printer_app = app;
 
         // Now we'll fire the reconnect since our UI is wired up.
         await printerMgr.reconnectAllPrinters();
