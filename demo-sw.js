@@ -12,6 +12,16 @@ self.addEventListener('activate', () => self.clients.claim());
 
 // Intercept fetch requests for modules and compile the intercepted typescript.
 self.addEventListener('fetch', (event) => {
+    // Start off easy: if it's a request for a TS file, transpile it.
+    if (event.request.url.endsWith('.ts')) {
+        log('Fetching', event.request.url, 'as just typescript');
+        event.respondWith(transpileTypeScript(event.request.url));
+        return;
+    }
+
+    // Next up is 'no extension'. In classical TS imports you omit any extension
+    // when pulling in a file reference, interpret those as TS and be okay if it
+    // ends up 404'ing.
     if (!event.request.url.endsWith('.ts')
         && !event.request.url.endsWith('.js')
         && event.request.destination === 'script'
@@ -21,10 +31,20 @@ self.addEventListener('fetch', (event) => {
         // and it's not a javascript file. Assume it's actually a TS module.
         // This is _mostly_ safe as js run through the ts compiler is unmodified.
         event.respondWith(transpileTypeScript(event.request.url + '.ts'));
+        return;
     }
 
-    if (event.request.url.endsWith('.ts')) {
-        event.respondWith(transpileTypeScript(event.request.url));
+    // Because TypeScript has chosen violence we have to use .js extensions in
+    // import statements. This is considered correct behavior. Sure okay.
+    // https://github.com/microsoft/TypeScript/issues/16577#issuecomment-703190339
+    // As such, we must test the fetch URL and see if it 404s, if so retry with
+    // a .ts extension instead.
+    if (event.request.url.endsWith('.js')
+        && event.request.destination === 'script'
+        && event.isTrusted) {
+        log('Testing', event.request.url, 'as maybe javascript');
+        event.respondWith(maybeFetchJs(event.request.url));
+        return;
     }
 });
 
@@ -40,6 +60,17 @@ self.addEventListener('message', async ({data: [sourceUrl, sourceCode]}) => {
         }
     });
 });
+
+const maybeFetchJs = async (requestUrl) => {
+    const maybeJs = await fetch(requestUrl);
+    if (maybeJs.status === 404) {
+        // Try it again with a TS extension
+        const tsUrl = requestUrl.substr(0, requestUrl.lastIndexOf('.')) + '.ts';
+        log('Rewrote JS URL to', tsUrl, 'and fetching as typescript');
+        return transpileTypeScript(tsUrl);
+    }
+    return maybeJs.body;
+}
 
 const runTranspile = async (src, code) => {
     log('Compiling:', src);
