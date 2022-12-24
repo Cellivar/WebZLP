@@ -1,8 +1,7 @@
-import { PrinterModel } from './PrinterModel';
-import { match } from 'ts-pattern';
-import { PrinterCommandLanguage } from '../Configuration/PrinterOptions';
-import * as EPL from './EplPrinterModels';
-import { IPrinterModelInfo, UnknownPrinter } from './PrinterModel';
+import { PrinterModel } from './PrinterModel.js';
+import { PrinterCommandLanguage } from '../Configuration/PrinterOptions.js';
+import * as EPL from './EplPrinterModels.js';
+import { IPrinterModelInfo, UnknownPrinter } from './PrinterModel.js';
 
 export class PrinterModelDb {
     /** Determine a printer model based on the printer-reported model. */
@@ -23,31 +22,38 @@ export class PrinterModelDb {
         // of the config's model number vs the hardware model number.
         // TODO: Make this extensible so it's possible for consumers to add their own
         // printers to the enum, match list, etc.
-        return match<string, PrinterModel>(rawModelId)
-            .with('UKQ1915HLU', () => PrinterModel.lp2824)
-            .with('UKQ1935HLU', () => PrinterModel.lp2844)
-            .with('UKQ1935HMU', () => {
+        switch (rawModelId) {
+            case 'UKQ1915HLU':
+                return PrinterModel.lp2824;
+            case 'UKQ1935HLU':
+                return PrinterModel.lp2844;
+            case 'UKQ1935HMU':
                 // HMU units that do not have FDX in the version string appear to be UPS
                 // units. Maybe. Mostly. It's not clear.
                 return PrinterModel.lp2844ups;
-            })
-            .with('LP2844-Z-200dpi', () => PrinterModel.lp2844z)
-            .with('LP2824-Z-200dpi', () => PrinterModel.lp2824z)
-            .otherwise(() => PrinterModel.unknown);
+            case 'LP2824-Z-200dpi':
+                return PrinterModel.lp2824z;
+            case 'LP2844-Z-200dpi':
+                return PrinterModel.lp2844z;
+            default:
+                return PrinterModel.unknown;
+        }
     }
 
     /** Look up the model information for a given printer model. */
     public static getModelInfo(model: PrinterModel): IPrinterModelInfo {
         // TODO: Make this extensible so it's possible for consumers to add their own
         // printers to the enum, match list, etc.
-        return match(model)
-            .with(PrinterModel.lp2824, () => new EPL.LP2824())
-            .with(PrinterModel.lp2844, () => new EPL.LP2844())
-            .with(PrinterModel.lp2844fedex, () => new EPL.LP2844())
-            .with(PrinterModel.lp2844ups, () => new EPL.LP2844())
-            .otherwise(() => new UnknownPrinter());
-        // TODO: Switch to this once I have a better way of handling switches..
-        // .exhaustive();
+        switch (model) {
+            case PrinterModel.lp2824:
+                return new EPL.LP2824();
+            case PrinterModel.lp2844:
+            case PrinterModel.lp2844fedex:
+            case PrinterModel.lp2844ups:
+                return new EPL.LP2844();
+            default:
+                return new UnknownPrinter();
+        }
     }
 
     public static guessLanguageFromModelHint(modelHint?: string): PrinterCommandLanguage {

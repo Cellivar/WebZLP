@@ -1,16 +1,16 @@
-import { WebZlpError } from '../../WebZlpError';
-import * as Options from '../Configuration/PrinterOptions';
-import { PrinterOptions } from '../Configuration/PrinterOptions';
-import { PrinterModelDb } from '../Models/PrinterModelDb';
-import { PrinterModel } from '../Models/PrinterModel';
+import { WebZlpError } from '../../WebZlpError.js';
+import * as Options from '../Configuration/PrinterOptions.js';
+import { PrinterOptions } from '../Configuration/PrinterOptions.js';
+import { PrinterModelDb } from '../Models/PrinterModelDb.js';
+import { PrinterModel } from '../Models/PrinterModel.js';
 import {
     CommandFormInclusionMode,
     PrinterCommandSet,
     TranspilationFormMetadata,
     TranspileCommandDelegate
-} from './PrinterCommandSet';
-import * as Commands from '../../Documents/Commands';
-import { PrinterCommunicationOptions } from '../PrinterCommunicationOptions';
+} from './PrinterCommandSet.js';
+import * as Commands from '../../Documents/Commands.js';
+import { PrinterCommunicationOptions } from '../PrinterCommunicationOptions.js';
 
 /** Command set for communicating with an EPL II printer. */
 export class EplPrinterCommandSet extends PrinterCommandSet {

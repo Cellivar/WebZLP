@@ -1,8 +1,8 @@
-import { IPrinterModelInfo, UnknownPrinter } from '../Models/PrinterModel';
-import * as Serial from './SerialPortSettings';
-export * from './SerialPortSettings';
-import * as Media from './MediaOptions';
-export * from './MediaOptions';
+import { IPrinterModelInfo, UnknownPrinter } from '../Models/PrinterModel.js';
+import * as Serial from './SerialPortSettings.js';
+export * from './SerialPortSettings.js';
+import * as Media from './MediaOptions.js';
+export * from './MediaOptions.js';
 
 /** Firmware information about the printer that can't be modified. */
 export interface IPrinterFactoryInformation {

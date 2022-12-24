@@ -1,5 +1,5 @@
-import { PrinterCommandLanguage } from './Configuration/PrinterOptions';
-import { CommandFormInclusionMode, TranspileCommandDelegate } from './Languages/PrinterCommandSet';
+import { PrinterCommandLanguage } from './Configuration/PrinterOptions.js';
+import { CommandFormInclusionMode, TranspileCommandDelegate } from './Languages/PrinterCommandSet.js';
 
 export class PrinterCommunicationOptions {
     /**

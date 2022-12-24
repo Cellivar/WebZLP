@@ -1,5 +1,5 @@
-import { Percent } from '../NumericRange';
-import { WebZlpError } from '../WebZlpError';
+import { Percent } from '../NumericRange.js';
+import { WebZlpError } from '../WebZlpError.js';
 
 /** Padding information for a trimmed image. */
 export interface ImageBoundingBox {

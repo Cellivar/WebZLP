@@ -4,8 +4,8 @@ import {
   DitheringMethod,
   EplPrinterCommandSet,
   TranspilationFormMetadata
-} from '../../../src';
-import { BitmapGRF } from '../../../src/Documents/BitmapGRF';
+} from '../../../src/index.js';
+import { BitmapGRF } from '../../../src/Documents/BitmapGRF.js';
 
 // Class pulled from jest-mock-canvas which I can't seem to actually import.
 class ImageData {

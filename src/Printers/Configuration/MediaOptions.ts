@@ -1,4 +1,4 @@
-import { Percent } from '../../NumericRange';
+import { Percent } from '../../NumericRange.js';
 
 /** The darkness of the printer setting, higher being printing darker. */
 export type DarknessPercent = Percent;

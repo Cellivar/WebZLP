@@ -1,20 +1,20 @@
-import { IDocument } from '../Documents/Document';
-import { ConfigDocumentBuilder, IConfigDocumentBuilder } from '../Documents/ConfigDocument';
+import { IDocument } from '../Documents/Document.js';
+import { ConfigDocumentBuilder, IConfigDocumentBuilder } from '../Documents/ConfigDocument.js';
 import {
     ILabelDocumentBuilder,
     LabelDocumentBuilder,
     LabelDocumentType
-} from '../Documents/LabelDocument';
-import { ReadyToPrintDocuments } from '../Documents/ReadyToPrintDocuments';
-import { WebZlpError } from '../WebZlpError';
-import { IPrinterDeviceChannel, PrinterChannelType } from './Communication/PrinterCommunication';
-import { UsbPrinterDeviceChannel } from './Communication/UsbPrinterDeviceChannel';
-import { PrinterCommandLanguage, PrinterOptions } from './Configuration/PrinterOptions';
-import { EplPrinterCommandSet } from './Languages/EplPrinterCommandSet';
-import { PrinterCommandSet } from './Languages/PrinterCommandSet';
-import { ZplPrinterCommandSet } from './Languages/ZplPrinterCommandSet';
-import { PrinterModelDb } from './Models/PrinterModelDb';
-import { PrinterCommunicationOptions } from './PrinterCommunicationOptions';
+} from '../Documents/LabelDocument.js';
+import { ReadyToPrintDocuments } from '../Documents/ReadyToPrintDocuments.js';
+import { WebZlpError } from '../WebZlpError.js';
+import { IPrinterDeviceChannel, PrinterChannelType } from './Communication/PrinterCommunication.js';
+import { UsbPrinterDeviceChannel } from './Communication/UsbPrinterDeviceChannel.js';
+import { PrinterCommandLanguage, PrinterOptions } from './Configuration/PrinterOptions.js';
+import { EplPrinterCommandSet } from './Languages/EplPrinterCommandSet.js';
+import { PrinterCommandSet } from './Languages/PrinterCommandSet.js';
+import { ZplPrinterCommandSet } from './Languages/ZplPrinterCommandSet.js';
+import { PrinterModelDb } from './Models/PrinterModelDb.js';
+import { PrinterCommunicationOptions } from './PrinterCommunicationOptions.js';
 
 /**
  * A class for working with a label printer.

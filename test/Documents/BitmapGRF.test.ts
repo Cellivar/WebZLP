@@ -1,5 +1,5 @@
 /// <reference types="jest" />
-import { BitmapGRF } from '../../src/Documents/BitmapGRF';
+import { BitmapGRF } from '../../src/Documents/BitmapGRF.js';
 
 // Class pulled from jest-mock-canvas which I can't seem to actually import.
 class ImageData {

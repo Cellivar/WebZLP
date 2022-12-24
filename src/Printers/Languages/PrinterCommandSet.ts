@@ -1,8 +1,8 @@
-import { CompiledDocument, IDocument } from '../../Documents/Document';
-import { WebZlpError } from '../../WebZlpError';
-import { PrinterCommandLanguage, PrinterOptions } from '../Configuration/PrinterOptions';
-import * as Commands from '../../Documents/Commands';
-import { PrinterCommunicationOptions } from '../PrinterCommunicationOptions';
+import { CompiledDocument, IDocument } from '../../Documents/Document.js';
+import { WebZlpError } from '../../WebZlpError.js';
+import { PrinterCommandLanguage, PrinterOptions } from '../Configuration/PrinterOptions.js';
+import * as Commands from '../../Documents/Commands.js';
+import { PrinterCommunicationOptions } from '../PrinterCommunicationOptions.js';
 
 export type TranspileCommandDelegate = (
     cmd: Commands.IPrinterCommand,

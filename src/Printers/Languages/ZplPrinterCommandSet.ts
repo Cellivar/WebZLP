@@ -1,14 +1,14 @@
-import * as Options from '../Configuration/PrinterOptions';
+import * as Options from '../Configuration/PrinterOptions.js';
 import {
     PrinterCommandSet,
     TranspilationFormMetadata,
     TranspileCommandDelegate,
     CommandFormInclusionMode
-} from './PrinterCommandSet';
-import * as Commands from '../../Documents/Commands';
-import { AutodetectedPrinter, PrinterModel } from '../Models/PrinterModel';
-import { PrinterModelDb } from '../Models/PrinterModelDb';
-import { PrinterCommunicationOptions } from '../PrinterCommunicationOptions';
+} from './PrinterCommandSet.js';
+import * as Commands from '../../Documents/Commands.js';
+import { AutodetectedPrinter, PrinterModel } from '../Models/PrinterModel.js';
+import { PrinterModelDb } from '../Models/PrinterModelDb.js';
+import { PrinterCommunicationOptions } from '../PrinterCommunicationOptions.js';
 
 export class ZplPrinterCommandSet extends PrinterCommandSet {
     private encoder = new TextEncoder();
