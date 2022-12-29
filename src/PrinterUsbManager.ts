@@ -14,8 +14,9 @@ export interface PrinterManagerEventMap {
  * a printer using the browser's UI. Once paired at least once the browser will rember and reconnect
  * automatically.
  *
- * This class exposes two events, which your code should add handlers for:
- * *
+ * This class exposes events, which your code should add handlers for:
+ * * connectedPrinter: Fired when a printer is ready to be interacted with.
+ * * disconnectedPrinter: Fired when a printer is no longer connected.
  *
  * This class will bind to WebUSB events on the Navigator element, your code should ensure only
  * one instance is ever instantiated to avoid conflicts.
