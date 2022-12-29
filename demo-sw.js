@@ -63,13 +63,14 @@ self.addEventListener('message', async ({data: [sourceUrl, sourceCode]}) => {
 
 const maybeFetchJs = async (requestUrl) => {
     const maybeJs = await fetch(requestUrl);
-    if (maybeJs.status === 404) {
-        // Try it again with a TS extension
-        const tsUrl = requestUrl.substr(0, requestUrl.lastIndexOf('.')) + '.ts';
-        log('Rewrote JS URL to', tsUrl, 'and fetching as typescript');
-        return transpileTypeScript(tsUrl);
+    if (maybeJs.status !== 404) {
+        return maybeJs;
     }
-    return maybeJs.body;
+
+    // Try it again with a TS extension
+    const tsUrl = requestUrl.substr(0, requestUrl.lastIndexOf('.')) + '.ts';
+    log('Rewrote JS URL to', tsUrl, 'and fetching as typescript');
+    return transpileTypeScript(tsUrl);
 }
 
 const runTranspile = async (src, code) => {
