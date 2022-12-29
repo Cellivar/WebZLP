@@ -1,7 +1,7 @@
 import * as Commands from './Commands.js';
 import { DocumentBuilder } from './Document.js';
 import * as Options from '../Printers/Configuration/PrinterOptions.js';
-import { BitmapGRF } from './BitmapGRF.js';
+import { BitmapGRF, ImageConversionOptions } from './BitmapGRF.js';
 
 export interface ILabelDocumentBuilder
     extends DocumentBuilder<ILabelDocumentBuilder>,
@@ -74,11 +74,18 @@ export class LabelDocumentBuilder
 
     addImageFromImageData(
         imageData: ImageData,
-        dithering = Commands.DitheringMethod.none
+        imageConversionOptions: ImageConversionOptions = {}
     ): ILabelDocumentBuilder {
         return this.then(
-            new Commands.AddImageCommand(BitmapGRF.fromCanvasImageData(imageData), dithering)
+            new Commands.AddImageCommand(
+                BitmapGRF.fromCanvasImageData(imageData),
+                imageConversionOptions
+            )
         );
+    }
+
+    addImageFromGRF(image: BitmapGRF): ILabelDocumentBuilder {
+        return this.then(new Commands.AddImageCommand(image, {}));
     }
 
     addLine(lengthInDots: number, heightInDots: number, color = Commands.DrawColor.black) {
@@ -139,8 +146,11 @@ export interface ILabelContentCommandBuilder {
     /** Add an ImageData object as an image to the label */
     addImageFromImageData(
         imageData: ImageData,
-        dithering?: Commands.DitheringMethod
+        imageConversionOptions?: ImageConversionOptions
     ): ILabelDocumentBuilder;
+
+    /** Add a bitmap GRF image to the label */
+    addImageFromGRF(image: BitmapGRF): ILabelDocumentBuilder;
 
     /** Draw a line from the current offset for the length and height. */
     addLine(

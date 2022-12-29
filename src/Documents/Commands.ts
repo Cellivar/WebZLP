@@ -1,5 +1,5 @@
 import * as Options from '../Printers/Configuration/PrinterOptions.js';
-import { BitmapGRF } from './BitmapGRF.js';
+import { BitmapGRF, ImageConversionOptions } from './BitmapGRF.js';
 
 /** Flags to indicate special operations a command might cause. */
 export enum PrinterCommandEffectFlags {
@@ -38,12 +38,6 @@ export interface IPrinterExtendedCommand extends IPrinterCommand {
 
     /** Gets the command languages this extended command can apply to. */
     get commandLanguageApplicability(): Options.PrinterCommandLanguage;
-}
-
-/** List of available dithering methods for converting images to black/white. */
-export enum DitheringMethod {
-    /** No dithering, cutoff with  used. */
-    none
 }
 
 /** List of colors to draw elements with */
@@ -436,7 +430,7 @@ export class AddImageCommand implements IPrinterCommand {
         return `Adds a ${this.bitmap.width} wide x ${this.bitmap.height} high image.`;
     }
 
-    constructor(public bitmap: BitmapGRF, public dithering: DitheringMethod) {}
+    constructor(public bitmap: BitmapGRF, public imageConversionOptions: ImageConversionOptions) {}
 }
 
 /** Command class to draw a straight line. */
