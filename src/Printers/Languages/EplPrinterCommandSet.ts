@@ -29,7 +29,7 @@ export class EplPrinterCommandSet extends PrinterCommandSet {
     get formEndCommand(): Uint8Array {
         // There's no formal command for the end of an EPL doc, but just in case
         // add a newline.
-        return this.encodeCommand('');
+        return this.encodeCommand();
     }
 
     protected nonFormCommands: (symbol | Commands.CommandType)[] = [
@@ -49,7 +49,7 @@ export class EplPrinterCommandSet extends PrinterCommandSet {
         [Commands.CommandType.CommandCustomSpecificCommand, this.unprocessedCommand],
         [Commands.CommandType.CommandLanguageSpecificCommand, this.unprocessedCommand],
         // Actually valid commands to parse
-        [Commands.CommandType.OffsetCommand, this.modifyOffset.bind(this)],
+        [Commands.CommandType.OffsetCommand, this.modifyOffset],
         [Commands.CommandType.ClearImageBufferCommand, () => this.formStartCommand],
         [Commands.CommandType.CutNowCommand, () => this.encodeCommand('C')],
         // EPL uses an on/off style for form backup, it'll remain off until reenabled.
@@ -95,7 +95,7 @@ export class EplPrinterCommandSet extends PrinterCommandSet {
         }
     }
 
-    public encodeCommand(str: string, withNewline = true): Uint8Array {
+    public encodeCommand(str = '', withNewline = true): Uint8Array {
         // Every command in EPL ends with a newline.
         return this.encoder.encode(str + (withNewline ? '\r\n' : ''));
     }
