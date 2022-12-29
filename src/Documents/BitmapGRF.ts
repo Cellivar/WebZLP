@@ -192,7 +192,7 @@ export class BitmapGRF {
             grayThreshold = 90,
             trimWhitespace = true,
             ditheringMethod = DitheringMethod.none
-        } = imageOptions;
+        } = imageOptions ?? {};
 
         width = width | 0;
         if (!width || width < 0) {
@@ -235,7 +235,7 @@ export class BitmapGRF {
             grayThreshold = 90,
             trimWhitespace = true,
             ditheringMethod = DitheringMethod.none
-        } = imageOptions;
+        } = imageOptions ?? {};
         // This property isn't supported in Firefox, so it isn't supported
         // in the lib types, and I don't feel like dealing with it right now
         // so TODO: fix this eventually
