@@ -1,7 +1,6 @@
 /// <reference types="jest" />
 import {
   AddImageCommand,
-  DitheringMethod,
   EplPrinterCommandSet,
   TranspilationFormMetadata
 } from '../../../src/index.js';
@@ -93,7 +92,7 @@ describe('EplImageConversionToFullCommand', () => {
   it('Should convert blank images to valid command', () => {
     const imageData = new ImageData(getImageDataInput(8, 1, 0), 8, 1);
     const bitmap = BitmapGRF.fromCanvasImageData(imageData, { trimWhitespace: false });
-    const cmd = new AddImageCommand(bitmap, DitheringMethod.none);
+    const cmd = new AddImageCommand(bitmap, {});
     const doc = new TranspilationFormMetadata();
     const resultCmd = cmdSet['addImageCommand'](cmd, doc, cmdSet);
 
@@ -109,7 +108,7 @@ describe('EplImageConversionToFullCommand', () => {
   it('Should apply offsets in command', () => {
     const imageData = new ImageData(getImageDataInput(8, 1, 0), 8, 1);
     const bitmap = BitmapGRF.fromCanvasImageData(imageData, { trimWhitespace: false });
-    const cmd = new AddImageCommand(bitmap, DitheringMethod.none);
+    const cmd = new AddImageCommand(bitmap, {});
     const appliedOffset = 10;
     const doc = new TranspilationFormMetadata();
     doc.horizontalOffset = appliedOffset;
