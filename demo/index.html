@@ -59,6 +59,10 @@
             document.getElementById('windowsDriverWarning').classList.remove('d-none');
         }
 
+        if (location.protocol !== 'https:') {
+            document.getElementById('urlNotSecure').classList.remove('d-none');
+        }
+
     </script>
 
     <!-- Here's some actual demo code. Note that it is typescript, not javascript. -->
@@ -503,6 +507,10 @@
                 <div class="alert alert-info" role="alert" id="loadingIndicator">
                     <h4>Loading....</h4>
                     <p>If you see this for a long time check the dev console for errors and try the <button id="emergencyRefreshBtn">emergency reset button.</button></p>
+                </div>
+                <div class="alert alert-warning d-none" role="alert" id="urlNotSecure">
+                    <h4>WebUSB requires HTTPS</h4>
+                    <p>It looks like this URL is not using HTTPS, and WebUSB <a href="https://developer.mozilla.org/en-US/docs/Web/API/WebUSB_API">only works in a secure context.</a> You'll need to load this page over HTTPS instead.</p>
                 </div>
             </div>
         </div>
