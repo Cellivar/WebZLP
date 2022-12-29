@@ -32,9 +32,37 @@
         }
     </script>
     <script type="module" src="./ts-browser.js"></script>
+    <script type="text/javascript" id="emergency_shenanigans_reboot_script">
+
+        window.addEventListener('DOMContentLoaded', async () => {
+            // Just in case our shenanigans explode, provide an easier way to clear state.
+            document.getElementById('emergencyRefreshBtn').addEventListener('click', () => {
+                navigator.serviceWorker.getRegistration('../demo-sw.js')
+                    .then(r => r.unregister())
+                    .finally(result => window.location.reload());
+            });
+        });
+
+    </script>
+    <script type="text/typescript" id="just_shenanigans_to_make_the_page_work">
+
+        // Since we got this far it's safe to hide the loading indicator.
+        document.getElementById('loadingIndicator').classList.add('d-none');
+
+        // This bit detects if the browser supports WebUSB, displaying a warning if not.
+        if (navigator.usb == null) {
+            document.getElementById('browserNoWebUsb').classList.remove('d-none');
+        }
+
+        // Display a warning if the OS is windows, which needs some configuration.
+        if (navigator.appVersion.indexOf('Win') != -1) {
+            document.getElementById('windowsDriverWarning').classList.remove('d-none');
+        }
+
+    </script>
 
     <!-- Here's some actual demo code. Note that it is typescript, not javascript. -->
-    <script type="text/typescript">
+    <script type="text/typescript" id="cool_demo_code_to_show_off_the_lib">
         import {
             DarknessPercent,
             IDocument,
@@ -457,16 +485,7 @@
         // Now we'll fire the reconnect since our UI is wired up.
         await printerMgr.reconnectAllPrinters();
 
-        // A couple of last minute things.
-        // This bit detects if the operating system is Windows and shows a little warning about the
-        // Windows print driver conflicting with WebUSB.
-        if (navigator.appVersion.indexOf('Win') != -1) {
-            document.getElementById('windowsDriverWarning').classList.remove('d-none');
-        }
-        // This bit detects if the browser supports WebUSB, displaying a warning if not.
-        if (navigator.usb == null) {
-            document.getElementById('browserNoWebUsb').classList.remove('d-none');
-        }
+        // We're done here. Bring in the dancing lobsters.
     </script>
     <row>
         <div class="container-fluid">
@@ -480,6 +499,10 @@
                 <div class="alert alert-warning d-none" role="alert" id="browserNoWebUsb">
                     <h4>Your browser doesn't support WebUSB</h4>
                     <p>This demo uses WebUSB to function and your browser doesn't seem to have that available.</p>
+                </div>
+                <div class="alert alert-info" role="alert" id="loadingIndicator">
+                    <h4>Loading....</h4>
+                    <p>If you see this for a long time check the dev console for errors and try the <button id="emergencyRefreshBtn">emergency reset button.</button></p>
                 </div>
             </div>
         </div>
