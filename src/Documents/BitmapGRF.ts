@@ -20,10 +20,18 @@ export interface ImageBoundingBox {
 
 /** Settings for converting an image to a GRF. */
 export interface ImageConversionOptions {
-    /** The threshold brightness below which to consider a pixel black. Defaults to 75. */
+    /** The threshold brightness below which to consider a pixel black. Defaults to 25. */
     grayThreshold?: Percent;
     /** Whether to trim whitespace around the image to reduce file size. Trimmed pixels will become padding in the bounding box. */
     trimWhitespace?: boolean;
+    /** The dithering method to use when converting image to monochrome. */
+    ditheringMethod?: DitheringMethod;
+}
+
+/** List of available dithering methods for converting images to black/white. */
+export enum DitheringMethod {
+    /** No dithering, cutoff with  used. */
+    none
 }
 
 /** Represents a GRF bitmap file. */
@@ -178,7 +186,11 @@ export class BitmapGRF {
     public static fromRGBA(
         data: Uint8Array | Uint8ClampedArray | Array<number>,
         width: number,
-        { grayThreshold = 75, trimWhitespace = true }: ImageConversionOptions = {}
+        {
+            grayThreshold = 25,
+            trimWhitespace = true,
+            ditheringMethod = DitheringMethod.none
+        }: ImageConversionOptions = {}
     ): BitmapGRF {
         width = width | 0;
         if (!width || width < 0) {
@@ -194,7 +206,7 @@ export class BitmapGRF {
             data,
             width,
             height,
-            { grayThreshold, trimWhitespace }
+            { grayThreshold, trimWhitespace, ditheringMethod }
         );
 
         const { grfData, bytesPerRow } = this.monochromeToGRF(
@@ -215,7 +227,11 @@ export class BitmapGRF {
      */
     public static fromCanvasImageData(
         imageData: ImageData,
-        { grayThreshold = 75, trimWhitespace = true }: ImageConversionOptions = {}
+        {
+            grayThreshold = 25,
+            trimWhitespace = true,
+            ditheringMethod = DitheringMethod.none
+        }: ImageConversionOptions = {}
     ): BitmapGRF {
         // This property isn't supported in Firefox, so it isn't supported
         // in the lib types, and I don't feel like dealing with it right now
@@ -230,7 +246,11 @@ export class BitmapGRF {
         // }
         //
         // Proceed on assuming it's an RGBA bitmap of sRGB data.
-        return this.fromRGBA(imageData.data, imageData.width, { grayThreshold, trimWhitespace });
+        return this.fromRGBA(imageData.data, imageData.width, {
+            grayThreshold,
+            trimWhitespace,
+            ditheringMethod
+        });
     }
 
     /** Converts monochrome data to GRF format. */
@@ -270,13 +290,20 @@ export class BitmapGRF {
         rgba: Uint8Array | Uint8ClampedArray | Array<number>,
         width: number,
         height: number,
-        { grayThreshold = 75, trimWhitespace = true }: ImageConversionOptions
+        { grayThreshold, trimWhitespace, ditheringMethod }: ImageConversionOptions
     ) {
         // Method (c) 2022 metafloor
         // https://github.com/metafloor/zpl-image/blob/491f4d6887294d71dcfa859957d43b3be28ce1e5/zpl-image.js
 
         // Convert black from percent to 0..255 value
         const threshold = (255 * grayThreshold) / 100;
+
+        // This is where we'd do some dithering, if we implemented anything other than none.
+        if (ditheringMethod != DitheringMethod.none) {
+            throw new WebZlpError(
+                `Dithering method ${DitheringMethod[ditheringMethod]} is not supported.`
+            );
+        }
 
         let minx: number, maxx: number, miny: number, maxy: number;
         if (!trimWhitespace) {
