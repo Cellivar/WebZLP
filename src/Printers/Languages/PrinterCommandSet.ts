@@ -14,7 +14,7 @@ type RawCommandForm = { commands: Array<Commands.IPrinterCommand>; withinForm: b
 
 export abstract class PrinterCommandSet {
     /** Encode a raw string command into a Uint8Array according to the command language rules. */
-    public abstract encodeCommand(str: string): Uint8Array;
+    public abstract encodeCommand(str?: string, withNewline?: boolean): Uint8Array;
 
     private readonly _noop = new Uint8Array();
     /** Get an empty command to be used as a no-op. */
@@ -94,7 +94,7 @@ export abstract class PrinterCommandSet {
             }
             return this.combineCommands(accumulator as Uint8Array, cmd);
             // We start with an explicit newline, to avoid possible previous commands partially sent
-        }, this.encodeCommand(''));
+        }, this.encodeCommand());
 
         const out = new CompiledDocument(this.commandLanguage, effects, buffer);
         return Object.freeze(out);

@@ -27,7 +27,7 @@ export class ZplPrinterCommandSet extends PrinterCommandSet {
         return this.encodeCommand('\n^XZ\n');
     }
 
-    encodeCommand(str: string, withNewline = true): Uint8Array {
+    encodeCommand(str = '', withNewline = true): Uint8Array {
         // TODO: ZPL supports omitting the newline, figure out a clever way to
         // handle situations where newlines are optional to reduce line noise.
         return this.encoder.encode(str + (withNewline ? '\n' : ''));
