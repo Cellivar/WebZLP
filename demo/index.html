@@ -59,6 +59,14 @@
             document.getElementById('windowsDriverWarning').classList.remove('d-none');
         }
 
+        // Display a warning if the OS is linux, which may need some configuration.
+        if (navigator.appVersion.indexOf('Linux') != -1) {
+            document.getElementById('linuxDriverWarning').classList.remove('d-none');
+        }
+
+        // ChromeOS works out of the box!
+
+        // WebUSB requires HTTPS, show an error if the page wasn't loaded securely.
         if (location.protocol !== 'https:') {
             document.getElementById('urlNotSecure').classList.remove('d-none');
         }
@@ -500,17 +508,24 @@
                     <p>It looks like your operating system is Windows. The <a href="https://web.dev/build-for-webusb/#windows">windows driver model conflicts with WebUSB</a> and might prevent this page from working with a printer.</p>
                     <p>To make this demo work you'll need to <a href="https://cellivar.github.io/WebZLP/docs/windows_driver">set up your driver correctly</a>. You'll see errors in the developer console if it isn't configured correctly.</p>
                 </div>
+                <div class="alert alert-warning alert-dismissible d-none" role="alert" id="linuxDriverWarning">
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    <h4>Linux may need extra configuration</h4>
+                    <p>It looks like your operating system is Linux. The <a href="https://web.dev/build-for-webusb/#linux">linux default driver conflicts with WebUSB</a> and might prevent this page from working with a printer.</p>
+                    <p>If a printer doesn't connect successfully you'll need to <a href="https://github.com/anthroarts/artshow-jockey/tree/73a794bcaa0f0a10625c94d4b2876eba5b638287/udev">set up udev rules</a> to load a different driver. You'll see errors in the developer console if it isn't configured correctly.</p>
+                    <p>You may be able to find the correct USB IDs for your device by visiting either opening <pre>chrome://usb-internals</pre> in a new tab and clicking on the 'Devices' tab, or visiting the <a href="http://www.linux-usb.org/usb-ids.html">the USB ID Repository</a>.</p>
+                </div>
                 <div class="alert alert-warning d-none" role="alert" id="browserNoWebUsb">
                     <h4>Your browser doesn't support WebUSB</h4>
                     <p>This demo uses WebUSB to function and your browser doesn't seem to have that available.</p>
                 </div>
-                <div class="alert alert-info" role="alert" id="loadingIndicator">
-                    <h4>Loading....</h4>
-                    <p>If you see this for a long time check the dev console for errors and try the <button id="emergencyRefreshBtn">emergency reset button.</button></p>
-                </div>
                 <div class="alert alert-warning d-none" role="alert" id="urlNotSecure">
                     <h4>WebUSB requires HTTPS</h4>
                     <p>It looks like this URL is not using HTTPS, and WebUSB <a href="https://developer.mozilla.org/en-US/docs/Web/API/WebUSB_API">only works in a secure context.</a> You'll need to load this page over HTTPS instead.</p>
+                </div>
+                <div class="alert alert-info" role="alert" id="loadingIndicator">
+                    <h4>Loading....</h4>
+                    <p>If you see this for a long time check the dev console for errors and try the <button id="emergencyRefreshBtn">emergency reset button.</button></p>
                 </div>
             </div>
         </div>
