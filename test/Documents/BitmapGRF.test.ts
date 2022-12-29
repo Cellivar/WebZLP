@@ -1,5 +1,9 @@
 /// <reference types="jest" />
-import { BitmapGRF } from '../../src/Documents/BitmapGRF.js';
+import {
+  BitmapGRF,
+  DitheringMethod,
+  ImageConversionOptions
+} from '../../src/Documents/BitmapGRF.js';
 
 // Class pulled from jest-mock-canvas which I can't seem to actually import.
 class ImageData {
@@ -81,6 +85,12 @@ function getImageDataInput(width: number, height: number, fill: number, alpha?: 
   return arr;
 }
 
+const imageConversionOptions: ImageConversionOptions = {
+  ditheringMethod: DitheringMethod.none,
+  grayThreshold: 99,
+  trimWhitespace: false
+};
+
 describe('rgbaImageConversion', () => {
   it('Should downconvert transparent images correctly', () => {
     const imageData = new ImageData(getImageDataInput(8, 1, 0), 8, 1);
@@ -89,7 +99,7 @@ describe('rgbaImageConversion', () => {
       imageData.data,
       imageData.width,
       imageData.height,
-      { grayThreshold: 75, trimWhitespace: false }
+      imageConversionOptions
     );
     const { grfData, bytesPerRow } = BitmapGRF['monochromeToGRF'](
       monochromeData,
@@ -110,7 +120,7 @@ describe('rgbaImageConversion', () => {
       imageData.data,
       imageData.width,
       imageData.height,
-      { grayThreshold: 75, trimWhitespace: false }
+      imageConversionOptions
     );
     const { grfData, bytesPerRow } = BitmapGRF['monochromeToGRF'](
       monochromeData,
@@ -131,7 +141,7 @@ describe('rgbaImageConversion', () => {
       imageData.data,
       imageData.width,
       imageData.height,
-      { grayThreshold: 75, trimWhitespace: false }
+      imageConversionOptions
     );
     const { grfData, bytesPerRow } = BitmapGRF['monochromeToGRF'](
       monochromeData,
@@ -152,7 +162,7 @@ describe('rgbaImageConversion', () => {
       imageData.data,
       imageData.width,
       imageData.height,
-      { grayThreshold: 75, trimWhitespace: false }
+      imageConversionOptions
     );
     const { grfData, bytesPerRow } = BitmapGRF['monochromeToGRF'](
       monochromeData,
@@ -174,7 +184,7 @@ describe('rgbaImageConversion', () => {
       imageData.data,
       imageData.width,
       imageData.height,
-      { grayThreshold: 75, trimWhitespace: false }
+      imageConversionOptions
     );
     const { grfData, bytesPerRow } = BitmapGRF['monochromeToGRF'](
       monochromeData,
@@ -196,7 +206,7 @@ describe('rgbaImageConversion', () => {
       imageData.data,
       imageData.width,
       imageData.height,
-      { grayThreshold: 75, trimWhitespace: false }
+      imageConversionOptions
     );
     const { grfData, bytesPerRow } = BitmapGRF['monochromeToGRF'](
       monochromeData,

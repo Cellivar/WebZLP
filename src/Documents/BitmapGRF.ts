@@ -20,7 +20,7 @@ export interface ImageBoundingBox {
 
 /** Settings for converting an image to a GRF. */
 export interface ImageConversionOptions {
-    /** The threshold brightness below which to consider a pixel black. Defaults to 25. */
+    /** The threshold brightness below which to consider a pixel black. Defaults to 90. */
     grayThreshold?: Percent;
     /** Whether to trim whitespace around the image to reduce file size. Trimmed pixels will become padding in the bounding box. */
     trimWhitespace?: boolean;
@@ -186,12 +186,14 @@ export class BitmapGRF {
     public static fromRGBA(
         data: Uint8Array | Uint8ClampedArray | Array<number>,
         width: number,
-        {
-            grayThreshold = 25,
+        imageOptions?: ImageConversionOptions
+    ): BitmapGRF {
+        const {
+            grayThreshold = 90,
             trimWhitespace = true,
             ditheringMethod = DitheringMethod.none
-        }: ImageConversionOptions = {}
-    ): BitmapGRF {
+        } = imageOptions;
+
         width = width | 0;
         if (!width || width < 0) {
             throw new BitmapFormatError('Image width must be provided for RGBA data.');
@@ -227,12 +229,13 @@ export class BitmapGRF {
      */
     public static fromCanvasImageData(
         imageData: ImageData,
-        {
-            grayThreshold = 25,
+        imageOptions?: ImageConversionOptions
+    ): BitmapGRF {
+        const {
+            grayThreshold = 90,
             trimWhitespace = true,
             ditheringMethod = DitheringMethod.none
-        }: ImageConversionOptions = {}
-    ): BitmapGRF {
+        } = imageOptions;
         // This property isn't supported in Firefox, so it isn't supported
         // in the lib types, and I don't feel like dealing with it right now
         // so TODO: fix this eventually
