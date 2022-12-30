@@ -28,9 +28,6 @@ export class Printer {
 
     private _printerConfig: PrinterOptions;
 
-    // Cache for the nextLine method.
-    private nextLineCache: string;
-
     private _ready: Promise<boolean>;
     /** A promise indicating this printer is ready to be used. */
     get ready() {
@@ -214,16 +211,8 @@ export class Printer {
         return config;
     }
 
-    /** Wait for the next line of data sent from the printer, or null if nothing is received. */
+    /** Wait for the next line of data sent from the printer, or undefined if nothing is received. */
     private async nextLine(timeoutMs: number): Promise<string | void> {
-        // If we have a cached line return that.
-        if (this.nextLineCache) {
-            const line = this.nextLineCache;
-            this.nextLineCache = null;
-            return line;
-        }
-
-        let timedOut = false;
         let reader: ReadableStreamDefaultReader<string>;
         const nextLinePromise = (async () => {
             reader = this.printerChannel.streamFromPrinter.getReader();
@@ -234,17 +223,11 @@ export class Printer {
                 return;
             }
 
-            if (timedOut) {
-                this.nextLineCache = value;
-                return;
-            }
-
             return value;
         })();
 
         const timeoutPromise = new Promise<void>((resolve) => {
             setTimeout(() => {
-                timedOut = true;
                 reader.releaseLock();
                 resolve();
             }, timeoutMs);
