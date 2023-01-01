@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 import { Percent } from '../NumericRange.js';
 import { WebZlpError } from '../WebZlpError.js';
 
@@ -340,11 +341,12 @@ export class BitmapGRF {
                 y = 0;
             for (let i = 0, n = width * height * 4; i < n; i += 4) {
                 // Alpha blend with white.
-                const a = rgba[i + 3] / 255;
-                const r = rgba[i] * 0.3 * a + 255 * (1 - a);
-                const g = rgba[i + 1] * 0.59 * a + 255 * (1 - a);
-                const b = rgba[i + 2] * 0.11 * a + 255 * (1 - a);
-                const gray = r + g + b;
+                const gray = this.colorToGrayscale(
+                    rgba[i + 0],
+                    rgba[i + 1],
+                    rgba[i + 2],
+                    rgba[i + 3]
+                );
 
                 if (gray <= threshold) {
                     if (minx > x) minx = x;
@@ -368,13 +370,14 @@ export class BitmapGRF {
             let i = (y * width + minx) * 4;
             for (let x = minx; x <= maxx; x++) {
                 // Alpha blend with white.
-                const a = rgba[i + 3] / 255.0;
-                const r = rgba[i] * 0.3 * a + 255.0 * (1 - a);
-                const g = rgba[i + 1] * 0.59 * a + 255.0 * (1 - a);
-                const b = rgba[i + 2] * 0.11 * a + 255.0 * (1 - a);
-                const gray = r + g + b;
+                const gray = this.colorToGrayscale(
+                    rgba[i + 0],
+                    rgba[i + 1],
+                    rgba[i + 2],
+                    rgba[i + 3]
+                );
 
-                buffer[idx++] = gray <= threshold ? 0 : 1;
+                buffer[idx++] = gray >= threshold ? 1 : 0;
                 i += 4;
             }
         }
@@ -388,11 +391,31 @@ export class BitmapGRF {
                 height: height,
                 paddingLeft: minx,
                 paddingTop: miny,
-                // TODO: Are these correct offesets or does it need + 1?
-                paddingRight: width - maxx,
-                paddingBottom: height - maxy
+                paddingRight: width - (this.roundUpToByte(cx) + minx),
+                paddingBottom: height - (cy + miny)
             }
         };
+    }
+
+    private static roundUpToByte(value: number) {
+        return Math.ceil(value / 8) * 8;
+    }
+
+    private static colorToGrayscale(
+        r: number,
+        g: number,
+        b: number,
+        a: number,
+        backgroundGray?: number
+    ): number {
+        backgroundGray = backgroundGray ?? 255.0;
+        const alpha = a / 255.0;
+        // Values from the Color FAQ: https://poynton.ca/notes/colour_and_gamma/ColorFAQ.html
+        const red = Math.pow(r / 255.0, 2.2) * 0.2126;
+        const blu = Math.pow(g / 255.0, 2.2) * 0.7152;
+        const grn = Math.pow(b / 255.0, 2.2) * 0.0722;
+        const gray = Math.pow(red + blu + grn, 0.454545) * 255;
+        return ((1 - alpha) * backgroundGray) + (alpha * gray);
     }
 
     /** Lookup table for binary to hex values. */
