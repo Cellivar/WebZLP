@@ -70,6 +70,8 @@ class ImageData {
   }
 }
 
+global.ImageData = ImageData;
+
 function getImageDataInput(width: number, height: number, fill: number, alpha?: number) {
   const arr = new Uint8ClampedArray(width * height * 4);
   if (alpha != null && alpha != fill) {
@@ -85,13 +87,28 @@ function getImageDataInput(width: number, height: number, fill: number, alpha?: 
   return arr;
 }
 
+function getImageDataInputAlternatingDots(width: number, height: number) {
+  const arr = new Uint8ClampedArray(width * height * 4);
+  let flip = 1;
+  for (let i = 0; i < arr.length; i += 4) {
+    flip = ~flip;
+    const fill = flip * 255;
+    arr[i + 0] = fill;
+    arr[i + 1] = fill;
+    arr[i + 2] = fill;
+    arr[i + 3] = 255;
+  }
+
+  return arr;
+}
+
 const imageConversionOptions: ImageConversionOptions = {
   ditheringMethod: DitheringMethod.none,
-  grayThreshold: 99,
+  grayThreshold: 70,
   trimWhitespace: false
 };
 
-describe('rgbaImageConversion', () => {
+describe('RGBA Image Conversion', () => {
   it('Should downconvert transparent images correctly', () => {
     const imageData = new ImageData(getImageDataInput(8, 1, 0), 8, 1);
     const expected = new Uint8Array([(1 << 8) - 1]);
@@ -137,6 +154,27 @@ describe('rgbaImageConversion', () => {
   it('Should downconvert white images correctly', () => {
     const imageData = new ImageData(getImageDataInput(8, 1, 255), 8, 1);
     const expected = new Uint8Array([(1 << 8) - 1]);
+    const { monochromeData, imageWidth, imageHeight, boundingBox } = BitmapGRF['toMonochrome'](
+      imageData.data,
+      imageData.width,
+      imageData.height,
+      imageConversionOptions
+    );
+    const { grfData, bytesPerRow } = BitmapGRF['monochromeToGRF'](
+      monochromeData,
+      imageWidth,
+      imageHeight
+    );
+
+    expect(imageWidth).toBe(8);
+    expect(imageHeight).toBe(1);
+    expect(bytesPerRow).toBe(1);
+    expect(grfData).toEqual(expected);
+  });
+
+  it('Should downconvert checkered images correctly', () => {
+    const imageData = new ImageData(getImageDataInputAlternatingDots(8, 1), 8, 1);
+    const expected = new Uint8Array([85]);
     const { monochromeData, imageWidth, imageHeight, boundingBox } = BitmapGRF['toMonochrome'](
       imageData.data,
       imageData.width,
@@ -218,5 +256,93 @@ describe('rgbaImageConversion', () => {
     expect(imageHeight).toBe(1);
     expect(bytesPerRow).toBe(1);
     expect(grfData).toEqual(expected);
+  });
+});
+
+describe('RGBA Round Trip', () => {
+  it('Should not modify white images round-trip to imageData', () => {
+    const imageData = new ImageData(getImageDataInput(8, 1, 255, 255), 8, 1);
+    const img = BitmapGRF.fromCanvasImageData(imageData, { trimWhitespace: false });
+    const outImageData = img.toImageData();
+
+    expect(outImageData.data.length).toBe(8 * 4);
+    expect(outImageData.height).toBe(1);
+    expect(outImageData.width).toBe(8);
+    expect(outImageData.data).toEqual(imageData.data);
+  });
+
+  it('Should not modify black images round-trip to imageData', () => {
+    const imageData = new ImageData(getImageDataInput(8, 1, 0, 255), 8, 1);
+    const img = BitmapGRF.fromCanvasImageData(imageData, { trimWhitespace: false });
+    const outImageData = img.toImageData();
+
+    expect(outImageData.data.length).toBe(8 * 4);
+    expect(outImageData.height).toBe(1);
+    expect(outImageData.width).toBe(8);
+    expect(outImageData.data).toEqual(imageData.data);
+  });
+
+  it('Should not modify pattern images round-trip to imageData', () => {
+    // Alternating black and white pixels.
+    const imageWidth = 16;
+    const imageHeight = 2;
+    const imageData = new ImageData(
+      getImageDataInputAlternatingDots(imageWidth, imageHeight),
+      imageWidth,
+      imageHeight
+    );
+    const img = BitmapGRF.fromCanvasImageData(imageData, { trimWhitespace: false });
+    const outImageData = img.toImageData();
+
+    expect(outImageData.data.length).toBe(imageWidth * imageHeight * 4);
+    expect(outImageData.height).toBe(imageHeight);
+    expect(outImageData.width).toBe(imageWidth);
+    expect(outImageData.data).toEqual(imageData.data);
+  });
+});
+
+describe('Whitespace Trimming', () => {
+  it('Should trim to black pixels', () => {
+    // A single black pixel, surrounded by white on all sides, 10 pixels wide.
+    /* eslint-disable prettier/prettier */
+    const imageData = new ImageData(
+      new Uint8ClampedArray([
+        255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+        255, 255, 255, 255,   0,   0,   0, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+        255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+      ]), 10, 3);
+    /* eslint-enable prettier/prettier */
+    const img = BitmapGRF.fromCanvasImageData(imageData, { trimWhitespace: true });
+
+    // Width will always be a multiple of 8 due to byte padding.
+    expect(img.width).toBe(8);
+    expect(img.height).toBe(1);
+    expect(img.boundingBox.width).toBe(10);
+    expect(img.boundingBox.height).toBe(3);
+    expect(img.boundingBox.paddingTop).toBe(1);
+    expect(img.boundingBox.paddingLeft).toBe(1);
+    expect(img.boundingBox.paddingBottom).toBe(1);
+    expect(img.boundingBox.paddingRight).toBe(1);
+  });
+
+  it('Should not trim an all-black image', () => {
+    const imageWidth = 16;
+    const imageHeight = 3;
+    const imageData = new ImageData(
+      getImageDataInput(imageWidth, imageHeight, 0, 255),
+      imageWidth,
+      imageHeight
+    );
+    const img = BitmapGRF.fromCanvasImageData(imageData, { trimWhitespace: true });
+
+    // Width will always be a multiple of 8 due to byte padding.
+    expect(img.width).toBe(imageWidth);
+    expect(img.height).toBe(imageHeight);
+    expect(img.boundingBox.width).toBe(imageWidth);
+    expect(img.boundingBox.height).toBe(imageHeight);
+    expect(img.boundingBox.paddingTop).toBe(0);
+    expect(img.boundingBox.paddingLeft).toBe(0);
+    expect(img.boundingBox.paddingBottom).toBe(0);
+    expect(img.boundingBox.paddingRight).toBe(0);
   });
 });
