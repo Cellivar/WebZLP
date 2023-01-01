@@ -76,6 +76,7 @@
     <!-- Here's some actual demo code. Note that it is typescript, not javascript. -->
     <script type="text/typescript" id="cool_demo_code_to_show_off_the_lib">
         import {
+            BitmapGRF,
             DarknessPercent,
             IDocument,
             ILabelDocumentBuilder,
@@ -408,19 +409,30 @@
 
                 const textarea = this.labelForm.querySelector('#labelFormText') as HTMLTextAreaElement;
                 const canvas = this.labelForm.querySelector("#labelCanvas") as HTMLCanvasElement;
-                const c = canvas.getContext('2d');
+                const pageContext = canvas.getContext('2d');
+                pageContext.clearRect(0, 0, canvas.width, canvas.height);
 
-                // We're doing this the quick and dirty way, clearing the rectangle each time and
-                // redrawing all of the text. A more complex app could do this more gracefully!
-                c.clearRect(0, 0, canvas.width, canvas.height);
-                c.font = `30pt ${this.fontName}`;
-                c.imageSmoothingEnabled = false;
-                c.fillStyle = "#000000";
+                // We'd like the preview image to be as close as possible to what the printer will
+                // actually print. To do this we don't draw text to the page's canvas directly,
+                // instead we draw to an offscreen canvas, render that canvas to a monochrome bitmap,
+                // then render *that* back to the page's canvas. This is a more accurate picture of
+                // what the label will end up looking like.
+
+                // A more complex app could do this more gracefully!
+                const offscreenContext = new OffscreenCanvas(canvas.width, canvas.height).getContext('2d');
+                offscreenContext.font = `30pt ${this.fontName}`;
+                offscreenContext.fillStyle = "#000000";
 
                 // fillText doesn't do newlines, do that manually
                 textarea.value.split('\n').forEach((l, i) => {
-                    c.fillText(l, 5, (i * 31) + 30);
+                    offscreenContext.fillText(l, 5, (i * 31) + 30);
                 })
+
+                // Now into the monochrome bitmap.
+                const offscreenImg = offscreenContext.getImageData(0, 0, canvas.width, canvas.height);
+                const monoImg = BitmapGRF.fromCanvasImageData(offscreenImg, { trimWhitespace: false });
+                // And finally back onto the page.
+                pageContext.putImageData(monoImg.toImageData(), 0, 0);
             }
 
             /** Render the canvas to a document for printing */

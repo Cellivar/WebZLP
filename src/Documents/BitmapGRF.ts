@@ -97,6 +97,24 @@ export class BitmapGRF {
         return this._bitmap;
     }
 
+    /** Gets an ImageData representation of this GRF. Can be used to draw into Canvas elements. */
+    public toImageData() {
+        const buffer = new Uint8ClampedArray(this._bitmap.length * 4 * 8);
+        for (let i = 0, n = this._bitmap.length; i < n; i++) {
+            // High bit to low bit (left to right) in the bitmap byte.
+            for (let offset = 7; offset >= 0; offset--) {
+                const outOffset = (i * 8 * 4) + ((7 - offset) * 4);
+                const pixel = ((this._bitmap[i] >> offset) & 1) === 1 ? 255 : 0;
+                buffer[outOffset + 0] = pixel;
+                buffer[outOffset + 1] = pixel;
+                buffer[outOffset + 2] = pixel;
+                buffer[outOffset + 3] = 255; // Always opaque alpha.
+            }
+        }
+
+        return new ImageData(buffer, this.width, this.height);
+    }
+
     /** Gets a bitmap GRF that has its colors inverted.
      *
      * EPL uses 1 as white. ZPL uses 1 as black. Use this to convert between them.
@@ -189,7 +207,7 @@ export class BitmapGRF {
         imageOptions?: ImageConversionOptions
     ): BitmapGRF {
         const {
-            grayThreshold = 90,
+            grayThreshold = 70,
             trimWhitespace = true,
             ditheringMethod = DitheringMethod.none
         } = imageOptions ?? {};
@@ -217,7 +235,7 @@ export class BitmapGRF {
             imageHeight
         );
 
-        return new BitmapGRF(grfData, imageWidth, imageHeight, bytesPerRow, boundingBox);
+        return new BitmapGRF(grfData, bytesPerRow * 8, imageHeight, bytesPerRow, boundingBox);
     }
 
     /**
@@ -232,7 +250,7 @@ export class BitmapGRF {
         imageOptions?: ImageConversionOptions
     ): BitmapGRF {
         const {
-            grayThreshold = 90,
+            grayThreshold = 70,
             trimWhitespace = true,
             ditheringMethod = DitheringMethod.none
         } = imageOptions ?? {};
