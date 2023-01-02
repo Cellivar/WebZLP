@@ -84,8 +84,22 @@ export class LabelDocumentBuilder
         );
     }
 
-    addImageFromGRF(image: BitmapGRF): ILabelDocumentBuilder {
-        return this.then(new Commands.AddImageCommand(image, {}));
+    addImageFromGRF(
+        image: BitmapGRF,
+        imageConversionOptions: ImageConversionOptions = {}
+    ): ILabelDocumentBuilder {
+        return this.andThen(new Commands.AddImageCommand(image, imageConversionOptions));
+    }
+
+    async addImageFromSVG(
+        svg: string,
+        widthInDots: number,
+        heightInDots: number,
+        imageConversionOptions: ImageConversionOptions = {}
+    ): Promise<ILabelDocumentBuilder> {
+        const img = await BitmapGRF.fromSVG(svg, widthInDots, heightInDots, imageConversionOptions);
+        const result = this.addImageFromGRF(img, imageConversionOptions);
+        return result;
     }
 
     addLine(lengthInDots: number, heightInDots: number, color = Commands.DrawColor.black) {
@@ -153,6 +167,14 @@ export interface ILabelContentCommandBuilder {
 
     /** Add a bitmap GRF image to the label */
     addImageFromGRF(image: BitmapGRF): ILabelDocumentBuilder;
+
+    /** Add an SVG image to the label, rendered to the given width and height. */
+    addImageFromSVG(
+        svg: string,
+        widthInDots: number,
+        heightInDots: number,
+        imageConversionOptions?: ImageConversionOptions
+    ): Promise<ILabelDocumentBuilder>;
 
     /** Draw a line from the current offset for the length and height. */
     addLine(
