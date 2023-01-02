@@ -28,40 +28,40 @@ export class ConfigDocumentBuilder
     // so to bring them closer to parity this is automatically implied.
     // TODO: Consider whether this should move to a ZPL extended command.
     finalize() {
-        this.then(new Commands.SaveCurrentConfigurationCommand());
+        this.andThen(new Commands.SaveCurrentConfigurationCommand());
         return super.finalize();
     }
 
     ///////////////////// GENERAL LABEL HANDLING
 
     clearImageBuffer(): IConfigDocumentBuilder {
-        return this.then(new Commands.ClearImageBufferCommand());
+        return this.andThen(new Commands.ClearImageBufferCommand());
     }
 
     rebootPrinter(): IDocument {
-        return this.then(new Commands.RebootPrinterCommand()).finalize();
+        return this.andThen(new Commands.RebootPrinterCommand()).finalize();
     }
 
     ///////////////////// CONFIG READING
 
     queryConfiguration(): IConfigDocumentBuilder {
-        return this.then(new Commands.QueryConfigurationCommand());
+        return this.andThen(new Commands.QueryConfigurationCommand());
     }
 
     printConfiguration(): IDocument {
-        return this.then(new Commands.PrintConfigurationCommand()).finalize();
+        return this.andThen(new Commands.PrintConfigurationCommand()).finalize();
     }
 
     ///////////////////// ALTER PRINTER CONFIG
 
     setDarknessConfig(darknessPercent: Options.DarknessPercent) {
-        return this.then(
+        return this.andThen(
             new Commands.SetDarknessCommand(darknessPercent, this._config.model.maxDarkness)
         );
     }
 
     setPrintDirection(upsideDown = false) {
-        return this.then(new Commands.SetPrintDirectionCommand(upsideDown));
+        return this.andThen(new Commands.SetPrintDirectionCommand(upsideDown));
     }
 
     setPrintSpeed(speed: Options.PrintSpeed, mediaSlewSpeed = Options.PrintSpeed.auto) {
@@ -82,7 +82,7 @@ export class ConfigDocumentBuilder
         if (mediaSlewSpeed === Options.PrintSpeed.auto) {
             mediaSlewSpeed = speed;
         }
-        return this.then(
+        return this.andThen(
             new Commands.SetPrintSpeedCommand(
                 speed,
                 this._config.model.getSpeedValue(speed),
@@ -95,7 +95,7 @@ export class ConfigDocumentBuilder
     ///////////////////// ALTER LABEL CONFIG
 
     autosenseLabelLength() {
-        return this.then(new Commands.AutosenseLabelDimensionsCommand()).finalize();
+        return this.andThen(new Commands.AutosenseLabelDimensionsCommand()).finalize();
     }
 
     setLabelDimensions(widthInInches: number, heightInInches?: number, gapLengthInInches?: number) {
@@ -108,13 +108,13 @@ export class ConfigDocumentBuilder
     }
 
     setLabelDimensionsDots(widthInDots: number, heightInDots?: number, gapLengthInDots?: number) {
-        return this.then(
+        return this.andThen(
             new Commands.SetLabelDimensionsCommand(widthInDots, heightInDots, gapLengthInDots)
         );
     }
 
     setLabelHomeOffsetDots(horizontalOffsetInDots: number, verticalOffsetInDots: number) {
-        return this.then(
+        return this.andThen(
             new Commands.SetLabelHomeCommand(horizontalOffsetInDots, verticalOffsetInDots)
         );
     }

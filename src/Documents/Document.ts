@@ -75,7 +75,7 @@ export abstract class DocumentBuilder<TBuilder extends DocumentBuilder<TBuilder>
         return new Document(this._commands, this.commandReorderBehavior);
     }
 
-    protected then(command: Commands.IPrinterCommand): TBuilder {
+    protected andThen(command: Commands.IPrinterCommand): TBuilder {
         this._commands.push(command);
         return this as unknown as TBuilder;
     }

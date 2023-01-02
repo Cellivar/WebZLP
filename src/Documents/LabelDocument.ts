@@ -33,41 +33,41 @@ export class LabelDocumentBuilder
     ///////////////////// GENERAL LABEL HANDLING
 
     clearImageBuffer(): ILabelDocumentBuilder {
-        return this.then(new Commands.ClearImageBufferCommand());
+        return this.andThen(new Commands.ClearImageBufferCommand());
     }
 
     addPrintCmd(count?: number, additionalDuplicateOfEach?: number): ILabelDocumentBuilder {
-        return this.then(new Commands.PrintCommand(count ?? 1, additionalDuplicateOfEach ?? 0));
+        return this.andThen(new Commands.PrintCommand(count ?? 1, additionalDuplicateOfEach ?? 0));
     }
 
     addCutNowCommand(): ILabelDocumentBuilder {
-        return this.then(new Commands.CutNowCommand());
+        return this.andThen(new Commands.CutNowCommand());
     }
 
     startNewLabel(): ILabelDocumentBuilder {
-        return this.then(new Commands.NewLabelCommand());
+        return this.andThen(new Commands.NewLabelCommand());
     }
 
     suppressFeedBackupForLabel(): ILabelDocumentBuilder {
-        return this.then(new Commands.SuppressFeedBackupCommand());
+        return this.andThen(new Commands.SuppressFeedBackupCommand());
     }
 
     reenableFeedBackup(): ILabelDocumentBuilder {
-        return this.then(new Commands.EnableFeedBackupCommand());
+        return this.andThen(new Commands.EnableFeedBackupCommand());
     }
 
     ///////////////////// OFFSET AND SPACING
 
     setOffset(horizontal: number, vertical?: number): ILabelDocumentBuilder {
-        return this.then(new Commands.OffsetCommand(horizontal, vertical, true));
+        return this.andThen(new Commands.OffsetCommand(horizontal, vertical, true));
     }
 
     addOffset(horizontal: number, vertical?: number): ILabelDocumentBuilder {
-        return this.then(new Commands.OffsetCommand(horizontal, vertical));
+        return this.andThen(new Commands.OffsetCommand(horizontal, vertical));
     }
 
     resetOffset(): ILabelDocumentBuilder {
-        return this.then(new Commands.OffsetCommand(0, 0, true));
+        return this.andThen(new Commands.OffsetCommand(0, 0, true));
     }
 
     ///////////////////// LABEL IMAGE CONTENTS
@@ -76,7 +76,7 @@ export class LabelDocumentBuilder
         imageData: ImageData,
         imageConversionOptions: ImageConversionOptions = {}
     ): ILabelDocumentBuilder {
-        return this.then(
+        return this.andThen(
             new Commands.AddImageCommand(
                 BitmapGRF.fromCanvasImageData(imageData),
                 imageConversionOptions
@@ -89,7 +89,7 @@ export class LabelDocumentBuilder
     }
 
     addLine(lengthInDots: number, heightInDots: number, color = Commands.DrawColor.black) {
-        return this.then(new Commands.AddLineCommand(lengthInDots, heightInDots, color));
+        return this.andThen(new Commands.AddLineCommand(lengthInDots, heightInDots, color));
     }
 
     addBox(
@@ -97,7 +97,9 @@ export class LabelDocumentBuilder
         heightInDots: number,
         thicknessInDots: number
     ): ILabelDocumentBuilder {
-        return this.then(new Commands.AddBoxCommand(lengthInDots, heightInDots, thicknessInDots));
+        return this.andThen(
+            new Commands.AddBoxCommand(lengthInDots, heightInDots, thicknessInDots)
+        );
     }
 }
 
