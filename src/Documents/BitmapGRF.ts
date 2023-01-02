@@ -275,6 +275,45 @@ export class BitmapGRF {
         });
     }
 
+    /** Use an SVG string as a bitmap image, rendered at the width and height provided. */
+    public static async fromSVG(
+        svg: string,
+        widthInDots: number,
+        heightInDots: number,
+        imageConversionOptions?: ImageConversionOptions
+    ) {
+        // Load in the SVG as a disconnected element to query its width and height.
+        // Doens't matter that this is a foreign document, it won't be re-used.
+        const tempcontainer = new Document().createElement('div');
+        tempcontainer.innerHTML = svg;
+        const svgElement = tempcontainer.firstChild as SVGSVGElement;
+        if (svgElement?.tagName?.toLowerCase() !== "svg") {
+            throw new BitmapFormatError(
+                `The top-level element of the SVG file must be an <svg> tag, but got '${svgElement?.tagName}' instead.`
+            );
+        }
+        svgElement.setAttribute('width', `${widthInDots}px`);
+        svgElement.setAttribute('height', `${heightInDots}px`);
+        svg = new XMLSerializer().serializeToString(svgElement);
+
+        // The raw SVG can contain non-ASCII characters, so encode the URI and report as utf-8.
+        const datauri = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+
+        const img = new Image(widthInDots, heightInDots);
+        img.src = datauri;
+
+        // Next render a canvas of the same size and load the SVG as a data URL.
+        const ctx = new OffscreenCanvas(widthInDots, heightInDots).getContext('2d') as OffscreenCanvasRenderingContext2D;
+        ctx.imageSmoothingEnabled = false;
+        await img.decode();
+        ctx.drawImage(img, 0, 0);
+
+        const data = ctx.getImageData(0, 0, widthInDots, heightInDots);
+
+        // Pass it through to the usual pipeline.
+        return this.fromCanvasImageData(data, imageConversionOptions);
+    }
+
     /** Converts monochrome data to GRF format. */
     private static monochromeToGRF(monochromeData: Uint8Array, width: number, height: number) {
         // Method (c) 2022 metafloor
