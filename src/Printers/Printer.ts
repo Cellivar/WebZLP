@@ -145,8 +145,8 @@ export class Printer {
         // Guess order is easiest to detect and support.. to least
         const guessOrder = [
             guess,
-            PrinterCommandLanguage.zpl,
             PrinterCommandLanguage.epl,
+            PrinterCommandLanguage.zpl,
             PrinterCommandLanguage.cpcl
         ];
 
