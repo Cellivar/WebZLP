@@ -16,6 +16,10 @@ export interface IPrinterLabelMediaOptions {
     get labelGapInches(): number;
     /** Label gap in dots */
     labelGapDots: number;
+    /** The offset in inches from the normal location of the label gap or black line. Can be negative. */
+    get labelLineOffsetInches(): number;
+    /** The offset in dots from the normal location of the label gap or black line. Can be negative. */
+    labelLineOffsetDots: number;
     /** The height of the label media, in inches. */
     get labelHeightInches(): number;
     /** The height of the label media, in dots. */
@@ -73,7 +77,7 @@ export class PrintSpeedSettings {
     public static getSpeedFromWholeNumber(speed: number): PrintSpeed {
         switch (speed) {
             case 0:
-                return PrintSpeed.auto;
+                return PrintSpeed.ipsAuto;
             case 1:
                 return PrintSpeed.ips1;
             case 2:
@@ -112,7 +116,7 @@ export class PrintSpeedSettings {
 export enum PrintSpeed {
     unknown = -1,
     /** Mobile printers can't be configured otherwise. */
-    auto = 0,
+    ipsAuto = 0,
     /** The lowest speed a given printer supports. */
     ipsPrinterMin,
     ips1,

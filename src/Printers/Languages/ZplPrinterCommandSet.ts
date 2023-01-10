@@ -45,6 +45,7 @@ export class ZplPrinterCommandSet extends PrinterCommandSet {
         symbol | Commands.CommandType,
         TranspileCommandDelegate
     >([
+        /* eslint-disable prettier/prettier */
         // Ghost commands which shouldn't make it this far.
         [Commands.CommandType.NewLabelCommand, this.unprocessedCommand],
         [Commands.CommandType.CommandCustomSpecificCommand, this.unprocessedCommand],
@@ -75,10 +76,15 @@ export class ZplPrinterCommandSet extends PrinterCommandSet {
         [Commands.CommandType.AutosenseLabelDimensionsCommand, () => this.encodeCommand('~JC')],
         [Commands.CommandType.SetLabelDimensionsCommand, this.setLabelDimensionsCommand],
         [Commands.CommandType.SetLabelHomeCommand, this.setLabelHomeCommand],
+        [Commands.CommandType.SetLabelPrintOriginOffsetCommand, this.setLabelPrintOriginOffsetCommand],
+        [Commands.CommandType.SetLabelToContinuousMediaCommand, this.setLabelToContinuousMediaCommand],
+        [Commands.CommandType.SetLabelToWebGapMediaCommand, this.setLabelToWebGapMediaCommand],
+        [Commands.CommandType.SetLabelToMarkMediaCommand, this.setLabelToMarkMediaCommand],
         [Commands.CommandType.AddImageCommand, this.addImageCommand],
         [Commands.CommandType.AddLineCommand, this.addLineCommand],
         [Commands.CommandType.AddBoxCommand, this.addBoxCommand],
         [Commands.CommandType.PrintCommand, this.printCommand]
+        /* eslint-enable prettier/prettier */
     ]);
 
     constructor(
@@ -152,10 +158,8 @@ export class ZplPrinterCommandSet extends PrinterCommandSet {
         const parser = new DOMParser();
         const xmldoc = parser.parseFromString(rawXml, 'application/xml');
         const errorNode = xmldoc.querySelector('parsererror');
-        console.log(xmldoc);
         if (errorNode) {
             // TODO: Log? Throw?
-            console.log('lol failed');
             return Options.PrinterOptions.invalid();
         }
 
@@ -214,9 +218,11 @@ export class ZplPrinterCommandSet extends PrinterCommandSet {
         const rawDarkness = Math.ceil(currentDarkness * (100 / maxDarkness));
         options.darknessPercent = Math.max(0, Math.min(rawDarkness, 99)) as Options.DarknessPercent;
 
+        const printRate = parseInt(this.getXmlText(doc, 'PRINT-RATE'));
+        const slewRate = parseInt(this.getXmlText(doc, 'SLEW-RATE'));
         options.speed = new Options.PrintSpeedSettings(
-            parseInt(this.getXmlText(doc, 'PRINT-RATE')),
-            parseInt(this.getXmlText(doc, 'SLEW-RATE'))
+            Options.PrintSpeedSettings.getSpeedFromWholeNumber(printRate),
+            Options.PrintSpeedSettings.getSpeedFromWholeNumber(slewRate)
         );
 
         // Always in dots
@@ -242,6 +248,14 @@ export class ZplPrinterCommandSet extends PrinterCommandSet {
             options.labelHeightDots = labelLength;
         }
 
+        // Some firmware versions let you store this, some only retain while power is on.
+        const labelHorizontalOffset = parseInt(this.getXmlText(doc, 'LABEL-SHIFT')) || 0;
+        const labelHeightOffset = parseInt(this.getXmlCurrent(doc, 'LABEL-TOP')) || 0;
+        options.labelPrintOriginOffsetDots = {
+            left: labelHorizontalOffset,
+            top: labelHeightOffset
+        };
+
         options.printOrientation =
             this.getXmlText(doc, 'LABEL-REVERSE') === 'Y'
                 ? Options.PrintOrientation.inverted
@@ -253,6 +267,8 @@ export class ZplPrinterCommandSet extends PrinterCommandSet {
                 : Options.ThermalPrintMode.transfer;
 
         options.mediaPrintMode = this.parsePrintMode(this.getXmlCurrent(doc, 'PRINT-MODE'));
+
+        options.labelGapDetectMode = this.parseMediaType(this.getXmlCurrent(doc, 'MEDIA-TRACKING'));
 
         options.mediaPrintMode =
             this.getXmlCurrent(doc, 'PRE-PEEL') === 'Y'
@@ -300,9 +316,21 @@ export class ZplPrinterCommandSet extends PrinterCommandSet {
         }
     }
 
+    private parseMediaType(str: string) {
+        switch (str) {
+            case 'CONTINUOUS':
+                return Options.LabelMediaGapDetectionMode.continuous;
+            case 'NONCONT-MARK':
+                return Options.LabelMediaGapDetectionMode.markSensing;
+            default:
+            case 'NONCONT-WEB':
+                return Options.LabelMediaGapDetectionMode.webSensing;
+        }
+    }
+
     private getSpeedTable(min: number, max: number) {
         const table = new Map<Options.PrintSpeed, number>([
-            [Options.PrintSpeed.auto, 0],
+            [Options.PrintSpeed.ipsAuto, 0],
             [Options.PrintSpeed.ipsPrinterMin, min],
             [Options.PrintSpeed.ipsPrinterMax, max]
         ]);
@@ -408,6 +436,48 @@ export class ZplPrinterCommandSet extends PrinterCommandSet {
         const xOffset = Math.trunc(cmd.xOffset);
         const yOffset = Math.trunc(cmd.yOffset);
         return cmdSet.encodeCommand(`^LH${xOffset},${yOffset}`);
+    }
+
+    private setLabelPrintOriginOffsetCommand(
+        cmd: Commands.SetLabelPrintOriginOffsetCommand,
+        outDoc: TranspilationFormMetadata,
+        cmdSet: ZplPrinterCommandSet
+    ): Uint8Array {
+        // This ends up being two commands, one to set the top and one to set the
+        // horizontal shift. LS moves the horizontal, LT moves the top. LT is
+        // clamped to +/- 120 dots, horizontal is 9999.
+        const xOffset = cmdSet.clampToRange(Math.trunc(cmd.xOffset), -9999, 9999);
+        const yOffset = cmdSet.clampToRange(Math.trunc(cmd.yOffset), -120, 120);
+        return cmdSet.encodeCommand(`^LS${xOffset}^LT${yOffset}`);
+    }
+
+    private setLabelToContinuousMediaCommand(
+        cmd: Commands.SetLabelToContinuousMediaCommand,
+        outDoc: TranspilationFormMetadata,
+        cmdSet: ZplPrinterCommandSet
+    ): Uint8Array {
+        const length = Math.trunc(cmd.labelLengthInDots);
+        const gap = Math.trunc(cmd.labelGapInDots);
+        return cmdSet.encodeCommand(`^MNN^LL${length + gap}`);
+    }
+
+    private setLabelToWebGapMediaCommand(
+        cmd: Commands.SetLabelToWebGapMediaCommand,
+        outDoc: TranspilationFormMetadata,
+        cmdSet: ZplPrinterCommandSet
+    ): Uint8Array {
+        const length = Math.trunc(cmd.labelLengthInDots);
+        return cmdSet.encodeCommand(`^MNY^LL${length},Y`);
+    }
+
+    private setLabelToMarkMediaCommand(
+        cmd: Commands.SetLabelToMarkMediaCommand,
+        outDoc: TranspilationFormMetadata,
+        cmdSet: ZplPrinterCommandSet
+    ): Uint8Array {
+        const length = Math.trunc(cmd.labelLengthInDots);
+        const lineOffset = Math.trunc(cmd.blackLineOffset);
+        return cmdSet.encodeCommand(`^MNM,${length}^LL${lineOffset}`);
     }
 
     private printCommand(

@@ -78,13 +78,9 @@ export class PrinterUsbManager extends EventTarget {
                 e.name === 'NotFoundError' &&
                 e.message === 'No device selected.'
             ) {
-                console.log('User did not select a printer');
                 return;
             }
-
-            console.log('Failed to connect to printer!');
-            console.log(e);
-            return;
+            throw e;
         }
     }
 

@@ -85,8 +85,7 @@ export abstract class BasePrinterInfo implements IPrinterModelInfo {
 
     /** Get the raw value this model understands as the speed. */
     public getSpeedValue(speed: PrintSpeed): number | undefined {
-        const val = this.speedTable.get(speed) ?? this.speedTable[PrintSpeed.auto];
-        console.log('Found speed ', val, 'for speed named', PrintSpeed[speed]);
+        const val = this.speedTable.get(speed) ?? this.speedTable[PrintSpeed.ipsAuto];
         return val;
     }
 
@@ -95,14 +94,14 @@ export abstract class BasePrinterInfo implements IPrinterModelInfo {
         for (const [key, val] of this.speedTable) {
             if (
                 val === rawSpeed &&
-                key != PrintSpeed.auto &&
+                key != PrintSpeed.ipsAuto &&
                 key != PrintSpeed.ipsPrinterMax &&
                 key != PrintSpeed.ipsPrinterMin
             ) {
                 return key;
             }
         }
-        return PrintSpeed.auto;
+        return PrintSpeed.ipsAuto;
     }
 }
 

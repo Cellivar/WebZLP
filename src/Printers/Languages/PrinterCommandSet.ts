@@ -212,6 +212,11 @@ export abstract class PrinterCommandSet {
         return merged;
     }
 
+    /** Clamp a number to a given range of values. */
+    protected clampToRange(value: number, min: number, max: number) {
+        return Math.min(Math.max(value, min), max);
+    }
+
     /** Parse the response of a configuration inqury in the command set language. */
     abstract parseConfigurationResponse(
         rawText: string,

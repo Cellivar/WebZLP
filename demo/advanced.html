@@ -14,16 +14,6 @@
 </head>
 <body>
     <a href="https://github.com/cellivar/webzlp" class="github-corner" aria-label="View source on GitHub"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#151513; color:#fff; position: absolute; top: 0; border: 0; right: 0;" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a><style>.github-corner:hover .octo-arm{animation:octocat-wave 560ms ease-in-out}@keyframes octocat-wave{0%,100%{transform:rotate(0)}20%,60%{transform:rotate(-25deg)}40%,80%{transform:rotate(10deg)}}@media (max-width:500px){.github-corner:hover .octo-arm{animation:none}.github-corner .octo-arm{animation:octocat-wave 560ms ease-in-out}}</style>
-    <!--
-        This part is just evil shenanigans to make the demo work, you can ignore it.
-
-        For those curious, this import map redirects import statements such that a Service Worker
-        can intercept them. The SW itself has the typescript compiler loaded, and it will recompile
-        the imported modules on the fly before sending them to the browser as javascript.
-
-        The page itself sends inline TS through the same flow, triggering the same module loading, so
-        even inline typescript works.
-    -->
     <script type="importmap">
         {
           "imports": {
@@ -78,6 +68,7 @@
         import {
             BitmapGRF,
             DarknessPercent,
+            LabelMediaGapDetectionMode,
             IDocument,
             ILabelDocumentBuilder,
             PrinterUsbManager,
@@ -119,7 +110,9 @@
                 'in tall, with a gap of',
                 config.labelGapInches,
                 'in.');
+            console.log('Printer media handling is', LabelMediaGapDetectionMode[config.labelGapDetectMode]);
         });
+
         // There's also an event that will tell you when a printer disconnects.
         printerMgr.addEventListener('disconnectedPrinter', ({ detail }) => {
             const printer = detail;
@@ -239,8 +232,8 @@
                 for (const [key, val] of speedTable) {
                     // Skip utility values, so long as there's more than the defaults.
                     // Mobile printers *only* support auto, for example.
-                    if ((speedTable.length > 3)
-                        && (key == PrintSpeed.auto
+                    if ((speedTable.size > 3)
+                        && (key == PrintSpeed.ipsAuto
                             || key == PrintSpeed.ipsPrinterMax
                             || key == PrintSpeed.ipsPrinterMin)) {
                         continue;
@@ -252,11 +245,27 @@
                 }
                 speedSelect.value = config.speed.printSpeed;
 
+                const mediaSelect = this.configModal.querySelector('#modalMediaType');
+                switch (config.labelGapDetectMode) {
+                    case LabelMediaGapDetectionMode.continuous:
+                        mediaSelect.value = "continuous";
+                        break;
+                    default:
+                    case LabelMediaGapDetectionMode.webSensing:
+                        mediaSelect.value = "gap";
+                        break;
+                    case LabelMediaGapDetectionMode.markSensing:
+                        mediaSelect.value = "mark";
+                        break;
+                }
+
                 this.configModal.querySelector('#modalPrinterIndex').value = config.serialNumber;
                 this.configModal.querySelector('#modalPrinterIndexText').textContent = printerIdx;
                 this.configModal.querySelector('#modalLabelWidth').value = config.labelWidthInches;
                 this.configModal.querySelector('#modalLabelHeight').value = config.labelHeightInches;
                 this.configModal.querySelector('#modalDarkness').value = config.darknessPercent;
+                this.configModal.querySelector('#modalLabelOffsetLeft').value = config.labelPrintOriginOffsetDots.left;
+                this.configModal.querySelector('#modalLabelOffsetTop').value = config.labelPrintOriginOffsetDots.top;
                 this.configModalHandle.show();
             }
 
@@ -406,9 +415,12 @@
                 }
 
                 const textarea = this.labelForm.querySelector('#labelFormText') as HTMLTextAreaElement;
+                const fontsizer = this.labelForm.querySelector('#previewFontSize') as HTMLInputElement;
                 const canvas = this.labelForm.querySelector("#labelCanvas") as HTMLCanvasElement;
                 const pageContext = canvas.getContext('2d');
                 pageContext.clearRect(0, 0, canvas.width, canvas.height);
+
+                const fontSize = Math.trunc(parseFloat(fontsizer.value));
 
                 // We'd like the preview image to be as close as possible to what the printer will
                 // actually print. To do this we don't draw text to the page's canvas directly,
@@ -418,12 +430,12 @@
 
                 // A more complex app could do this more gracefully!
                 const offscreenContext = new OffscreenCanvas(canvas.width, canvas.height).getContext('2d');
-                offscreenContext.font = `30pt ${this.fontName}`;
+                offscreenContext.font = `${fontSize}pt ${this.fontName}`;
                 offscreenContext.fillStyle = "#000000";
 
                 // fillText doesn't do newlines, do that manually
                 textarea.value.split('\n').forEach((l, i) => {
-                    offscreenContext.fillText(l, 5, (i * 31) + 30);
+                    offscreenContext.fillText(l, 5, (i * fontSize + 2) + fontSize);
                 })
 
                 // Now into the monochrome bitmap.
@@ -467,13 +479,37 @@
                 const darkness = parseInt(form.modalDarkness.value) as DarknessPercent;
                 const rawSpeed = parseInt(form.modalSpeed.value) as PrintSpeed;
                 const labelWidthInches = parseFloat(form.modalLabelWidth.value);
+                const labelHeightInches = parseFloat(form.modalLabelHeight.value);
                 const autosense = form.modalWithAutosense.checked;
+                const offsetLeft = parseInt(form.modalLabelOffsetLeft.value);
+                console.log("OFFSET LEFT", offsetLeft);
+                const offsetTop = parseInt(form.modalLabelOffsetTop.value);
+                console.log("OFFSET TOP", offsetTop);
+
+                let mediaType: LabelMediaGapDetectionMode;
 
                 // Construct the config document with the values from the form
-                const configDoc = printer
-                    .getConfigDocument()
+                const configDoc = printer.getConfigDocument();
+
+                // Form mode should be set first for other elements to work right.
+                switch (form.modalMediaType.value) {
+                    case "continuous":
+                        configDoc.setLabelMediaToContinuous(labelHeightInches);
+                        break;
+                    case "mark":
+                        // TODO: Make a form for black line sensing.
+                        configDoc.setLabelMediaToMarkSense(labelHeightInches, 16, 0);
+                        break;
+                    default:
+                    case "gap":
+                        // TODO: Make a form for label gap size.
+                        configDoc.setLabelMediaToWebGapSense(labelHeightInches, 16);
+                        break;
+                }
+
+                configDoc
                     .setPrintDirection()
-                    .setLabelHomeOffsetDots(0, 0)
+                    .setLabelPrintOriginOffsetCommand(offsetLeft, offsetTop)
                     .setPrintSpeed(rawSpeed)
                     .setDarknessConfig(darkness)
                     .setLabelDimensions(labelWidthInches);
@@ -490,21 +526,14 @@
             }
         }
 
-        // With the app class defined we can run it.
-        // First up collect the basic structure of the app
         const btnContainer = document.getElementById("printerlist");
         const labelForm = document.getElementById("labelForm");
         const labelFormInstructions = document.getElementById("labelFormInstructions");
         const configModal = document.getElementById("printerOptionModal");
 
-        // And feed that into the app class to manage the elements
         const app = new BasicLabelDesignerApp(printerMgr, btnContainer, labelForm, labelFormInstructions, configModal);
-        // and let it take over the UI.
         await app.init();
-        // Then hang it on the window object so we can play with it elsewhere, like the dev console.
         window.printer_app = app;
-
-        // Now we'll fire the reconnect since our UI is wired up.
         await printerMgr.reconnectAllPrinters();
 
         // We're done here. Bring in the dancing lobsters.
@@ -562,6 +591,11 @@
                         <h5>Preview</h5>
                         <canvas id="labelCanvas" width="584" height="160" style="border: 2px solid blue; background-color: white; margin-bottom: 10px;"></canvas>
                         <h5>Input</h5>
+                        <label for="previewFontSize" class="form-label">Font Size</label>
+                        <div class="input-group">
+                            <input id="previewFontSize" type="number" class="form-control" placeholder="16"
+                                aria-label="Font Size" value="16">
+                        </div>
                         <textarea id="labelFormText" name="labelText" cols="40" rows="10" wrap="hard"
                             style="font-family: monospace; resize: both;"
                             placeholder="Enter your label text here!"></textarea>
@@ -603,7 +637,7 @@
                                     <label for="modalLabelHeight" class="form-label">Label Height</label>
                                     <div class="input-group mb-3">
                                         <input id="modalLabelHeight" type="text" class="form-control" placeholder="2.25"
-                                            aria-label="Height" required pattern="\d+\.*\d*" readonly>
+                                            aria-label="Height" required pattern="\d+\.*\d*">
                                         <span id="modalLabelHeightText" class="input-group-text">in</span>
                                     </div>
                                 </div>
@@ -635,6 +669,36 @@
                                             <option value="4">2 ips</option>
                                             <option value="5">2.5 ips</option>
                                             <option value="7">3.5 ips</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="row">
+                                <div class="col">
+                                    <label for="modalLabelOffsetLeft" class="form-label">Left Offset</label>
+                                    <div class="input-group mb-3">
+                                        <input id="modalLabelOffsetLeft" type="text" class="form-control" placeholder="0"
+                                            aria-label="Width" required pattern="-?\d+">
+                                        <span class="input-group-text">dots</span>
+                                    </div>
+                                </div>
+                                <div class="col">
+                                    <label for="modalLabelOffsetTop" class="form-label">Top Offset</label>
+                                    <div class="input-group mb-3">
+                                        <input id="modalLabelOffsetTop" type="text" class="form-control" placeholder="0"
+                                            aria-label="Height" required pattern="-?\d+">
+                                        <span class="input-group-text">dots</span>
+                                    </div>
+                                </div>
+                                <div class="col">
+                                    <label for="modalMediaType" class="form-label">Media Type</label>
+                                    <div class="mb-3">
+                                        <select id="modalMediaType" class="form-select" aria-label="Media Type">
+                                            <option value="continuous">Continuous</option>
+                                            <option value="gap">Gap-sense</option>
+                                            <option value="mark">Mark-sense</option>
                                         </select>
                                     </div>
                                 </div>
