@@ -87,6 +87,9 @@ export enum CommandType {
     SetLabelDimensionsCommand = 'SetLabelDimensionsCommand',
     SetLabelHomeCommand = 'SetLabelHomeCommand',
     SetLabelPrintOriginOffsetCommand = 'SetLabelPrintOriginOffsetCommand',
+    SetLabelToContinuousMediaCommand = 'SetLabelToContinuousMediaCommand',
+    SetLabelToWebGapMediaCommand = 'SetLabelToWebGapMediaCommand',
+    SetLabelToMarkMediaCommand = 'SetLabelToMarkMediaCommand',
     SetPrintDirectionCommand = 'SetPrintDirectionCommand',
     SetPrintSpeedCommand = 'SetPrintSpeedCommand',
     SuppressFeedBackupCommand = 'SuppressFeedBackupCommand',
@@ -372,6 +375,58 @@ export class SetLabelPrintOriginOffsetCommand implements IPrinterCommand {
     printerEffectFlags = PrinterCommandEffectFlags.altersPrinterConfig;
 
     constructor(public xOffset: number, public yOffset: number) {}
+}
+
+/** A command class to set the media handling mode to continuous media. */
+export class SetLabelToContinuousMediaCommand implements IPrinterCommand {
+    get name(): string {
+        return 'Sets the media handling mode to continuous media.';
+    }
+    get type(): CommandType {
+        return CommandType.SetLabelToContinuousMediaCommand;
+    }
+    toDisplay(): string {
+        return this.name;
+    }
+    printerEffectFlags = PrinterCommandEffectFlags.altersPrinterConfig;
+
+    constructor(public labelLengthInDots: number, public labelGapInDots = 0) {}
+}
+
+/** A command class to set the media handling mode to web gap detection. */
+export class SetLabelToWebGapMediaCommand implements IPrinterCommand {
+    get name(): string {
+        return 'Sets the media handling mode to web gap detection.';
+    }
+    get type(): CommandType {
+        return CommandType.SetLabelToWebGapMediaCommand;
+    }
+    toDisplay(): string {
+        return this.name;
+    }
+    printerEffectFlags = PrinterCommandEffectFlags.altersPrinterConfig;
+
+    constructor(public labelLengthInDots: number, public labelGapInDots: number) {}
+}
+
+/** A command class to set the media handling mode to black mark detection. */
+export class SetLabelToMarkMediaCommand implements IPrinterCommand {
+    get name(): string {
+        return 'Sets the media handling mode to black mark detection.';
+    }
+    get type(): CommandType {
+        return CommandType.SetLabelToMarkMediaCommand;
+    }
+    toDisplay(): string {
+        return this.name;
+    }
+    printerEffectFlags = PrinterCommandEffectFlags.altersPrinterConfig;
+
+    constructor(
+        public labelLengthInDots: number,
+        public blackLineThicknessInDots: number,
+        public blackLineOffset: number
+    ) {}
 }
 
 /** Command class to cause the printer to auto-sense the media length. */

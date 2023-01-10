@@ -60,6 +60,11 @@ export class PrinterOptions implements IPrinterFactoryInformation, Media.IPrinte
         return this.dotToInch(this.labelGapDots);
     }
 
+    labelLineOffsetDots: number;
+    get labelLineOffsetInches() {
+        return this.dotToInch(this.labelLineOffsetDots);
+    }
+
     labelWidthDots: number;
     get labelWidthInches() {
         return this.dotToInch(this.labelWidthDots);

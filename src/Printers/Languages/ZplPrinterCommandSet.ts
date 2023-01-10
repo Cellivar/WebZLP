@@ -77,6 +77,9 @@ export class ZplPrinterCommandSet extends PrinterCommandSet {
         [Commands.CommandType.SetLabelDimensionsCommand, this.setLabelDimensionsCommand],
         [Commands.CommandType.SetLabelHomeCommand, this.setLabelHomeCommand],
         [Commands.CommandType.SetLabelPrintOriginOffsetCommand, this.setLabelPrintOriginOffsetCommand],
+        [Commands.CommandType.SetLabelToContinuousMediaCommand, this.setLabelToContinuousMediaCommand],
+        [Commands.CommandType.SetLabelToWebGapMediaCommand, this.setLabelToWebGapMediaCommand],
+        [Commands.CommandType.SetLabelToMarkMediaCommand, this.setLabelToMarkMediaCommand],
         [Commands.CommandType.AddImageCommand, this.addImageCommand],
         [Commands.CommandType.AddLineCommand, this.addLineCommand],
         [Commands.CommandType.AddBoxCommand, this.addBoxCommand],
@@ -265,6 +268,8 @@ export class ZplPrinterCommandSet extends PrinterCommandSet {
 
         options.mediaPrintMode = this.parsePrintMode(this.getXmlCurrent(doc, 'PRINT-MODE'));
 
+        options.labelGapDetectMode = this.parseMediaType(this.getXmlCurrent(doc, 'MEDIA-TRACKING'));
+
         options.mediaPrintMode =
             this.getXmlCurrent(doc, 'PRE-PEEL') === 'Y'
                 ? Options.MediaPrintMode.peelWithPrepeel
@@ -308,6 +313,18 @@ export class ZplPrinterCommandSet extends PrinterCommandSet {
             default:
             case 'TEAR OFF':
                 return Options.MediaPrintMode.tearoff;
+        }
+    }
+
+    private parseMediaType(str: string) {
+        switch (str) {
+            case 'CONTINUOUS':
+                return Options.LabelMediaGapDetectionMode.continuous;
+            case 'NONCONT-MARK':
+                return Options.LabelMediaGapDetectionMode.markSensing;
+            default:
+            case 'NONCONT-WEB':
+                return Options.LabelMediaGapDetectionMode.webSensing;
         }
     }
 
@@ -432,6 +449,30 @@ export class ZplPrinterCommandSet extends PrinterCommandSet {
         const xOffset = this.clampToRange(Math.trunc(cmd.xOffset), -9999, 9999);
         const yOffset = this.clampToRange(Math.trunc(cmd.yOffset), -120, 120);
         return cmdSet.encodeCommand(`^LS${xOffset}^LT${yOffset}`);
+    }
+
+    private setLabelToContinuousMediaCommand(
+        cmd: Commands.SetLabelToContinuousMediaCommand,
+        outDoc: TranspilationFormMetadata,
+        cmdSet: ZplPrinterCommandSet
+    ): Uint8Array {
+        return cmdSet.encodeCommand(`^MNN^LL${cmd.labelLengthInDots + cmd.labelGapInDots}`);
+    }
+
+    private setLabelToWebGapMediaCommand(
+        cmd: Commands.SetLabelToWebGapMediaCommand,
+        outDoc: TranspilationFormMetadata,
+        cmdSet: ZplPrinterCommandSet
+    ): Uint8Array {
+        return cmdSet.encodeCommand(`^MNY^LL${cmd.labelLengthInDots},Y`);
+    }
+
+    private setLabelToMarkMediaCommand(
+        cmd: Commands.SetLabelToMarkMediaCommand,
+        outDoc: TranspilationFormMetadata,
+        cmdSet: ZplPrinterCommandSet
+    ): Uint8Array {
+        return cmdSet.encodeCommand(`^MNM,${cmd.blackLineOffset}^LL${cmd.labelLengthInDots}`);
     }
 
     private printCommand(

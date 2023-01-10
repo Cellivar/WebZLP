@@ -16,6 +16,10 @@ export interface IPrinterLabelMediaOptions {
     get labelGapInches(): number;
     /** Label gap in dots */
     labelGapDots: number;
+    /** The offset in inches from the normal location of the label gap or black line. Can be negative. */
+    get labelLineOffsetInches(): number;
+    /** The offset in dots from the normal location of the label gap or black line. Can be negative. */
+    labelLineOffsetDots: number;
     /** The height of the label media, in inches. */
     get labelHeightInches(): number;
     /** The height of the label media, in dots. */

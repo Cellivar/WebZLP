@@ -44,6 +44,7 @@ export class EplPrinterCommandSet extends PrinterCommandSet {
         symbol | Commands.CommandType,
         TranspileCommandDelegate
     >([
+        /* eslint-disable prettier/prettier */
         // Ghost commands which shouldn't make it this far.
         [Commands.CommandType.NewLabelCommand, this.unprocessedCommand],
         [Commands.CommandType.CommandCustomSpecificCommand, this.unprocessedCommand],
@@ -67,10 +68,14 @@ export class EplPrinterCommandSet extends PrinterCommandSet {
         [Commands.CommandType.SetLabelDimensionsCommand, this.setLabelDimensionsCommand],
         [Commands.CommandType.SetLabelHomeCommand, this.setLabelHomeCommand],
         [Commands.CommandType.SetLabelPrintOriginOffsetCommand, this.setLabelPrintOriginOffsetCommand],
+        [Commands.CommandType.SetLabelToContinuousMediaCommand, this.setLabelToContinuousMediaCommand],
+        [Commands.CommandType.SetLabelToWebGapMediaCommand, this.setLabelToWebGapMediaCommand],
+        [Commands.CommandType.SetLabelToMarkMediaCommand, this.setLabelToMarkMediaCommand],
         [Commands.CommandType.AddImageCommand, this.addImageCommand],
         [Commands.CommandType.AddLineCommand, this.addLineCommand],
         [Commands.CommandType.AddBoxCommand, this.addBoxCommand],
         [Commands.CommandType.PrintCommand, this.printCommand]
+        /* eslint-enable prettier/prettier */
     ]);
 
     constructor(
@@ -149,11 +154,13 @@ export class EplPrinterCommandSet extends PrinterCommandSet {
         const labelInfo = {
             labelWidthDots: undefined,
             labelGapDots: undefined,
+            labelGapOffsetDots: undefined,
             labelHeightDots: undefined,
             density: undefined,
             xRef: undefined,
             yRef: undefined,
-            orientation: undefined
+            orientation: undefined,
+            mediaMode: undefined
         };
 
         // All the rest of these follow some kind of standard pattern for
@@ -173,11 +180,34 @@ export class EplPrinterCommandSet extends PrinterCommandSet {
                 case /^q\d+\sQ/.test(str): {
                     // q600 Q208,25            # Form width (q) and length (Q), with label gap
                     const settingsForm = str.trim().split(' ');
-                    const length = settingsForm[1].split(',');
-                    // Label width includes 4 dots of padding
+                    // Label width includes 4 dots of padding. Ish. Maybe.
                     labelInfo.labelWidthDots = parseInt(settingsForm[0].substring(1)) - 4;
-                    labelInfo.labelGapDots = parseInt(length[1].trim());
+                    // Length is fuzzy, depending on the second value this can be
+                    // A: The length of the label surface
+                    // B: The distance between black line marks
+                    // C: The length of the form on continous media
+                    // Format is Qp1,p2[,p3]
+                    const length = settingsForm[1].split(',');
+                    // p1 is always present and can be treated as the 'label height' consistently.
                     labelInfo.labelHeightDots = parseInt(length[0].substring(1));
+                    // p2 value depends on...
+                    const rawGapMode = length[1].trim();
+                    if (rawGapMode === '0') {
+                        // Length of '0' indicates continuous media.
+                        labelInfo.mediaMode = Options.LabelMediaGapDetectionMode.continuous;
+                    } else if (rawGapMode.startsWith('B')) {
+                        // A B character enables black line detect mode, gap is the line width.
+                        labelInfo.mediaMode = Options.LabelMediaGapDetectionMode.markSensing;
+                        labelInfo.labelGapDots = parseInt(rawGapMode.substring(1));
+                    } else {
+                        // Otherwise this is the gap length between labels.
+                        labelInfo.mediaMode = Options.LabelMediaGapDetectionMode.webSensing;
+                        labelInfo.labelGapDots = parseInt(rawGapMode);
+                    }
+                    // A third value is required for black line, ignored for others.
+                    if (length[2]) {
+                        labelInfo.labelGapOffsetDots = parseInt(length[2]);
+                    }
                     break;
                 }
                 case /^S\d\sD\d\d\sR/.test(str): {
@@ -315,6 +345,9 @@ export class EplPrinterCommandSet extends PrinterCommandSet {
 
         // No rounding applied to other offsets, those tend to be stable.
         options.labelGapDots = labelInfo.labelGapDots;
+        options.labelLineOffsetDots = labelInfo.labelGapOffsetDots;
+
+        options.labelGapDetectMode = labelInfo.mediaMode;
 
         options.labelPrintOriginOffsetDots = { left: labelInfo.xRef, top: labelInfo.yRef };
 
@@ -425,6 +458,35 @@ export class EplPrinterCommandSet extends PrinterCommandSet {
         const xOffset = Math.trunc(cmd.xOffset);
         const yOffset = Math.trunc(cmd.yOffset);
         return cmdSet.encodeCommand(`R${xOffset},${yOffset}`);
+    }
+
+    private setLabelToContinuousMediaCommand(
+        cmd: Commands.SetLabelToContinuousMediaCommand,
+        outDoc: TranspilationFormMetadata,
+        cmdSet: EplPrinterCommandSet
+    ): Uint8Array {
+        // EPL seems to not have a static label length? All labels are variable?
+        // Needs testing.
+        return cmdSet.encodeCommand(`Q${cmd.labelGapInDots},0`);
+    }
+
+    private setLabelToWebGapMediaCommand(
+        cmd: Commands.SetLabelToWebGapMediaCommand,
+        outDoc: TranspilationFormMetadata,
+        cmdSet: EplPrinterCommandSet
+    ): Uint8Array {
+        return cmdSet.encodeCommand(`Q${cmd.labelLengthInDots},${cmd.labelGapInDots}`);
+    }
+
+    private setLabelToMarkMediaCommand(
+        cmd: Commands.SetLabelToMarkMediaCommand,
+        outDoc: TranspilationFormMetadata,
+        cmdSet: EplPrinterCommandSet
+    ): Uint8Array {
+        const length = cmd.labelLengthInDots;
+        const lineLength = cmd.blackLineThicknessInDots;
+        const lineOffset = cmd.blackLineOffset;
+        return cmdSet.encodeCommand(`Q${length},B${lineLength},${lineOffset}`);
     }
 
     private printCommand(
