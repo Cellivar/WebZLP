@@ -45,6 +45,7 @@ export class ZplPrinterCommandSet extends PrinterCommandSet {
         symbol | Commands.CommandType,
         TranspileCommandDelegate
     >([
+        /* eslint-disable prettier/prettier */
         // Ghost commands which shouldn't make it this far.
         [Commands.CommandType.NewLabelCommand, this.unprocessedCommand],
         [Commands.CommandType.CommandCustomSpecificCommand, this.unprocessedCommand],
@@ -75,10 +76,12 @@ export class ZplPrinterCommandSet extends PrinterCommandSet {
         [Commands.CommandType.AutosenseLabelDimensionsCommand, () => this.encodeCommand('~JC')],
         [Commands.CommandType.SetLabelDimensionsCommand, this.setLabelDimensionsCommand],
         [Commands.CommandType.SetLabelHomeCommand, this.setLabelHomeCommand],
+        [Commands.CommandType.SetLabelPrintOriginOffsetCommand, this.setLabelPrintOriginOffsetCommand],
         [Commands.CommandType.AddImageCommand, this.addImageCommand],
         [Commands.CommandType.AddLineCommand, this.addLineCommand],
         [Commands.CommandType.AddBoxCommand, this.addBoxCommand],
         [Commands.CommandType.PrintCommand, this.printCommand]
+        /* eslint-enable prettier/prettier */
     ]);
 
     constructor(
@@ -241,6 +244,14 @@ export class ZplPrinterCommandSet extends PrinterCommandSet {
             options.labelWidthDots = labelWidth;
             options.labelHeightDots = labelLength;
         }
+
+        // Some firmware versions let you store this, some only retain while power is on.
+        const labelHorizontalOffset = parseInt(this.getXmlCurrent(doc, 'LABEL-SHIFT'));
+        const labelHeightOffset = parseInt(this.getXmlCurrent(doc, 'LABEL-TOP'));
+        options.labelPrintOriginOffsetDots = {
+            left: labelHorizontalOffset,
+            top: labelHeightOffset
+        };
 
         options.printOrientation =
             this.getXmlText(doc, 'LABEL-REVERSE') === 'Y'
@@ -408,6 +419,19 @@ export class ZplPrinterCommandSet extends PrinterCommandSet {
         const xOffset = Math.trunc(cmd.xOffset);
         const yOffset = Math.trunc(cmd.yOffset);
         return cmdSet.encodeCommand(`^LH${xOffset},${yOffset}`);
+    }
+
+    private setLabelPrintOriginOffsetCommand(
+        cmd: Commands.SetLabelPrintOriginOffsetCommand,
+        outDoc: TranspilationFormMetadata,
+        cmdSet: ZplPrinterCommandSet
+    ): Uint8Array {
+        // This ends up being two commands, one to set the top and one to set the
+        // horizontal shift. LS moves the horizontal, LT moves the top. LT is
+        // clamped to +/- 120 dots, horizontal is 9999.
+        const xOffset = this.clampToRange(Math.trunc(cmd.xOffset), -9999, 9999);
+        const yOffset = this.clampToRange(Math.trunc(cmd.yOffset), -120, 120);
+        return cmdSet.encodeCommand(`^LS${xOffset}^LT${yOffset}`);
     }
 
     private printCommand(

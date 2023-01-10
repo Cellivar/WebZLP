@@ -66,6 +66,7 @@ export class EplPrinterCommandSet extends PrinterCommandSet {
         [Commands.CommandType.AutosenseLabelDimensionsCommand, () => this.encodeCommand('xa')],
         [Commands.CommandType.SetLabelDimensionsCommand, this.setLabelDimensionsCommand],
         [Commands.CommandType.SetLabelHomeCommand, this.setLabelHomeCommand],
+        [Commands.CommandType.SetLabelPrintOriginOffsetCommand, this.setLabelPrintOriginOffsetCommand],
         [Commands.CommandType.AddImageCommand, this.addImageCommand],
         [Commands.CommandType.AddLineCommand, this.addLineCommand],
         [Commands.CommandType.AddBoxCommand, this.addBoxCommand],
@@ -252,7 +253,7 @@ export class EplPrinterCommandSet extends PrinterCommandSet {
                     break;
                 default:
                     console.log(
-                        "WebZPL observed a config line from your printer that was not handled. We'd love it if you could report this bug! Send '" +
+                        "WebZLP observed a config line from your printer that was not handled. We'd love it if you could report this bug! Send '" +
                             str +
                             "' to https://github.com/Cellivar/WebZLP/issues"
                     );
@@ -406,6 +407,18 @@ export class EplPrinterCommandSet extends PrinterCommandSet {
 
     private setLabelHomeCommand(
         cmd: Commands.SetLabelHomeCommand,
+        outDoc: TranspilationFormMetadata,
+        cmdSet: EplPrinterCommandSet
+    ): Uint8Array {
+        return this.modifyOffset(
+            new Commands.OffsetCommand(cmd.xOffset, cmd.yOffset, true),
+            outDoc,
+            cmdSet
+        );
+    }
+
+    private setLabelPrintOriginOffsetCommand(
+        cmd: Commands.SetLabelPrintOriginOffsetCommand,
         outDoc: TranspilationFormMetadata,
         cmdSet: EplPrinterCommandSet
     ): Uint8Array {

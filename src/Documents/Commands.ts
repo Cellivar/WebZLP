@@ -86,6 +86,7 @@ export enum CommandType {
     SetDarknessCommand = 'SetDarknessCommand',
     SetLabelDimensionsCommand = 'SetLabelDimensionsCommand',
     SetLabelHomeCommand = 'SetLabelHomeCommand',
+    SetLabelPrintOriginOffsetCommand = 'SetLabelPrintOriginOffsetCommand',
     SetPrintDirectionCommand = 'SetPrintDirectionCommand',
     SetPrintSpeedCommand = 'SetPrintSpeedCommand',
     SuppressFeedBackupCommand = 'SuppressFeedBackupCommand',
@@ -351,6 +352,22 @@ export class SetLabelHomeCommand implements IPrinterCommand {
     }
     toDisplay(): string {
         return `Set the label home (origin) to ${this.xOffset},${this.yOffset} from the top-left.`;
+    }
+    printerEffectFlags = PrinterCommandEffectFlags.altersPrinterConfig;
+
+    constructor(public xOffset: number, public yOffset: number) {}
+}
+
+/** Command class to set the print offset from the top-left of the label. */
+export class SetLabelPrintOriginOffsetCommand implements IPrinterCommand {
+    get name(): string {
+        return 'Sets the print offset from the top left corner.';
+    }
+    get type(): CommandType {
+        return CommandType.SetLabelPrintOriginOffsetCommand;
+    }
+    toDisplay(): string {
+        return `Sets the print offset to ${this.xOffset} in and ${this.yOffset} down frmo the top-left.`;
     }
     printerEffectFlags = PrinterCommandEffectFlags.altersPrinterConfig;
 
