@@ -456,7 +456,9 @@ export class ZplPrinterCommandSet extends PrinterCommandSet {
         outDoc: TranspilationFormMetadata,
         cmdSet: ZplPrinterCommandSet
     ): Uint8Array {
-        return cmdSet.encodeCommand(`^MNN^LL${cmd.labelLengthInDots + cmd.labelGapInDots}`);
+        const length = Math.trunc(cmd.labelLengthInDots);
+        const gap = Math.trunc(cmd.labelGapInDots);
+        return cmdSet.encodeCommand(`^MNN^LL${length + gap}`);
     }
 
     private setLabelToWebGapMediaCommand(
@@ -464,7 +466,8 @@ export class ZplPrinterCommandSet extends PrinterCommandSet {
         outDoc: TranspilationFormMetadata,
         cmdSet: ZplPrinterCommandSet
     ): Uint8Array {
-        return cmdSet.encodeCommand(`^MNY^LL${cmd.labelLengthInDots},Y`);
+        const length = Math.trunc(cmd.labelLengthInDots);
+        return cmdSet.encodeCommand(`^MNY^LL${length},Y`);
     }
 
     private setLabelToMarkMediaCommand(
@@ -472,7 +475,9 @@ export class ZplPrinterCommandSet extends PrinterCommandSet {
         outDoc: TranspilationFormMetadata,
         cmdSet: ZplPrinterCommandSet
     ): Uint8Array {
-        return cmdSet.encodeCommand(`^MNM,${cmd.blackLineOffset}^LL${cmd.labelLengthInDots}`);
+        const length = Math.trunc(cmd.labelLengthInDots);
+        const lineOffset = Math.trunc(cmd.blackLineOffset);
+        return cmdSet.encodeCommand(`^MNM,${length}^LL${lineOffset}`);
     }
 
     private printCommand(

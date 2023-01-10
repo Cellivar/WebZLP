@@ -467,7 +467,8 @@ export class EplPrinterCommandSet extends PrinterCommandSet {
     ): Uint8Array {
         // EPL seems to not have a static label length? All labels are variable?
         // Needs testing.
-        return cmdSet.encodeCommand(`Q${cmd.labelGapInDots},0`);
+        const length = Math.trunc(cmd.labelLengthInDots);
+        return cmdSet.encodeCommand(`Q${length},0`);
     }
 
     private setLabelToWebGapMediaCommand(
@@ -475,7 +476,9 @@ export class EplPrinterCommandSet extends PrinterCommandSet {
         outDoc: TranspilationFormMetadata,
         cmdSet: EplPrinterCommandSet
     ): Uint8Array {
-        return cmdSet.encodeCommand(`Q${cmd.labelLengthInDots},${cmd.labelGapInDots}`);
+        const length = Math.trunc(cmd.labelLengthInDots);
+        const gap = Math.trunc(cmd.labelGapInDots);
+        return cmdSet.encodeCommand(`Q${length},${gap}`);
     }
 
     private setLabelToMarkMediaCommand(
@@ -483,9 +486,9 @@ export class EplPrinterCommandSet extends PrinterCommandSet {
         outDoc: TranspilationFormMetadata,
         cmdSet: EplPrinterCommandSet
     ): Uint8Array {
-        const length = cmd.labelLengthInDots;
-        const lineLength = cmd.blackLineThicknessInDots;
-        const lineOffset = cmd.blackLineOffset;
+        const length = Math.trunc(cmd.labelLengthInDots);
+        const lineLength = Math.trunc(cmd.blackLineThicknessInDots);
+        const lineOffset = Math.trunc(cmd.blackLineOffset);
         return cmdSet.encodeCommand(`Q${length},B${lineLength},${lineOffset}`);
     }
 

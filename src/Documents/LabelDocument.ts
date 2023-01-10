@@ -62,6 +62,12 @@ export class LabelDocumentBuilder
         return this.andThen(new Commands.OffsetCommand(horizontal, vertical, true));
     }
 
+    setLabelHomeOffsetDots(horizontalOffsetInDots: number, verticalOffsetInDots: number) {
+        return this.andThen(
+            new Commands.SetLabelHomeCommand(horizontalOffsetInDots, verticalOffsetInDots)
+        );
+    }
+
     addOffset(horizontal: number, vertical?: number): ILabelDocumentBuilder {
         return this.andThen(new Commands.OffsetCommand(horizontal, vertical));
     }
@@ -148,10 +154,27 @@ export interface ILabelActionCommandBuilder {
 }
 
 export interface ILabelPositionCommandBuilder {
-    /** Set the aboslute offset from the top left position of the label. */
+    /** Set the aboslute offset from the top left position of the label.
+     *
+     * Avoid printing off the edges of a label, which can cause excessive head wear.
+     */
     setOffset(horizontal: number, vertical?: number): ILabelDocumentBuilder;
 
-    /** Add a relative offset to the current offset from the top left position of the label. */
+    /**
+     * Sets the temporary origin offset from the top-left of the label that all
+     * other offsets are calculated from. Only applies to current label.
+     *
+     * Avoid printing off the edges of a label, which can cause excessive head wear.
+     */
+    setLabelHomeOffsetDots(
+        horizontalOffsetInDots: number,
+        verticalOffsetInDots: number
+    ): ILabelDocumentBuilder;
+
+    /** Add a relative offset to the current offset from the top left position of the label.
+     *
+     * Avoid printing off the edges of a label, which can cause excessive head wear.
+     */
     addOffset(horizontal: number, vertical?: number): ILabelDocumentBuilder;
 
     /** Resets the offset back to origin (top left of label) */

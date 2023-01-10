@@ -118,6 +118,50 @@ export class ConfigDocumentBuilder
             new Commands.SetLabelHomeCommand(horizontalOffsetInDots, verticalOffsetInDots)
         );
     }
+
+    setLabelPrintOriginOffsetCommand(horizontalOffsetInDots: number, verticalOffsetInDots: number) {
+        return this.andThen(
+            new Commands.SetLabelPrintOriginOffsetCommand(
+                horizontalOffsetInDots,
+                verticalOffsetInDots
+            )
+        );
+    }
+
+    setLabelMediaToContinuous(labelHeightInInches: number): IConfigDocumentBuilder {
+        const dpi = this._config.model.dpi;
+        return this.andThen(
+            new Commands.SetLabelToContinuousMediaCommand(dpi * labelHeightInInches)
+        );
+    }
+
+    setLabelMediaToWebGapSense(
+        labelHeightInInches: number,
+        labelGapInInches: number
+    ): IConfigDocumentBuilder {
+        const dpi = this._config.model.dpi;
+        return this.andThen(
+            new Commands.SetLabelToWebGapMediaCommand(
+                labelHeightInInches * dpi,
+                labelGapInInches * dpi
+            )
+        );
+    }
+
+    setLabelMediaToMarkSense(
+        labelLengthInInches: number,
+        blackLineThicknessInInches: number,
+        blackLineOffsetInInches: number
+    ): IConfigDocumentBuilder {
+        const dpi = this._config.model.dpi;
+        return this.andThen(
+            new Commands.SetLabelToMarkMediaCommand(
+                labelLengthInInches * dpi,
+                blackLineThicknessInInches * dpi,
+                blackLineOffsetInInches * dpi
+            )
+        );
+    }
 }
 
 export interface IPrinterBasicCommandBuilder {
@@ -179,8 +223,8 @@ export interface IPrinterLabelConfigBuilder {
     ): IConfigDocumentBuilder;
 
     /**
-     * Sets the origin offset from the top-left of the label that all other offsets
-     * are calculated from.
+     * Sets the temporary origin offset from the top-left of the label that all
+     * other offsets are calculated from. Only applies to current label.
      *
      * Use this to fine-tune the alignment of your printer to your label stock.
      *
@@ -191,8 +235,37 @@ export interface IPrinterLabelConfigBuilder {
         verticalOffsetInDots: number
     ): IConfigDocumentBuilder;
 
+    /** Sets the retained origin offset from the top-left of the label that all
+     * other offets are calculated from. Applies to all labels until a printer reset
+     * or power cycle.
+     *
+     * May or may not be stored depending on printer firmware.
+     *
+     * Avoid printing off the edges of a label, which can cause excessive head wear.
+     */
+    setLabelPrintOriginOffsetCommand(
+        horizontalOffsetInDots: number,
+        verticalOffsetInDots: number
+    ): IConfigDocumentBuilder;
+
     /** Run the autosense operation to get label length. Must be last command. */
     autosenseLabelLength(): IDocument;
+
+    /** Sets the media type to continuous (gapless) media. */
+    setLabelMediaToContinuous(labelLengthInDots: number): IConfigDocumentBuilder;
+
+    /** Sets the media type to web gap sensing media. It's recommended to run autosense after this. */
+    setLabelMediaToWebGapSense(
+        labelLengthInDots: number,
+        labelGapInDots: number
+    ): IConfigDocumentBuilder;
+
+    /** Sets the media type to mark sensing media. */
+    setLabelMediaToMarkSense(
+        labelLengthInDots: number,
+        blackLineThicknessInDots: number,
+        blackLineOffset: number
+    ): IConfigDocumentBuilder;
 }
 
 /** Error indicating setting a config value failed. */
