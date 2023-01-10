@@ -249,7 +249,7 @@ export class ZplPrinterCommandSet extends PrinterCommandSet {
         }
 
         // Some firmware versions let you store this, some only retain while power is on.
-        const labelHorizontalOffset = parseInt(this.getXmlCurrent(doc, 'LABEL-SHIFT'));
+        const labelHorizontalOffset = parseInt(this.getXmlText(doc, 'LABEL-SHIFT'));
         const labelHeightOffset = parseInt(this.getXmlCurrent(doc, 'LABEL-TOP'));
         options.labelPrintOriginOffsetDots = {
             left: labelHorizontalOffset,
