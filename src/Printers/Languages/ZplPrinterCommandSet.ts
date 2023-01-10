@@ -446,8 +446,8 @@ export class ZplPrinterCommandSet extends PrinterCommandSet {
         // This ends up being two commands, one to set the top and one to set the
         // horizontal shift. LS moves the horizontal, LT moves the top. LT is
         // clamped to +/- 120 dots, horizontal is 9999.
-        const xOffset = this.clampToRange(Math.trunc(cmd.xOffset), -9999, 9999);
-        const yOffset = this.clampToRange(Math.trunc(cmd.yOffset), -120, 120);
+        const xOffset = cmdSet.clampToRange(Math.trunc(cmd.xOffset), -9999, 9999);
+        const yOffset = cmdSet.clampToRange(Math.trunc(cmd.yOffset), -120, 120);
         return cmdSet.encodeCommand(`^LS${xOffset}^LT${yOffset}`);
     }
 

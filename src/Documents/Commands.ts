@@ -370,7 +370,7 @@ export class SetLabelPrintOriginOffsetCommand implements IPrinterCommand {
         return CommandType.SetLabelPrintOriginOffsetCommand;
     }
     toDisplay(): string {
-        return `Sets the print offset to ${this.xOffset} in and ${this.yOffset} down frmo the top-left.`;
+        return `Sets the print offset to ${this.xOffset} in and ${this.yOffset} down from the top-left.`;
     }
     printerEffectFlags = PrinterCommandEffectFlags.altersPrinterConfig;
 
