@@ -10,6 +10,8 @@ See [the demo](https://cellivar.github.io/WebZLP/demo) that runs in your browser
 
 The demo dynamically compiles the typescript in the browser so can take a minute to spin up.
 
+Want to see more bells and whistles? Or maybe you just want to play around with a printer you have? Try the [advanced demo](https://cellivar.github.io/WebZLP/demo/advanced) for more options and controls. The code is a little harder to follow because of the additional things going on.
+
 ## Docs
 
 This repo contains some docs and findings related to Zebra label printers and their various quirks. I'm interested in collecting as much of this information as I can as I just think they're neat. If you have something to add please feel free to open an issue!
