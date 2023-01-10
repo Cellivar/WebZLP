@@ -88,7 +88,7 @@ export class ReadyToPrintDocuments {
         return printer
             .getConfigDocument()
             .setPrintDirection()
-            .setPrintSpeed(PrintSpeed.auto)
+            .setPrintSpeed(PrintSpeed.ipsAuto)
             .setDarknessConfig(darknessPercent)
             .setLabelDimensions(labelWidthInches)
             .autosenseLabelLength();

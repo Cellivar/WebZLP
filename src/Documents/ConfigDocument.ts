@@ -64,7 +64,7 @@ export class ConfigDocumentBuilder
         return this.andThen(new Commands.SetPrintDirectionCommand(upsideDown));
     }
 
-    setPrintSpeed(speed: Options.PrintSpeed, mediaSlewSpeed = Options.PrintSpeed.auto) {
+    setPrintSpeed(speed: Options.PrintSpeed, mediaSlewSpeed = Options.PrintSpeed.ipsAuto) {
         if (!this._config.model.isSpeedValid(speed)) {
             throw new UnsupportedPrinterConfigError(
                 'setPrintSpeed',
@@ -79,7 +79,7 @@ export class ConfigDocumentBuilder
         }
 
         // If the media slew speed is auto just copy the print speed.
-        if (mediaSlewSpeed === Options.PrintSpeed.auto) {
+        if (mediaSlewSpeed === Options.PrintSpeed.ipsAuto) {
             mediaSlewSpeed = speed;
         }
         return this.andThen(

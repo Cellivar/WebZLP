@@ -21,7 +21,7 @@ export abstract class LP28XX extends EplPrinter {
     abstract get model(): PrinterModel;
 
     private _speedTable = new Map<PrintSpeed, number>([
-        [PrintSpeed.auto, 3],
+        [PrintSpeed.ipsAuto, 3],
         [PrintSpeed.ipsPrinterMax, 4],
         [PrintSpeed.ipsPrinterMin, 1],
         [PrintSpeed.ips1_5, 1],

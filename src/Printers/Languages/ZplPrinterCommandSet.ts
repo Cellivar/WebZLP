@@ -158,10 +158,8 @@ export class ZplPrinterCommandSet extends PrinterCommandSet {
         const parser = new DOMParser();
         const xmldoc = parser.parseFromString(rawXml, 'application/xml');
         const errorNode = xmldoc.querySelector('parsererror');
-        console.log(xmldoc);
         if (errorNode) {
             // TODO: Log? Throw?
-            console.log('lol failed');
             return Options.PrinterOptions.invalid();
         }
 
@@ -220,9 +218,11 @@ export class ZplPrinterCommandSet extends PrinterCommandSet {
         const rawDarkness = Math.ceil(currentDarkness * (100 / maxDarkness));
         options.darknessPercent = Math.max(0, Math.min(rawDarkness, 99)) as Options.DarknessPercent;
 
+        const printRate = parseInt(this.getXmlText(doc, 'PRINT-RATE'));
+        const slewRate = parseInt(this.getXmlText(doc, 'SLEW-RATE'));
         options.speed = new Options.PrintSpeedSettings(
-            parseInt(this.getXmlText(doc, 'PRINT-RATE')),
-            parseInt(this.getXmlText(doc, 'SLEW-RATE'))
+            Options.PrintSpeedSettings.getSpeedFromWholeNumber(printRate),
+            Options.PrintSpeedSettings.getSpeedFromWholeNumber(slewRate)
         );
 
         // Always in dots
@@ -249,8 +249,8 @@ export class ZplPrinterCommandSet extends PrinterCommandSet {
         }
 
         // Some firmware versions let you store this, some only retain while power is on.
-        const labelHorizontalOffset = parseInt(this.getXmlText(doc, 'LABEL-SHIFT'));
-        const labelHeightOffset = parseInt(this.getXmlCurrent(doc, 'LABEL-TOP'));
+        const labelHorizontalOffset = parseInt(this.getXmlText(doc, 'LABEL-SHIFT')) || 0;
+        const labelHeightOffset = parseInt(this.getXmlCurrent(doc, 'LABEL-TOP')) || 0;
         options.labelPrintOriginOffsetDots = {
             left: labelHorizontalOffset,
             top: labelHeightOffset
@@ -330,7 +330,7 @@ export class ZplPrinterCommandSet extends PrinterCommandSet {
 
     private getSpeedTable(min: number, max: number) {
         const table = new Map<Options.PrintSpeed, number>([
-            [Options.PrintSpeed.auto, 0],
+            [Options.PrintSpeed.ipsAuto, 0],
             [Options.PrintSpeed.ipsPrinterMin, min],
             [Options.PrintSpeed.ipsPrinterMax, max]
         ]);
