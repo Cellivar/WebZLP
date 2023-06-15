@@ -45,3 +45,15 @@ export class LP2824 extends LP28XX {
         return PrinterModel.lp2824;
     }
 }
+
+export class TLP2824 extends LP28XX {
+    get model() {
+        return PrinterModel.tlp2824;
+    }
+}
+
+export class TLP2844 extends LP28XX {
+    get model() {
+        return PrinterModel.tlp2844;
+    }
+}

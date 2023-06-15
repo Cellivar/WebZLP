@@ -23,6 +23,12 @@ export class PrinterModelDb {
         // TODO: Make this extensible so it's possible for consumers to add their own
         // printers to the enum, match list, etc.
         switch (rawModelId) {
+            case 'UKQ1915  U':
+                // TODO: This is an educated guess, validate it!
+                return PrinterModel.tlp2824;
+            case 'UKQ1935  U':
+                return PrinterModel.tlp2844;
+
             case 'UKQ1915HLU':
                 return PrinterModel.lp2824;
             case 'UKQ1935HLU':
@@ -31,6 +37,7 @@ export class PrinterModelDb {
                 // HMU units that do not have FDX in the version string appear to be UPS
                 // units. Maybe. Mostly. It's not clear.
                 return PrinterModel.lp2844ups;
+
             case 'LP2824-Z-200dpi':
                 return PrinterModel.lp2824z;
             case 'LP2844-Z-200dpi':
@@ -45,12 +52,20 @@ export class PrinterModelDb {
         // TODO: Make this extensible so it's possible for consumers to add their own
         // printers to the enum, match list, etc.
         switch (model) {
+            // LP models, direct thermal only.
             case PrinterModel.lp2824:
                 return new EPL.LP2824();
             case PrinterModel.lp2844:
             case PrinterModel.lp2844fedex:
             case PrinterModel.lp2844ups:
                 return new EPL.LP2844();
+
+            // TLP models, direct thermal or thermal transfer.
+            case PrinterModel.tlp2824:
+                return new EPL.TLP2824();
+            case PrinterModel.tlp2844:
+                return new EPL.TLP2844();
+
             default:
                 return new UnknownPrinter();
         }
