@@ -23,10 +23,10 @@ export class PrinterModelDb {
         // TODO: Make this extensible so it's possible for consumers to add their own
         // printers to the enum, match list, etc.
         switch (rawModelId) {
-            case 'UKQ1915  U':
+            case 'UKQ1915 U':
                 // TODO: This is an educated guess, validate it!
                 return PrinterModel.tlp2824;
-            case 'UKQ1935  U':
+            case 'UKQ1935 U':
                 return PrinterModel.tlp2844;
 
             case 'UKQ1915HLU':
