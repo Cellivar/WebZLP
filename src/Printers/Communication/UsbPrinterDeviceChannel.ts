@@ -109,7 +109,7 @@ export class UsbPrinterDeviceChannel extends EventTarget implements IPrinterDevi
             d.configurations[0].interfaces.length === 0 ||
             d.configurations[0].interfaces[0].alternates.length === 0
         ) {
-            throw new WebZlpError('USB printer did not expose any interfaces.');
+            throw new WebZlpError('USB printer did not expose any USB interfaces. Try power-cycling the printer. This is a hardware problem.');
         }
 
         // A standard Zebra printer will have two endpoints on one interface.
