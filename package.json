@@ -1,6 +1,6 @@
 {
   "name": "webzlp",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Zebra LP-series WebUSB driver",
   "main": "./dist/src/index.js",
   "types": "./dist/src/index.d.ts",
