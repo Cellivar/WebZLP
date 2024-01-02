@@ -102,11 +102,21 @@ export class UsbPrinterDeviceChannel extends EventTarget implements IPrinterDevi
     private async connect() {
         const d = this.device;
 
+        // Any sane USB device should expose at least one configuration with one
+        // interface.
+        if (
+            d.configurations.length === 0 ||
+            d.configurations[0].interfaces.length === 0 ||
+            d.configurations[0].interfaces[0].alternates.length === 0
+        ) {
+            throw new WebZlpError('USB printer did not expose any USB interfaces. Try power-cycling the printer. This is a hardware problem.');
+        }
+
         // A standard Zebra printer will have two endpoints on one interface.
         // One of them will be output, one of them will be input. They can be
         // in a random order (or missing!) so we must enumerate them to find them.
         let o: USBEndpoint, i: USBEndpoint;
-        for (const endpoint of d.configuration.interfaces[0].alternates[0].endpoints) {
+        for (const endpoint of d.configurations[0].interfaces[0].alternates[0].endpoints) {
             if (endpoint.direction == 'out') {
                 o = endpoint;
             } else if (endpoint.direction == 'in') {
