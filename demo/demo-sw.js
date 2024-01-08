@@ -1,5 +1,5 @@
 // Has to be a hard version so the URL doesn't redirect, which prevents loading.
-importScripts('https://unpkg.com/typescript@4.9.3/lib/typescript.js');
+importScripts('https://unpkg.com/typescript@5.2.2/lib/typescript.js');
 
 const log = (...obj) => console.log('SHENANIGANS', ...obj);
 
@@ -12,6 +12,10 @@ self.addEventListener('activate', () => self.clients.claim());
 
 // Intercept fetch requests for modules and compile the intercepted typescript.
 self.addEventListener('fetch', (event) => {
+    if (!event.request.url.startsWith('https://')) {
+        return;
+    }
+
     // Start off easy: if it's a request for a TS file, transpile it.
     if (event.request.url.endsWith('.ts')) {
         log('Fetching', event.request.url, 'as just typescript');
@@ -102,7 +106,7 @@ const transpileTypeScript = async (requestUrl) => {
     };
 
     const transpiledResponse = new Response(transpiledCode, responseOptions);
-    if (!requestUrl.startsWith('https://localhost')) {
+    if (!requestUrl.startsWith('https://localhost') && requestUrl.startsWith('https://')) {
         typescriptCache.put(requestUrl, transpiledResponse.clone());
     }
 

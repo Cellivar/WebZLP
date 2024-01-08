@@ -1,262 +1,219 @@
-import { IDocument } from '../Documents/Document.js';
-import { ConfigDocumentBuilder, IConfigDocumentBuilder } from '../Documents/ConfigDocument.js';
+import { type IDocument } from '../Documents/Document.js';
+import { ConfigDocumentBuilder, type IConfigDocumentBuilder } from '../Documents/ConfigDocument.js';
 import {
-    ILabelDocumentBuilder,
-    LabelDocumentBuilder,
-    LabelDocumentType
+  type ILabelDocumentBuilder,
+  LabelDocumentBuilder,
+  LabelDocumentType
 } from '../Documents/LabelDocument.js';
 import { ReadyToPrintDocuments } from '../Documents/ReadyToPrintDocuments.js';
 import { WebZlpError } from '../WebZlpError.js';
-import { IPrinterDeviceChannel, PrinterChannelType } from './Communication/PrinterCommunication.js';
-import { UsbPrinterDeviceChannel } from './Communication/UsbPrinterDeviceChannel.js';
+import { UsbDeviceChannel } from './Communication/UsbPrinterDeviceChannel.js';
 import { PrinterCommandLanguage, PrinterOptions } from './Configuration/PrinterOptions.js';
 import { EplPrinterCommandSet } from './Languages/EplPrinterCommandSet.js';
 import { PrinterCommandSet } from './Languages/PrinterCommandSet.js';
 import { ZplPrinterCommandSet } from './Languages/ZplPrinterCommandSet.js';
 import { PrinterModelDb } from './Models/PrinterModelDb.js';
-import { PrinterCommunicationOptions } from './PrinterCommunicationOptions.js';
+import { DeviceNotReadyError, type IDeviceChannel, type IDeviceCommunicationOptions, DeviceCommunicationError, type IDeviceInformation, type IDevice } from './Communication/DeviceCommunication.js';
 
 /**
  * A class for working with a label printer.
  */
-export class Printer {
-    // Printer communication handles
-    private channelType: PrinterChannelType;
-    private device: USBDevice;
-    private printerChannel: IPrinterDeviceChannel;
-    private commandset: PrinterCommandSet;
+export class LabelPrinter implements IDevice {
+  // Printer communication handles
+  private _channel: IDeviceChannel<Uint8Array, string>;
+  private _commandSet?: PrinterCommandSet;
 
-    private _printerConfig: PrinterOptions;
+  private _printerOptions: PrinterOptions;
+  /** Gets the read-only copy of the current config of the printer. To modify use getConfigDocument. */
+  get printerOptions() { return this._printerOptions.copy(); }
+  /** Gets the model of the printer, detected from the printer's config. */
+  get printerModel() { return this._printerOptions.model; }
+  /** Gets the serial number of the printer, detected from the printer's config. */
+  get printerSerial() { return this._printerOptions.serialNumber; }
 
-    private _ready: Promise<boolean>;
-    /** A promise indicating this printer is ready to be used. */
-    get ready() {
-        return this._ready;
+  private _deviceCommOpts: IDeviceCommunicationOptions;
+  /** Gets the configured printer communication options. */
+  get printerCommunicationOptions() {
+    return this._deviceCommOpts;
+  }
+
+  private _disposed = false;
+  private _ready: Promise<boolean>;
+  /** A promise indicating this printer is ready to be used. */
+  get ready() {
+    return this._ready;
+  }
+  get connected() {
+    return !this._disposed
+      && this._channel.connected
+  }
+
+  /** Construct a new printer from a given USB device. */
+  static fromUSBDevice(
+    device: USBDevice,
+    options: IDeviceCommunicationOptions
+  ): LabelPrinter {
+    return new LabelPrinter(new UsbDeviceChannel(device, options), options);
+  }
+
+  constructor(
+    channel: IDeviceChannel<Uint8Array, string>,
+    deviceCommunicationOptions: IDeviceCommunicationOptions = { debug: false },
+    printerOptions?: PrinterOptions,
+  ) {
+    this._channel = channel;
+    this._deviceCommOpts = deviceCommunicationOptions;
+    this._printerOptions = printerOptions ?? PrinterOptions.invalid;
+    this._ready = this.setup();
+  }
+
+  private async setup() {
+    const channelReady = await this._channel.ready;
+    if (!channelReady) {
+      // If the channel failed to connect we have no hope.
+      return false;
     }
 
-    /** Gets the model of the printer, detected from the printer's config. */
-    get printerModel() {
-        return this._printerConfig.model;
+    await this.refreshPrinterConfiguration(this._channel.getDeviceInfo());
+    return true;
+  }
+
+  /** Gets a document for configuring this printer. */
+  public getConfigDocument(): IConfigDocumentBuilder {
+    return new ConfigDocumentBuilder(this._printerOptions);
+  }
+
+  /** Gets a document for printing a label. */
+  public getLabelDocument(
+    docType: LabelDocumentType = LabelDocumentType.instanceForm
+  ): ILabelDocumentBuilder {
+    return new LabelDocumentBuilder(this._printerOptions, docType);
+  }
+
+  /** Send a document to the printer, applying the commands. */
+  public async sendDocument(doc: IDocument) {
+    await this.ready;
+    if (!this.connected || this._commandSet === undefined) {
+      throw new DeviceNotReadyError("Printer is not ready to communicate.");
     }
 
-    /** Gets the read-only copy of the current config of the printer. To modfiy use getConfigDocument. */
-    get printerConfig() {
-        return this._printerConfig.copy();
+    if (this._deviceCommOpts.debug) {
+      console.debug('SENDING COMMANDS TO PRINTER:');
+      console.debug(doc.showCommands());
     }
 
-    private _printerCommunicationOptions: PrinterCommunicationOptions;
-    /** Gets the configured printer communication options. */
-    get printerCommunicationOptions() {
-        return this._printerCommunicationOptions;
+    // Exceptions are thrown and handled elsewhere.
+    const compiled = this._commandSet.transpileDoc(doc);
+
+    if (this._deviceCommOpts.debug) {
+      console.debug('RAW COMMAND BUFFER:');
+      console.debug(compiled.commandBufferString);
     }
 
-    /** Construct a new printer from a given USB device. */
-    static fromUSBDevice(device: USBDevice, options?: PrinterCommunicationOptions): Printer {
-        return new this(PrinterChannelType.usb, device, options);
+    await this._channel.sendCommands(compiled.commandBuffer);
+  }
+
+  /** Close the connection to this printer, preventing future communication. */
+  public async dispose() {
+    this._disposed = true;
+    this._ready = Promise.resolve(false);
+    await this._channel.dispose();
+  }
+
+  /** Refresh the printer information cache directly from the printer. */
+  public async refreshPrinterConfiguration(deviceInfo?: IDeviceInformation): Promise<PrinterOptions> {
+    if (!this._printerOptions.valid) {
+      // First time pulling the config. Detect language and model.
+      this._printerOptions = await this.detectLanguageAndSetConfig(deviceInfo);
+    } else {
+      this._printerOptions = await this.tryGetConfig(this._commandSet);
     }
 
-    constructor(
-        channelType: PrinterChannelType,
-        device: USBDevice,
-        options?: PrinterCommunicationOptions
-    ) {
-        this.channelType = channelType;
-        this._printerCommunicationOptions = options ?? new PrinterCommunicationOptions();
-
-        switch (this.channelType) {
-            case PrinterChannelType.usb:
-                this.device = device;
-                this.printerChannel = new UsbPrinterDeviceChannel(
-                    this.device,
-                    this._printerCommunicationOptions.debug
-                );
-                break;
-            case PrinterChannelType.serial:
-            case PrinterChannelType.bluetooth:
-            case PrinterChannelType.network:
-                throw new WebZlpError('Printer comm method not implemented.');
-        }
-
-        this._ready = this.setup();
+    if (!this._printerOptions.valid) {
+      throw new WebZlpError(
+        'Failed to detect the printer information, either the printer is unknown or the config can not be parsed. This printer can not be used.'
+      );
     }
+    return this._printerOptions;
+  }
 
-    private async setup() {
-        await this.printerChannel.ready;
-        await this.refreshPrinterConfiguration(this.printerChannel.modelHint);
-        return true;
-    }
+  private async detectLanguageAndSetConfig(deviceInfo?: IDeviceInformation): Promise<PrinterOptions> {
+    const guess = PrinterModelDb.guessLanguageFromModelHint(deviceInfo);
+    // Guess order is easiest to detect and support.. to least
+    const guessOrder = [
+      guess,
+      PrinterCommandLanguage.epl,
+      PrinterCommandLanguage.zpl,
+      PrinterCommandLanguage.cpcl
+    ];
 
-    /** Gets a document for configuring this printer. */
-    public getConfigDocument(): IConfigDocumentBuilder {
-        return new ConfigDocumentBuilder(this._printerConfig);
-    }
-
-    /** Gets a document for printing a label. */
-    public getLabelDocument(
-        docType: LabelDocumentType = LabelDocumentType.instanceForm
-    ): ILabelDocumentBuilder {
-        return new LabelDocumentBuilder(this._printerConfig, docType);
-    }
-
-    /** Send a document to the printer, applying the commands. */
-    public async sendDocument(doc: IDocument) {
-        await this.ready;
-
-        if (this._printerCommunicationOptions.debug) {
-            console.debug('SENDING COMMANDS TO PRINTER:');
-            console.debug(doc.showCommands());
-        }
-
-        // Exceptions are thrown and handled elsewhere.
-        const compiled = this.commandset.transpileDoc(doc);
-
-        if (this._printerCommunicationOptions.debug) {
-            console.debug('RAW COMMAND BUFFER:');
-            console.debug(compiled.commandBufferString);
-        }
-
-        await this.printerChannel.sendCommands(compiled.commandBuffer);
-    }
-
-    /** Close the connection to this printer, preventing future communication from working. */
-    public async dispose() {
-        await this.printerChannel.dispose();
-    }
-
-    /** Refresh the printer information cache directly from the printer. */
-    public async refreshPrinterConfiguration(modelHint?: string): Promise<PrinterOptions> {
-        if (!this._printerConfig) {
-            // First time pulling the config. Detect language and model.
-            this._printerConfig = await this.detectLanguageAndSetConfig(modelHint);
-        } else {
-            this._printerConfig = await this.tryGetConfig(this.commandset);
-        }
-
-        if (!this._printerConfig?.valid) {
-            throw new WebZlpError(
-                'Failed to detect the printer information, either the printer is unknown or the config can not be parsed. This printer can not be used.'
-            );
-        }
-        return this._printerConfig;
-    }
-
-    private async detectLanguageAndSetConfig(modelHint?: string): Promise<PrinterOptions> {
-        const guess = PrinterModelDb.guessLanguageFromModelHint(modelHint);
-        // Guess order is easiest to detect and support.. to least
-        const guessOrder = [
-            guess,
-            PrinterCommandLanguage.epl,
-            PrinterCommandLanguage.zpl,
-            PrinterCommandLanguage.cpcl
-        ];
-
-        // For each language, we send the appropriate command to try and get the
-        // config dump. If we get something legible back break out.
-        for (let i = 0; i < guessOrder.length; i++) {
-            const set = this.getCommandSetForLanguage(guessOrder[i]);
-            if (set == null) {
-                continue;
-            }
-            this.logIfDebug('Trying printer language guess', PrinterCommandLanguage[guessOrder[i]]);
-            const config = await this.tryGetConfig(set);
-            if (config.valid) {
-                this.commandset = set;
-                return config;
-            }
-        }
-
-        return { valid: false } as PrinterOptions;
-    }
-
-    private getCommandSetForLanguage(lang: PrinterCommandLanguage): PrinterCommandSet {
-        // In order of preferred communication method
-        if (PrinterCommandLanguage.zpl === (lang & PrinterCommandLanguage.zpl)) {
-            return new ZplPrinterCommandSet();
-        }
-        if (PrinterCommandLanguage.epl === (lang & PrinterCommandLanguage.epl)) {
-            return new EplPrinterCommandSet();
-        }
-        return null;
-    }
-
-    private async tryGetConfig(cmdSet: PrinterCommandSet): Promise<PrinterOptions> {
-        // TODO: Move this elsewhere so we don't create a new one each time.
-        // Safe to use a raw document with null metadata since the data isn't used here.
-        const compiled = cmdSet.transpileDoc(ReadyToPrintDocuments.configDocument);
-        this.logIfDebug('Querying printer config with', compiled.commandBufferString);
-
-        let config: PrinterOptions;
-        // Querying for a config doesn't always.. work? Like, just straight up
-        // for reasons I can't figure out some printers will refuse to return
-        // a valid config. Mostly EPL models.
-        // Give it 3 chances before we give up.
-        let retryLimit = 3;
-        do {
-            retryLimit--;
-
-            // Start listening for the return from the
-            const listenEpl = this.listenForData();
-
-            // Config isn't set up yet, send command directly without the send command.
-            await this.printerChannel.sendCommands(compiled.commandBuffer);
-            const rawResult = await listenEpl;
-            config = cmdSet.parseConfigurationResponse(
-                rawResult,
-                this._printerCommunicationOptions
-            );
-        } while (!config.valid && retryLimit > 0);
-
-        this.logIfDebug(`Config result is ${config.valid ? 'valid' : 'not valid.'}`);
-
+    // For each language, we send the appropriate command to try and get the
+    // config dump. If we get something legible back break out.
+    for (let i = 0; i < guessOrder.length; i++) {
+      const set = this.getCommandSetForLanguage(guessOrder[i]);
+      if (set === undefined) {
+        continue;
+      }
+      this.logIfDebug('Trying printer language guess', PrinterCommandLanguage[guessOrder[i]]);
+      const config = await this.tryGetConfig(set);
+      if (config.valid) {
+        this._commandSet = set;
         return config;
+      }
     }
 
-    /** Wait for the next line of data sent from the printer, or undefined if nothing is received. */
-    private async nextLine(timeoutMs: number): Promise<string | void> {
-        let reader: ReadableStreamDefaultReader<string>;
-        const nextLinePromise = (async () => {
-            reader = this.printerChannel.streamFromPrinter.getReader();
-            const { value, done } = await reader.read();
-            reader.releaseLock();
+    return { valid: false } as PrinterOptions;
+  }
 
-            if (done) {
-                return;
-            }
-
-            return value;
-        })();
-
-        const timeoutPromise = new Promise<void>((resolve) => {
-            setTimeout(() => {
-                reader.releaseLock();
-                resolve();
-            }, timeoutMs);
-        });
-
-        return Promise.race([nextLinePromise, timeoutPromise]);
+  private getCommandSetForLanguage(lang: PrinterCommandLanguage): PrinterCommandSet | undefined {
+    // In order of preferred communication method
+    if (PrinterCommandLanguage.zpl === (lang & PrinterCommandLanguage.zpl)) {
+      return new ZplPrinterCommandSet();
     }
-
-    /** Listen for incoming data until a timeout, assuming the source is done. */
-    private async listenForData(timeoutMs = 300) {
-        let aggregate = '';
-        for (;;) {
-            const line = await this.nextLine(timeoutMs);
-            if (line === undefined) {
-                this.logIfDebug(
-                    'Received',
-                    aggregate.length,
-                    'long message from printer:\n',
-                    aggregate
-                );
-                return aggregate;
-            }
-            aggregate += line + '\n';
-        }
+    if (PrinterCommandLanguage.epl === (lang & PrinterCommandLanguage.epl)) {
+      return new EplPrinterCommandSet();
     }
+    return undefined;
+  }
 
-    private logIfDebug(...obj: unknown[]) {
-        if (this._printerCommunicationOptions.debug) {
-            console.debug(...obj);
-        }
+  private async tryGetConfig(cmdSet?: PrinterCommandSet): Promise<PrinterOptions> {
+    let config = PrinterOptions.invalid;
+    if (cmdSet === undefined) { return config; }
+
+    const compiled = cmdSet.transpileDoc(ReadyToPrintDocuments.configDocument);
+    this.logIfDebug('Querying printer config with', compiled.commandBufferString);
+
+    // Querying for a config doesn't always.. work? Like, just straight up
+    // for reasons I can't figure out some printers will refuse to return
+    // a valid config. Mostly EPL models.
+    // Give it 3 chances before we give up.
+    let retryLimit = 3;
+    do {
+      retryLimit--;
+
+      // Start listening for the return from the printer
+      const awaitInput = this._channel.getInput(); // this.listenForData();
+
+      // Config isn't set up yet, send command directly without the send command.
+      await this._channel.sendCommands(compiled.commandBuffer);
+      const rawResult = await awaitInput;
+      if (rawResult instanceof DeviceCommunicationError) {
+        continue;
+      }
+      config = cmdSet.parseConfigurationResponse(
+        rawResult.join(),
+        this._printerOptions
+      );
+    } while (!config.valid && retryLimit > 0);
+
+    this.logIfDebug(`Config result is ${config.valid ? 'valid' : 'not valid.'}`);
+
+    return config;
+  }
+
+  private logIfDebug(...obj: unknown[]) {
+    if (this._deviceCommOpts.debug) {
+      console.debug(...obj);
     }
+  }
 }

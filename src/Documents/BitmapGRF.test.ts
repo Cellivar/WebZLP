@@ -1,9 +1,10 @@
-/// <reference types="jest" />
+import { expect, describe, it } from 'vitest';
+
 import {
   BitmapGRF,
   DitheringMethod,
-  ImageConversionOptions
-} from '../../src/Documents/BitmapGRF.js';
+  type ImageConversionOptions
+} from './BitmapGRF.js';
 
 // Class pulled from jest-mock-canvas which I can't seem to actually import.
 class ImageData {
@@ -26,7 +27,24 @@ class ImageData {
     return 'srgb' as PredefinedColorSpace;
   }
 
-  constructor(arr, w, h) {
+
+  /**
+   * Creates an `ImageData` object from a given `Uint8ClampedArray` and the size of the image it contains.
+   *
+   * @param array A `Uint8ClampedArray` containing the underlying pixel representation of the image.
+   * @param width An `unsigned` `long` representing the width of the image.
+   * @param height An `unsigned` `long` representing the height of the image. This value is optional: the height will be inferred from the array's size and the given width.
+   */
+  constructor(array: Uint8ClampedArray, width: number, height?: number)
+
+  /**
+   * Creates an `ImageData` object of a black rectangle with the given width and height.
+   *
+   * @param width An `unsigned` `long` representing the width of the image.
+   * @param height An `unsigned` `long` representing the height of the image.
+   */
+  constructor(width: number, height: number)
+  constructor(arr: number | Uint8ClampedArray, w: number, h?: number) {
     if (arguments.length === 2) {
       if (arr instanceof Uint8ClampedArray) {
         if (arr.length === 0)
@@ -49,7 +67,7 @@ class ImageData {
         this._height = height;
         this._data = new Uint8ClampedArray(width * height * 4);
       }
-    } else if (arguments.length === 3) {
+    } else if (arguments.length === 3 && h !== undefined) {
       if (!(arr instanceof Uint8ClampedArray))
         throw new TypeError('First argument must be a Uint8ClampedArray when using 3 arguments.');
       if (arr.length === 0) throw new RangeError('Source length must be a positive multiple of 4.');
@@ -60,7 +78,7 @@ class ImageData {
       if (!Number.isFinite(w)) throw new RangeError('The width is zero or not a number.');
       if (w === 0) throw new RangeError('The width is zero or not a number.');
       if (arr.length !== w * h * 4)
-        throw new RangeError("Source doesn'n contain the exact number of pixels needed.");
+        throw new RangeError("Source doesn't contain the exact number of pixels needed.");
       this._width = w;
       this._height = h;
       this._data = arr;
@@ -74,7 +92,7 @@ global.ImageData = ImageData;
 
 function getImageDataInput(width: number, height: number, fill: number, alpha?: number) {
   const arr = new Uint8ClampedArray(width * height * 4);
-  if (alpha != null && alpha != fill) {
+  if (alpha != undefined && alpha != fill) {
     for (let i = 0; i < arr.length; i += 4) {
       arr[i + 0] = fill;
       arr[i + 1] = fill;
@@ -112,7 +130,7 @@ describe('RGBA Image Conversion', () => {
   it('Should downconvert transparent images correctly', () => {
     const imageData = new ImageData(getImageDataInput(8, 1, 0), 8, 1);
     const expected = new Uint8Array([(1 << 8) - 1]);
-    const { monochromeData, imageWidth, imageHeight, boundingBox } = BitmapGRF['toMonochrome'](
+    const { monochromeData, imageWidth, imageHeight } = BitmapGRF['toMonochrome'](
       imageData.data,
       imageData.width,
       imageData.height,
@@ -133,7 +151,7 @@ describe('RGBA Image Conversion', () => {
   it('Should downconvert black images correctly', () => {
     const imageData = new ImageData(getImageDataInput(8, 1, 0, 255), 8, 1);
     const expected = new Uint8Array([0]);
-    const { monochromeData, imageWidth, imageHeight, boundingBox } = BitmapGRF['toMonochrome'](
+    const { monochromeData, imageWidth, imageHeight } = BitmapGRF['toMonochrome'](
       imageData.data,
       imageData.width,
       imageData.height,
@@ -154,7 +172,7 @@ describe('RGBA Image Conversion', () => {
   it('Should downconvert white images correctly', () => {
     const imageData = new ImageData(getImageDataInput(8, 1, 255), 8, 1);
     const expected = new Uint8Array([(1 << 8) - 1]);
-    const { monochromeData, imageWidth, imageHeight, boundingBox } = BitmapGRF['toMonochrome'](
+    const { monochromeData, imageWidth, imageHeight } = BitmapGRF['toMonochrome'](
       imageData.data,
       imageData.width,
       imageData.height,
@@ -175,7 +193,7 @@ describe('RGBA Image Conversion', () => {
   it('Should downconvert checkered images correctly', () => {
     const imageData = new ImageData(getImageDataInputAlternatingDots(8, 1), 8, 1);
     const expected = new Uint8Array([85]);
-    const { monochromeData, imageWidth, imageHeight, boundingBox } = BitmapGRF['toMonochrome'](
+    const { monochromeData, imageWidth, imageHeight } = BitmapGRF['toMonochrome'](
       imageData.data,
       imageData.width,
       imageData.height,
@@ -196,7 +214,7 @@ describe('RGBA Image Conversion', () => {
   it('Should pad and downconvert transparent images correctly', () => {
     const imageData = new ImageData(getImageDataInput(5, 1, 0), 5, 1);
     const expected = new Uint8Array([(1 << 8) - 1]);
-    const { monochromeData, imageWidth, imageHeight, boundingBox } = BitmapGRF['toMonochrome'](
+    const { monochromeData, imageWidth, imageHeight } = BitmapGRF['toMonochrome'](
       imageData.data,
       imageData.width,
       imageData.height,
@@ -218,7 +236,7 @@ describe('RGBA Image Conversion', () => {
     const imgWidth = 4;
     const imageData = new ImageData(getImageDataInput(imgWidth, 1, 0, 255), imgWidth, 1);
     const expected = new Uint8Array([(1 << imgWidth) - 1]);
-    const { monochromeData, imageWidth, imageHeight, boundingBox } = BitmapGRF['toMonochrome'](
+    const { monochromeData, imageWidth, imageHeight } = BitmapGRF['toMonochrome'](
       imageData.data,
       imageData.width,
       imageData.height,
@@ -240,7 +258,7 @@ describe('RGBA Image Conversion', () => {
     const imgWidth = 4;
     const imageData = new ImageData(getImageDataInput(imgWidth, 1, 255), imgWidth, 1);
     const expected = new Uint8Array([(1 << 8) - 1]);
-    const { monochromeData, imageWidth, imageHeight, boundingBox } = BitmapGRF['toMonochrome'](
+    const { monochromeData, imageWidth, imageHeight } = BitmapGRF['toMonochrome'](
       imageData.data,
       imageData.width,
       imageData.height,
@@ -304,14 +322,12 @@ describe('RGBA Round Trip', () => {
 describe('Whitespace Trimming', () => {
   it('Should trim to black pixels', () => {
     // A single black pixel, surrounded by white on all sides, 10 pixels wide.
-    /* eslint-disable prettier/prettier */
     const imageData = new ImageData(
       new Uint8ClampedArray([
         255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
-        255, 255, 255, 255,   0,   0,   0, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+        255, 255, 255, 255, 0, 0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
         255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
       ]), 10, 3);
-    /* eslint-enable prettier/prettier */
     const img = BitmapGRF.fromCanvasImageData(imageData, { trimWhitespace: true });
 
     // Width will always be a multiple of 8 due to byte padding.

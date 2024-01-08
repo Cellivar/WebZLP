@@ -1,10 +1,10 @@
-/// <reference types="jest" />
+import { expect, describe, it } from 'vitest';
 import {
   AddImageCommand,
   EplPrinterCommandSet,
-  TranspilationFormMetadata
-} from '../../../src/index.js';
-import { BitmapGRF } from '../../../src/Documents/BitmapGRF.js';
+  TranspiledDocumentState
+} from '../../index.js';
+import { BitmapGRF } from '../../Documents/BitmapGRF.js';
 
 // Class pulled from jest-mock-canvas which I can't seem to actually import.
 class ImageData {
@@ -27,7 +27,7 @@ class ImageData {
     return 'srgb' as PredefinedColorSpace;
   }
 
-  constructor(arr, w, h) {
+  constructor(arr: number | Uint8ClampedArray, w: number, h?: number) {
     if (arguments.length === 2) {
       if (arr instanceof Uint8ClampedArray) {
         if (arr.length === 0)
@@ -50,7 +50,7 @@ class ImageData {
         this._height = height;
         this._data = new Uint8ClampedArray(width * height * 4);
       }
-    } else if (arguments.length === 3) {
+    } else if (arguments.length === 3 && h !== undefined) {
       if (!(arr instanceof Uint8ClampedArray))
         throw new TypeError('First argument must be a Uint8ClampedArray when using 3 arguments.');
       if (arr.length === 0) throw new RangeError('Source length must be a positive multiple of 4.');
@@ -73,7 +73,7 @@ class ImageData {
 
 function getImageDataInput(width: number, height: number, fill: number, alpha?: number) {
   const arr = new Uint8ClampedArray(width * height * 4);
-  if (alpha != null && alpha != fill) {
+  if (alpha !== undefined && alpha != fill) {
     for (let i = 0; i < arr.length; i += 4) {
       arr[i + 0] = fill;
       arr[i + 1] = fill;
@@ -88,13 +88,13 @@ function getImageDataInput(width: number, height: number, fill: number, alpha?: 
 
 const cmdSet = new EplPrinterCommandSet();
 
-describe('EplImageConversionToFullCommand', () => {
+describe('EPL Image Conversion', () => {
   it('Should convert blank images to valid command', () => {
     const imageData = new ImageData(getImageDataInput(8, 1, 0), 8, 1);
     const bitmap = BitmapGRF.fromCanvasImageData(imageData, { trimWhitespace: false });
     const cmd = new AddImageCommand(bitmap, {});
-    const doc = new TranspilationFormMetadata();
-    const resultCmd = cmdSet['addImageCommand'](cmd, doc, cmdSet);
+    const doc = new TranspiledDocumentState();
+    const resultCmd = cmdSet['addImageCommand'](cmd, doc);
 
     const expectedCmd = Uint8Array.from([
       ...new TextEncoder().encode('GW0,0,1,1,'),
@@ -110,10 +110,10 @@ describe('EplImageConversionToFullCommand', () => {
     const bitmap = BitmapGRF.fromCanvasImageData(imageData, { trimWhitespace: false });
     const cmd = new AddImageCommand(bitmap, {});
     const appliedOffset = 10;
-    const doc = new TranspilationFormMetadata();
+    const doc = new TranspiledDocumentState();
     doc.horizontalOffset = appliedOffset;
     doc.verticalOffset = appliedOffset * 2;
-    const resultCmd = cmdSet['addImageCommand'](cmd, doc, cmdSet);
+    const resultCmd = cmdSet['addImageCommand'](cmd, doc);
 
     const expectedCmd = Uint8Array.from([
       ...new TextEncoder().encode(`GW${appliedOffset},${appliedOffset * 2},1,1,`),
@@ -122,12 +122,5 @@ describe('EplImageConversionToFullCommand', () => {
     ]);
 
     expect(resultCmd).toEqual(expectedCmd);
-  });
-
-  it('Should return noop for blank imageData', () => {
-    const doc = new TranspilationFormMetadata();
-    const resultCmd = cmdSet['addImageCommand'](null, doc, cmdSet);
-
-    expect(resultCmd).toEqual(new Uint8Array());
   });
 });

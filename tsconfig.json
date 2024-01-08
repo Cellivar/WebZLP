@@ -1,12 +1,28 @@
 {
   "compilerOptions": {
-    "module": "es6",
-    "types": [],
-    "lib": ["dom", "esnext"],
-    "outDir": "./dist/",
-    "sourceMap": true,
-    "target": "esnext",
+    "target": "ES2022",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "lib": [
+      "ESNext",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "skipLibCheck": false,
+    "isolatedModules": true,
+    "noEmit": true,
+    "strict": true,
+    "checkJs": true,
     "declaration": true,
-    "moduleResolution": "node"
-  }
+    "declarationMap": true,
+    "noUnusedLocals": true,
+    "useDefineForClassFields": true,
+    "noUnusedParameters": true,
+    "forceConsistentCasingInFileNames": true,
+    "verbatimModuleSyntax": true,
+    "incremental": true
+  },
+  "include": [
+    "src"
+  ]
 }
