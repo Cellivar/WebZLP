@@ -1,130 +1,187 @@
-/// <reference types="w3c-web-usb" />
-import { Printer } from './Printers/Printer.js';
-import { PrinterCommunicationOptions } from './Printers/PrinterCommunicationOptions.js';
+import type { IDevice, IDeviceCommunicationOptions, IDeviceEvent } from './Printers/Communication/DeviceCommunication.js';
 
-export interface PrinterManagerEventMap {
-    connectedPrinter: CustomEvent<{ detail: Printer }>;
-    disconnectedPrinter: CustomEvent<{ detail: Printer }>;
+export interface IUsbDeviceManagerEventMap<TDevice extends IDevice> {
+  connectedDevice: CustomEvent<IDeviceEvent<TDevice>>;
+  disconnectedDevice: CustomEvent<IDeviceEvent<TDevice>>;
 }
 
-/** Singleton for handling USB printer management.
+export interface IUsbDeviceCommunicationOptions extends IDeviceCommunicationOptions {
+  /** Connection options for what types of USB devices to pay attention to. */
+  requestOptions: USBDeviceRequestOptions;
+}
+
+type DeviceGetter<TDevice extends IDevice> = (
+  device: USBDevice,
+  deviceCommunicationOptions: IUsbDeviceCommunicationOptions
+) => TDevice;
+
+/** Singleton for handling USB device management.
  *
  * This class can be used to handle the WebUSB communication management for you instead of handling
- * printer communication yourself. The promptToConnect method is used to prompt the user to select
- * a printer using the browser's UI. Once paired at least once the browser will rember and reconnect
+ * device connections yourself. The promptToConnect method is used to prompt the user to select
+ * a device using the browser's UI. Once paired at least once the browser will remember and reconnect
  * automatically.
  *
  * This class exposes events, which your code should add handlers for:
- * * connectedPrinter: Fired when a printer is ready to be interacted with.
- * * disconnectedPrinter: Fired when a printer is no longer connected.
+ * * connectedDevice: Fired when a device is ready to be interacted with.
+ * * disconnectedDevice: Fired when a device is no longer connected.
  *
- * This class will bind to WebUSB events on the Navigator element, your code should ensure only
- * one instance is ever instantiated to avoid conflicts.
+ * This class will attempt to manage any USB devices that match the filter you
+ * provide in the constructor. If you instantiate it multiple times you must use
+ * different USBDeviceFilters, otherwise managers will start managing each other's
+ * devices. This will very likely lead to unintended operation.
  */
-export class PrinterUsbManager extends EventTarget {
-    private nav: Navigator;
+export class UsbDeviceManager<TDevice extends IDevice> extends EventTarget {
+  private usb: USB;
 
-    /** List of tracked printers. */
-    private _printers: Printer[] = [];
-    public get printers(): readonly Printer[] {
-        return this._printers;
+  /** Map of tracked devices to their wrapper objects. */
+  private _devices = new Map<USBDevice, TDevice>();
+  public get devices() { return [...this._devices.values()]; }
+
+  private deviceGetter: DeviceGetter<TDevice>;
+
+  /** Communication behavior when communicating with devices. */
+  public deviceCommunicationOptions: IUsbDeviceCommunicationOptions;
+
+  constructor(
+    navigatorUsb: USB,
+    deviceConstructor: DeviceGetter<TDevice>,
+    commOpts?: IUsbDeviceCommunicationOptions
+  ) {
+    super();
+    this.usb = navigatorUsb;
+    this.deviceGetter = deviceConstructor;
+    this.deviceCommunicationOptions = commOpts ?? {
+      debug: true,
+      requestOptions: {
+        filters: [{
+          vendorId: 0x0a5f // Zebra
+        }]
+      }
+    };
+
+    this.usb.addEventListener('connect', this.handleConnect.bind(this));
+    this.usb.addEventListener('disconnect', this.handleDisconnect.bind(this));
+  }
+
+  public addEventListener<T extends keyof IUsbDeviceManagerEventMap<TDevice>>(
+    type: T,
+    listener: EventListenerObject | null | ((this: UsbDeviceManager<TDevice>, ev: IUsbDeviceManagerEventMap<TDevice>[T]) => void),
+    options?: boolean | AddEventListenerOptions
+  ): void;
+  public addEventListener(
+    type: string,
+    callback: EventListenerOrEventListenerObject | null,
+    options?: boolean | AddEventListenerOptions
+  ): void {
+    super.addEventListener(type, callback, options);
+  }
+
+  /** Ask the user to connect to a device, using the filter from deviceCommunicationOptions. */
+  public async promptForNewDevice(): Promise<boolean> {
+    try {
+      const device = await this.usb.requestDevice(this.deviceCommunicationOptions.requestOptions);
+      await this.handleConnect(new USBConnectionEvent('connect', { device }));
+    } catch (e) {
+      // User cancelled
+      if (
+        e instanceof DOMException &&
+        e.name === 'NotFoundError' &&
+        e.message.endsWith('No device selected.')
+      ) {
+        return false;
+      }
+      throw e;
     }
-    /** Corresponding list of tracked devices */
-    private devices: USBDevice[] = [];
-    // TODO: Switch to Record since we use this for a reverse mapping.
+    return true;
+  }
 
-    /** Default comm options used when connecting to a printer. */
-    public printerCommunicationOptions: PrinterCommunicationOptions;
+  /** Disconnect then reconnect all devices */
+  public async forceReconnect() {
+    const oldList = Array.from(this._devices.values());
+    this._devices.clear();
+    await Promise.all([...oldList].map(async (value) => value.dispose()));
 
-    constructor(nav: Navigator, printerCommOpts?: PrinterCommunicationOptions) {
-        super();
-        this.nav = nav;
-        this.printerCommunicationOptions = printerCommOpts ?? new PrinterCommunicationOptions();
+    const newDevices = await this.usb.getDevices();
+    await Promise.all(
+      newDevices
+        .map((d) => new USBConnectionEvent('connect', { device: d }))
+        .map(async (e) => await this.handleConnect(e))
+    );
+  }
 
-        // Since this was created assume control over USB.
-        this.nav.usb.addEventListener('connect', this.handleConnectPrinter.bind(this));
-        this.nav.usb.addEventListener('disconnect', this.handleDisconnectPrinter.bind(this));
-    }
-
-    public addEventListener<T extends keyof PrinterManagerEventMap>(
-        type: T,
-        listener: (this: PrinterUsbManager, ev: PrinterManagerEventMap[T]) => void,
-        options?: boolean | AddEventListenerOptions
-    ): void;
-    public addEventListener(
-        type: string,
-        callback: EventListenerOrEventListenerObject,
-        options?: boolean | AddEventListenerOptions
-    ): void {
-        super.addEventListener(type, callback, options);
-    }
-
-    /** Display the USB device connection dialog to select a printer. */
-    public async promptToConnectUsbPrinter(options?: USBDeviceRequestOptions) {
-        try {
-            const device = await this.nav.usb.requestDevice(
-                options ?? {
-                    filters: [
-                        {
-                            vendorId: 0x0a5f // Zebra
-                        }
-                    ]
-                }
-            );
-            await this.handleConnectPrinter({ device });
-        } catch (e) {
-            if (
-                e instanceof DOMException &&
-                e.name === 'NotFoundError' &&
-                e.message === 'No device selected.'
-            ) {
-                return;
-            }
-            throw e;
-        }
-    }
-
-    /** Simulate all printers being disconnected and reconnected. */
-    public async reconnectAllPrinters() {
-        this.devices = [];
-        await Promise.all(this._printers.map(async (p) => await p.dispose()));
-        this._printers = [];
-
-        const devices = await navigator.usb.getDevices();
-        await Promise.all(
-            devices.map(async (device) => await this.handleConnectPrinter({ device }))
-        );
-    }
-
-    /** Handler for printer connection events. */
-    public async handleConnectPrinter({ device }): Promise<void> {
-        // Reconnection events may fire for known printers, exclude them.
-        if (this.devices.includes(device)) {
-            return;
-        }
-        this.devices.push(device);
-        const printer = Printer.fromUSBDevice(device, this.printerCommunicationOptions);
-        this._printers.push(printer);
-
-        // Don't notify that the printer exists until it's ready to exist.
-        await printer.ready;
-
-        const event = new CustomEvent<Printer>('connectedPrinter', { detail: printer });
-        this.dispatchEvent(event);
+  /** Handler for device connection events. */
+  public async handleConnect({ device }: USBConnectionEvent): Promise<void> {
+    // Make sure it's a device this manager cares about.
+    if (!this.isManageableDevice(device)) {
+      // Whatever device this is it isn't one we'd be able to ask the user to
+      // connect to. We shouldn't attempt to talk to it.
+      return;
     }
 
-    /** Handler for printer disconnection events. */
-    public async handleDisconnectPrinter({ device }): Promise<void> {
-        const idx = this.devices.findIndex((i) => i == device);
-        if (idx < 0) {
-            return;
-        }
-        const printer = this._printers[idx];
-        this.devices.splice(idx, 1);
-        this._printers.splice(idx, 1);
-        await printer.dispose();
-
-        const event = new CustomEvent<Printer>('disconnectedPrinter', { detail: printer });
-        this.dispatchEvent(event);
+    // Only handle registration if we aren't already tracking a device
+    let dev = this._devices.get(device)
+    if (dev === undefined) {
+      dev = this.deviceGetter(device, this.deviceCommunicationOptions);
+      this._devices.set(device, dev);
     }
+
+    // Don't notify that the device exists until it's ready to exist.
+    await dev.ready;
+
+    this.sendEvent('connectedDevice', { device: dev });
+  }
+
+  /** Handler for device disconnection events. */
+  public async handleDisconnect({ device }: USBConnectionEvent): Promise<void> {
+    const dev = this._devices.get(device);
+    if (dev === undefined) {
+      return;
+    }
+    this._devices.delete(device);
+    await dev.dispose();
+
+    this.sendEvent('disconnectedDevice', { device: dev });
+  }
+
+  private sendEvent(
+    eventName: keyof IUsbDeviceManagerEventMap<TDevice>,
+    detail: IDeviceEvent<TDevice>
+  ): boolean {
+    return super.dispatchEvent(new CustomEvent<IDeviceEvent<TDevice>>(eventName, { detail }));
+  }
+
+  /** Determine if a given device is allowed to be managed by this manager. */
+  private isManageableDevice(device: USBDevice): boolean {
+    const filters = this.deviceCommunicationOptions.requestOptions.filters;
+    const exclusionFilters = this.deviceCommunicationOptions.requestOptions.exclusionFilters ?? [];
+
+    // Step 1: Look for filters where the device doesn't match.
+    const shouldBeFiltered = filters.map(filter => {
+      return (filter.vendorId   !== undefined && filter.vendorId     !== device.vendorId)
+        || (filter.productId    !== undefined && filter.productId    !== device.productId)
+        || (filter.classCode    !== undefined && filter.classCode    !== device.deviceClass)
+        || (filter.subclassCode !== undefined && filter.subclassCode !== device.deviceSubclass)
+        || (filter.protocolCode !== undefined && filter.protocolCode !== device.deviceProtocol)
+        || (filter.serialNumber !== undefined && filter.serialNumber !== device.serialNumber);
+    });
+    if (shouldBeFiltered.some(r => r === true)) {
+      return false;
+    }
+
+    // Step 2: Look for exclusions where the device does match.
+    const shouldBeExcluded = exclusionFilters.map(filter => {
+      return (filter.vendorId   !== undefined && filter.vendorId     === device.vendorId)
+        || (filter.productId    !== undefined && filter.productId    === device.productId)
+        || (filter.classCode    !== undefined && filter.classCode    === device.deviceClass)
+        || (filter.subclassCode !== undefined && filter.subclassCode === device.deviceSubclass)
+        || (filter.protocolCode !== undefined && filter.protocolCode === device.deviceProtocol)
+        || (filter.serialNumber !== undefined && filter.serialNumber === device.serialNumber);
+    });
+    if (shouldBeExcluded.some(r => r === true)) {
+      return false;
+    }
+
+    return true;
+  }
 }

@@ -1,5 +1,4 @@
-/* eslint-disable prettier/prettier */
-import { Percent } from '../NumericRange.js';
+import type { Percent } from '../NumericRange.js';
 import { WebZlpError } from '../WebZlpError.js';
 
 /** Padding information for a trimmed image. */
@@ -21,7 +20,7 @@ export interface ImageBoundingBox {
 
 /** Settings for converting an image to a GRF. */
 export interface ImageConversionOptions {
-    /** The threshold brightness below which to consider a pixel black. Defaults to 90. */
+    /** The threshold brightness below which to consider a pixel black. Defaults to 70. */
     grayThreshold?: Percent;
     /** Whether to trim whitespace around the image to reduce file size. Trimmed pixels will become padding in the bounding box. */
     trimWhitespace?: boolean;
@@ -261,7 +260,7 @@ export class BitmapGRF {
         //
         // Only supports sRGB as RGBA data.
         // if (imageData.colorSpace !== 'srgb') {
-        //     throw new DocumentValidationError(
+        //     throw new TranspileDocumentError(
         //         'Unknown color space for given imageData. Expected srgb but got ' +
         //             imageData.colorSpace
         //     );
@@ -357,17 +356,17 @@ export class BitmapGRF {
         // https://github.com/metafloor/zpl-image/blob/491f4d6887294d71dcfa859957d43b3be28ce1e5/zpl-image.js
 
         // Convert black from percent to 0..255 value
-        const threshold = (255 * grayThreshold) / 100;
+        const threshold = (255 * (grayThreshold?? 70)) / 100;
 
         // This is where we'd do some dithering, if we implemented anything other than none.
-        if (ditheringMethod != DitheringMethod.none) {
+        if (ditheringMethod !== undefined && ditheringMethod !== DitheringMethod.none) {
             throw new WebZlpError(
                 `Dithering method ${DitheringMethod[ditheringMethod]} is not supported.`
             );
         }
 
         let minx: number, maxx: number, miny: number, maxy: number;
-        if (!trimWhitespace) {
+        if (trimWhitespace !== true) {
             minx = miny = 0;
             maxx = width - 1;
             maxy = height - 1;
