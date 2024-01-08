@@ -28,6 +28,8 @@ export class LabelPrinter implements IDevice {
   get printerOptions() { return this._printerOptions.copy(); }
   /** Gets the model of the printer, detected from the printer's config. */
   get printerModel() { return this._printerOptions.model; }
+  /** Gets the manufacturer of the printer, detected from the printer's config. */
+  get printerManufacturer() { return this._printerOptions.manufacturer; }
   /** Gets the serial number of the printer, detected from the printer's config. */
   get printerSerial() { return this._printerOptions.serialNumber; }
 

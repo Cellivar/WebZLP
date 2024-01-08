@@ -344,7 +344,11 @@ export class EplPrinterCommandSet extends PrinterCommandSet {
 
     // Marshall it into a real data structure as best we can.
     // TODO: Better way to do this?
-    const options = new PrinterOptions(printerInfo.serial, expectedModel, printerInfo.firmware);
+    const options = new PrinterOptions(
+      printerInfo.serial,
+      expectedModel,
+      'EPL', // TODO: Pull dynamically
+      printerInfo.firmware);
 
     const darkPercent = Math.ceil(labelInfo.density * (100 / expectedModel.maxDarkness));
     options.darknessPercent = clampToRange(darkPercent, 0, expectedModel.maxDarkness) as Options.DarknessPercent;
