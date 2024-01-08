@@ -9,6 +9,8 @@ export interface IPrinterFactoryInformation {
   get serialNumber(): string;
   /** The model of the printer. */
   get model(): IPrinterModelInfo;
+  /** The manufacturer of the printer */
+  get manufacturer(): string;
   /** The firmware version information for the printer. */
   get firmware(): string;
   /** The command languages the printer supports. */
@@ -26,6 +28,9 @@ export class PrinterOptions implements IPrinterFactoryInformation, Media.IPrinte
   get model(): IPrinterModelInfo {
     return this._model;
   }
+
+  private _manufacturer: string;
+  get manufacturer() { return this._manufacturer ?? '' }
 
   get labelDpi(): number {
     return this._model.dpi;
@@ -77,17 +82,19 @@ export class PrinterOptions implements IPrinterFactoryInformation, Media.IPrinte
   constructor(
     serialNumber: string,
     model: IPrinterModelInfo,
+    manufacturer: string,
     firmware: string,
     valid = true
   ) {
     this._serialNum = serialNumber;
     this._model = model;
+    this._manufacturer = manufacturer;
     this._firmware = firmware;
     this._valid = valid;
   }
 
   /** Get a default invalid config. */
-  public static readonly invalid = new PrinterOptions('', new UnknownPrinter(), '', false);
+  public static readonly invalid = new PrinterOptions('', new UnknownPrinter(),'', '', false);
 
   private dotToInch(dots?: number) {
     if (dots === undefined || this.model.dpi === undefined) { return 0; }
@@ -95,7 +102,7 @@ export class PrinterOptions implements IPrinterFactoryInformation, Media.IPrinte
   }
 
   public copy(): PrinterOptions {
-    const copy = new PrinterOptions(this.serialNumber, this.model, this.firmware, this.valid);
+    const copy = new PrinterOptions(this.serialNumber, this.model, this.manufacturer, this.firmware, this.valid);
     copy.printOrientation           = this.printOrientation;
     copy.speed                      = this.speed;
     copy.darknessPercent            = this.darknessPercent;

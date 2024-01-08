@@ -225,6 +225,7 @@ export class ZplPrinterCommandSet extends PrinterCommandSet {
     const options = new Options.PrinterOptions(
       serial,
       modelInfo,
+      'Zebra', // TODO: Pull dynamically
       this.getXmlText(doc, 'FIRMWARE-VERSION') ?? ''
     );
 
