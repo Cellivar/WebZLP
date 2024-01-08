@@ -40,7 +40,7 @@
         document.getElementById('loadingIndicator').classList.add('d-none');
 
         // This bit detects if the browser supports WebUSB, displaying a warning if not.
-        if (navigator.usb == null) {
+        if (navigator.usb === undefined) {
             document.getElementById('browserNoWebUsb').classList.remove('d-none');
         }
 
@@ -65,43 +65,45 @@
 
     <!-- Here's some actual demo code. Note that it is typescript, not javascript. -->
     <script type="text/typescript" id="cool_demo_code_to_show_off_the_lib">
-        import {
-            BitmapGRF,
-            DarknessPercent,
-            LabelMediaGapDetectionMode,
-            IDocument,
-            ILabelDocumentBuilder,
-            PrinterUsbManager,
-            PrinterCommunicationOptions,
-            PrintSpeed,
-            Printer,
-            ReadyToPrintDocuments
-        } from 'webzlp';
+        // First import the lib!
+        import * as WebLabel from 'webzlp';
 
         // For this demo we're going to make use of the USB printer manager
         // so it can take care of concerns like the USB connect and disconnect events.
 
-        // Enable debugging, so the dev console can fill up with interesting messages!
-        const debugOpts = new PrinterCommunicationOptions();
-        debugOpts.debug = true;
-        const printerMgr = new PrinterUsbManager(window.navigator, debugOpts);
+        const printerMgr = new WebLabel.UsbDeviceManager<WebLabel.LabelPrinter>(
+            window.navigator.usb,
+            WebLabel.LabelPrinter.fromUSBDevice,
+            {
+              // Enable debugging, so the dev console can fill up with interesting messages!
+              debug: true,
+              requestOptions: {
+                // Limit the USB devices we try to connect to.
+                filters: [
+                  {
+                    vendorId: 0x0A5F // Zebra
+                  }
+                ]
+              }
+            }
+        )
 
         // We'll wire up some basic event listeners to the printer manager.
         // First, a button to prompt a user to add a printer.
-        const addPrinterBtn = document.getElementById('addprinter');
-        addPrinterBtn.addEventListener('click', async () => printerMgr.promptToConnectUsbPrinter());
+        const addPrinterBtn = document.getElementById('addprinter')!;
+        addPrinterBtn.addEventListener('click', async () => printerMgr.promptForNewDevice());
 
         // Next a button to manually refresh all printers, just in case.
-        const refreshPrinterBtn = document.getElementById('refreshPrinters');
-        refreshPrinterBtn.addEventListener('click', async () => printerMgr.reconnectAllPrinters());
+        const refreshPrinterBtn = document.getElementById('refreshPrinters')!;
+        refreshPrinterBtn.addEventListener('click', async () => printerMgr.forceReconnect());
 
         // Next we wire up some events on the PrinterUsbManager itself.
-        printerMgr.addEventListener('connectedPrinter', ({ detail }) => {
-            const printer = detail;
+        printerMgr.addEventListener('connectedDevice', ({ detail }) => {
+            const printer = detail.device;
             console.log('New printer is a', printer.printerModel.model);
-            const config = printer.printerConfig;
+            const config = printer.printerOptions;
             console.log('Printer darkness is', config.darknessPercent, 'percent');
-            console.log('Printer speed is', PrintSpeed[config.speed.printSpeed]);
+            console.log('Printer speed is', WebLabel.PrintSpeed[config.speed.printSpeed]);
             console.log(
                 'Label is',
                 config.labelWidthInches,
@@ -110,14 +112,13 @@
                 'in tall, with a gap of',
                 config.labelGapInches,
                 'in.');
-            console.log('Printer media handling is', LabelMediaGapDetectionMode[config.labelGapDetectMode]);
+            console.log('Printer media handling is', WebLabel.LabelMediaGapDetectionMode[config.labelGapDetectMode]);
         });
 
         // There's also an event that will tell you when a printer disconnects.
-        printerMgr.addEventListener('disconnectedPrinter', ({ detail }) => {
-            const printer = detail;
-            // TODO: Hide appropriate interface.
-            console.log('Lost printer', printer.printerModel.model, 'serial', printer.printerConfig.serialNumber);
+        printerMgr.addEventListener('disconnectedDevice', ({ detail }) => {
+            const printer = detail.device;
+            console.log('Lost printer', printer.printerModel.model, 'serial', printer.printerOptions.serialNumber);
         });
 
         // When the browser first loaded the page any previously connected printers would have caused
@@ -135,33 +136,27 @@
         // The app's logic is wrapped in a class just for ease of reading.
         class BasicLabelDesignerApp {
             constructor(
-                manager: PrinterUsbManager,
-                btnContainer: HTMLElement,
-                labelForm: HTMLElement,
-                labelFormInstructions: HTMLElement,
-                configModal: HTMLElement
+                private manager: WebLabel.UsbDeviceManager<WebLabel.LabelPrinter>,
+                private btnContainer: HTMLElement,
+                private labelForm: HTMLElement,
+                private labelFormInstructions: HTMLElement,
+                private configModal: HTMLElement
             ) {
-                this.manager = manager;
-                this.btnContainer = btnContainer;
-                this.labelForm = labelForm;
-                this.labelFormInstructions = labelFormInstructions;
-                this.configModal = configModal;
-
                 // Based on the containers, map the various listeners.
                 this.configModalHandle = new bootstrap.Modal(this.configModal);
                 this.configModal
-                    .querySelector('form')
+                    .querySelector('form')!
                     .addEventListener('submit', this.updatePrinterConfig.bind(this));
                 this.labelForm.addEventListener('blur', this.renderTextForm.bind(this));
                 this.labelForm.addEventListener('keyup', this.renderTextForm.bind(this));
 
                 // Add a second set of event listeners for printer connect and disconnect to redraw
                 // the printer list when it changes.
-                this.manager.addEventListener('connectedPrinter', ({ detail }) => {
+                this.manager.addEventListener('connectedDevice', () => {
                     this.activePrinterIndex = -1;
                     this.redrawPrinterButtons();
                 });
-                this.manager.addEventListener('disconnectedPrinter', ({ detail }) => {
+                this.manager.addEventListener('disconnectedDevice', () => {
                     this.activePrinterIndex = -1;
                     this.redrawPrinterButtons();
                 });
@@ -190,21 +185,18 @@
             }
 
             // Some storage fields and utility properties
-            private btnContainer: HTMLElement;
-            private labelForm: HTMLElement;
-            private labelFormInstructions: HTMLElement;
-            private configModal: HTMLElement;
             private fontName: string;
-            private manager: PrinterUsbManager;
-            get printers(): readonly Printer[] {
-                return this.manager.printers;
+            private configModalHandle: any;
+
+            get printers(): readonly WebLabel.LabelPrinter[] {
+                return this.manager.devices;
             }
 
             // Track which printer is currently selected for operations
             private _activePrinter = 0;
-            get activePrinter(): Printer {
+            get activePrinter(): WebLabel.LabelPrinter | undefined {
                 return this._activePrinter < 0 || this._activePrinter > this.printers.length
-                    ? null
+                    ? undefined
                     : this.printers[this._activePrinter];
             }
             set activePrinterIndex(printerIdx: number) {
@@ -219,53 +211,54 @@
             }
 
             /** Display the configuration for a printer. */
-            public showConfigModal(printer: Printer, printerIdx: number) {
-                if (printer == null) {
+            public showConfigModal(printer: WebLabel.LabelPrinter, printerIdx: number) {
+                if (printer == undefined) {
                     return;
                 }
-                const config = printer.printerConfig;
+                const config = printer.printerOptions;
 
                 // Translate the available speeds to options to be selected
-                const speedSelect = this.configModal.querySelector('#modalSpeed');
+                const speedSelect = this.configModal.querySelector('#modalSpeed')!;
                 speedSelect.innerHTML = '';
-                const speedTable = printer.printerModel.speedTable as ReadonlyMap<PrintSpeed, number>;
+                const speedTable = printer.printerModel.speedTable as ReadonlyMap<WebLabel.PrintSpeed, number>;
                 for (const [key, val] of speedTable) {
                     // Skip utility values, so long as there's more than the defaults.
                     // Mobile printers *only* support auto, for example.
                     if ((speedTable.size > 3)
-                        && (key == PrintSpeed.ipsAuto
-                            || key == PrintSpeed.ipsPrinterMax
-                            || key == PrintSpeed.ipsPrinterMin)) {
+                        && (key === WebLabel.PrintSpeed.ipsAuto
+                            || key === WebLabel.PrintSpeed.ipsPrinterMax
+                            || key === WebLabel.PrintSpeed.ipsPrinterMin
+                    )) {
                         continue;
                     }
                     const opt = document.createElement('option');
                     opt.value = key;
-                    opt.innerHTML = PrintSpeed[key].substring(3).replaceAll('_', '.') + ' ips';
+                    opt.innerHTML = WebLabel.PrintSpeed[key].substring(3).replaceAll('_', '.') + ' ips';
                     speedSelect.appendChild(opt);
                 }
                 speedSelect.value = config.speed.printSpeed;
 
-                const mediaSelect = this.configModal.querySelector('#modalMediaType');
+                const mediaSelect = this.configModal.querySelector('#modalMediaType')!;
                 switch (config.labelGapDetectMode) {
-                    case LabelMediaGapDetectionMode.continuous:
+                    case WebLabel.LabelMediaGapDetectionMode.continuous:
                         mediaSelect.value = "continuous";
                         break;
                     default:
-                    case LabelMediaGapDetectionMode.webSensing:
+                    case WebLabel.LabelMediaGapDetectionMode.webSensing:
                         mediaSelect.value = "gap";
                         break;
-                    case LabelMediaGapDetectionMode.markSensing:
+                    case WebLabel.LabelMediaGapDetectionMode.markSensing:
                         mediaSelect.value = "mark";
                         break;
                 }
 
-                this.configModal.querySelector('#modalPrinterIndex').value = config.serialNumber;
-                this.configModal.querySelector('#modalPrinterIndexText').textContent = printerIdx;
-                this.configModal.querySelector('#modalLabelWidth').value = config.labelWidthInches;
-                this.configModal.querySelector('#modalLabelHeight').value = config.labelHeightInches;
-                this.configModal.querySelector('#modalDarkness').value = config.darknessPercent;
-                this.configModal.querySelector('#modalLabelOffsetLeft').value = config.labelPrintOriginOffsetDots.left;
-                this.configModal.querySelector('#modalLabelOffsetTop').value = config.labelPrintOriginOffsetDots.top;
+                this.configModal.querySelector('#modalPrinterIndex')!.value = config.serialNumber;
+                this.configModal.querySelector('#modalPrinterIndexText')!.textContent = printerIdx;
+                this.configModal.querySelector('#modalLabelWidth')!.value = config.labelWidthInches;
+                this.configModal.querySelector('#modalLabelHeight')!.value = config.labelHeightInches;
+                this.configModal.querySelector('#modalDarkness')!.value = config.darknessPercent;
+                this.configModal.querySelector('#modalLabelOffsetLeft')!.value = config.labelPrintOriginOffsetDots.left;
+                this.configModal.querySelector('#modalLabelOffsetTop')!.value = config.labelPrintOriginOffsetDots.top;
                 this.configModalHandle.show();
             }
 
@@ -278,33 +271,33 @@
             /** Highlight only the currently selected printer. */
             private redrawPrinterButtonHighlights() {
                 this.printers.forEach((printer, idx) => {
-                    const element = document.getElementById(`printer_${idx}`);
                     const highlight = this._activePrinter == idx ? "var(--bs-blue)" : "transparent";
+                    const element = document.getElementById(`printer_${idx}`)!;
                     element.style.background = `linear-gradient(to right, ${highlight}, ${highlight}, grey, grey)`;
                 });
             }
 
             /** Add a printer's button UI to the list of printers. */
-            private drawPrinterButton(printer: Printer, idx: number) {
+            private drawPrinterButton(printer: WebLabel.LabelPrinter, idx: number) {
                 const highlight = this._activePrinter == idx ? "var(--bs-blue)" : "transparent";
 
                 // Generate a new label printer button for the given printer.
                 const element = document.createElement("div");
                 element.innerHTML = `
-    <li id="printer_${idx}" data-printer-idx="${idx}"
+        <li id="printer_${idx}" data-printer-idx="${idx}"
         class="list-group-item d-flex flex-row justify-content-between sligh-items-start"
         style="background: linear-gradient(to right, ${highlight}, ${highlight}, grey, grey);">
         <div class="col-sm-8">
             <div class="col-sm-12">
-                <span data-serial="${printer.printerConfig.serialNumber}">${printer.printerConfig.serialNumber}</span>
+                <span data-serial="${printer.printerOptions.serialNumber}">${printer.printerOptions.serialNumber}</span>
             </div>
             <div class="col-sm-12">
-                <span>${printer.printerConfig.labelWidthInches}" x ${printer.printerConfig.labelHeightInches}"</span>
+                <span>${printer.printerOptions.labelWidthInches}" x ${printer.printerOptions.labelHeightInches}"</span>
             </div>
         </div>
         <div class="d-flex flex-row justify-content-end">
             <div class="btn-group" role="group" aria-label="Printer button group">
-                <button id="printto_${idx}" class="btn btn-success btn-lg" data-label-width="${printer.labelWidth}" data-label-height="${printer.labelHeight}" data-printer-idx="${idx}">🖨</button>
+                <button id="printto_${idx}" class="btn btn-success btn-lg" data-label-width="${printer.printerOptions.labelWidthInches}" data-label-height="${printer.printerOptions.labelHeightInches}" data-printer-idx="${idx}">🖨</button>
                     <button class="btn btn-success dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
                         <span class="visually-hidden">Settings</span>
                     </button>
@@ -325,23 +318,23 @@
                 </div>
             </div>
         </div>
-    </li>`;
+        </li>`;
                 // And slap it into the button container.
                 this.btnContainer.appendChild(element);
 
                 // Then wire up the button events so they work.
-                document.getElementById(`printto_${idx}`)
+                document.getElementById(`printto_${idx}`)!
                     .addEventListener('click', async (e) => {
                         e.preventDefault();
-                        const printerIdx = e.currentTarget.dataset.printerIdx as number;
+                        const printerIdx = (e.currentTarget as HTMLAnchorElement).dataset.printerIdx as unknown as number;
                         const printer = this.printers[printerIdx];
                         const doc = this.addCanvasImageToLabelDoc(printer.getLabelDocument());
                         await printer.sendDocument(doc);
                     });
-                document.getElementById(`printer_${idx}`)
+                document.getElementById(`printer_${idx}`)!
                     .addEventListener('click', async (e) => {
                         e.preventDefault();
-                        const printerIdx = e.currentTarget.dataset.printerIdx as number;
+                        const printerIdx = (e.currentTarget as HTMLAnchorElement).dataset.printerIdx as unknown as number;
                         if (this._activePrinter == printerIdx) {
                             // Don't refresh anything if we already have this printer selected..
                             return;
@@ -350,35 +343,35 @@
                         this.redrawPrinterButtonHighlights();
                         this.redrawTextCanvas();
                     });
-                document.getElementById(`printtest_${idx}`)
+                document.getElementById(`printtest_${idx}`)!
                     .addEventListener('click', async (e) => {
                         e.preventDefault();
-                        const printerIdx = e.currentTarget.dataset.printerIdx as number;
+                        const printerIdx = (e.currentTarget as HTMLAnchorElement).dataset.printerIdx as unknown as number;
                         const printer = this.printers[printerIdx];
-                        const doc = ReadyToPrintDocuments.printTestLabelDocument(
-                            printer.printerConfig.labelWidthDots);
+                        const doc = WebLabel.ReadyToPrintDocuments.printTestLabelDocument(
+                            printer.printerOptions.labelWidthDots);
                         await printer.sendDocument(doc);
                     });
-                document.getElementById(`feedlabel_${idx}`)
+                document.getElementById(`feedlabel_${idx}`)!
                     .addEventListener('click', async (e) => {
                         e.preventDefault();
-                        const printerIdx = e.currentTarget.dataset.printerIdx as number;
+                        const printerIdx = (e.currentTarget as HTMLAnchorElement).dataset.printerIdx as unknown as number;
                         const printer = this.printers[printerIdx];
-                        const doc = ReadyToPrintDocuments.feedLabelDoc;
+                        const doc = WebLabel.ReadyToPrintDocuments.feedLabelDocument;
                         await printer.sendDocument(doc);
                     });
-                document.getElementById(`printconfig_${idx}`)
+                document.getElementById(`printconfig_${idx}`)!
                     .addEventListener('click', async (e) => {
                         e.preventDefault();
-                        const printerIdx = e.currentTarget.dataset.printerIdx as number;
+                        const printerIdx = (e.currentTarget as HTMLAnchorElement).dataset.printerIdx as unknown as number;
                         const printer = this.printers[printerIdx];
-                        const doc = ReadyToPrintDocuments.printerPrintConfigDoc;
+                        const doc = WebLabel.ReadyToPrintDocuments.printConfigDocument;
                         await printer.sendDocument(doc);
                     });
-                document.getElementById(`configprinter_${idx}`)
+                document.getElementById(`configprinter_${idx}`)!
                     .addEventListener('click', async (e) => {
                         e.preventDefault();
-                        const printerIdx = e.currentTarget.dataset.printerIdx as number;
+                        const printerIdx = (e.currentTarget as HTMLAnchorElement).dataset.printerIdx as unknown as number;
                         const printer = this.printers[printerIdx];
                         this.showConfigModal(printer, printerIdx);
                     });
@@ -387,7 +380,7 @@
             /** Redraw the text canvas size according to the printer. */
             private redrawTextCanvas() {
                 const printer = this.activePrinter;
-                if (printer == null) {
+                if (printer == undefined) {
                     this.labelForm.classList.add('d-none');
                     this.labelFormInstructions.classList.remove('d-none');
                     return;
@@ -399,25 +392,25 @@
                 // Resize the canvas to match the label size.
                 const canvas = this.labelForm.querySelector("#labelCanvas") as HTMLCanvasElement;
                 // Add a small margin as printer alignment is not exact.
-                canvas.width = printer.printerConfig.labelWidthDots - 2;
-                canvas.height = printer.printerConfig.labelHeightDots - 2;
+                canvas.width = printer.printerOptions.labelWidthDots - 2;
+                canvas.height = printer.printerOptions.labelHeightDots - 2;
 
                 const textarea = this.labelForm.querySelector('#labelFormText') as HTMLTextAreaElement;
                 textarea.value = "Enter your label text here!";
-                this.renderTextForm(null);
+                this.renderTextForm();
             }
 
             /** Render the text form to the canvas */
-            private renderTextForm(e: KeyboardEvent) {
+            private renderTextForm() {
                 const printer = this.activePrinter;
-                if (printer == null) {
+                if (printer == undefined) {
                     return;
                 }
 
                 const textarea = this.labelForm.querySelector('#labelFormText') as HTMLTextAreaElement;
                 const fontsizer = this.labelForm.querySelector('#previewFontSize') as HTMLInputElement;
                 const canvas = this.labelForm.querySelector("#labelCanvas") as HTMLCanvasElement;
-                const pageContext = canvas.getContext('2d');
+                const pageContext = canvas.getContext('2d')!;
                 pageContext.clearRect(0, 0, canvas.width, canvas.height);
 
                 const fontSize = Math.trunc(parseFloat(fontsizer.value));
@@ -429,7 +422,7 @@
                 // what the label will end up looking like.
 
                 // A more complex app could do this more gracefully!
-                const offscreenContext = new OffscreenCanvas(canvas.width, canvas.height).getContext('2d');
+                const offscreenContext = new OffscreenCanvas(canvas.width, canvas.height).getContext('2d')!;
                 offscreenContext.font = `${fontSize}pt ${this.fontName}`;
                 offscreenContext.fillStyle = "#000000";
 
@@ -440,15 +433,15 @@
 
                 // Now into the monochrome bitmap.
                 const offscreenImg = offscreenContext.getImageData(0, 0, canvas.width, canvas.height);
-                const monoImg = BitmapGRF.fromCanvasImageData(offscreenImg, { trimWhitespace: false });
+                const monoImg = WebLabel.BitmapGRF.fromCanvasImageData(offscreenImg, { trimWhitespace: false });
                 // And finally back onto the page.
                 pageContext.putImageData(monoImg.toImageData(), 0, 0);
             }
 
             /** Render the canvas to a document for printing */
-            private addCanvasImageToLabelDoc(builder: ILabelDocumentBuilder): IDocument {
+            private addCanvasImageToLabelDoc(builder: WebLabel.ILabelDocumentBuilder): WebLabel.IDocument {
                 const canvas = this.labelForm.querySelector("#labelCanvas") as HTMLCanvasElement;
-                const imgData = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height);
+                const imgData = canvas.getContext('2d')!.getImageData(0, 0, canvas.width, canvas.height);
 
                 // One of the benefits of this library is being able to render images to a canvas element
                 // and sending that canvas directly to a label. This allows your webpage to generate complex
@@ -464,11 +457,11 @@
                 e.preventDefault();
 
                 // Figure out the right printer
-                const formElement = this.configModal.querySelector('form');
+                const formElement = this.configModal.querySelector('form')!;
                 const form = formElement.elements as HTMLFormControlsCollection;
-                const printerIdx = parseInt(formElement.querySelector('#modalPrinterIndexText').innerText);
+                const printerIdx = parseInt(formElement.querySelector('#modalPrinterIndexText')!.innerText);
                 const printer = this.printers[printerIdx];
-                if (printer == null) {
+                if (printer == undefined) {
                     return;
                 }
 
@@ -476,17 +469,13 @@
                 form.modalCancel.setAttribute("disabled", "");
 
                 // Pull the values out of the form.
-                const darkness = parseInt(form.modalDarkness.value) as DarknessPercent;
-                const rawSpeed = parseInt(form.modalSpeed.value) as PrintSpeed;
-                const labelWidthInches = parseFloat(form.modalLabelWidth.value);
+                const darkness          = parseInt(form.modalDarkness.value) as DarknessPercent;
+                const rawSpeed          = parseInt(form.modalSpeed.value) as PrintSpeed;
+                const labelWidthInches  = parseFloat(form.modalLabelWidth.value);
                 const labelHeightInches = parseFloat(form.modalLabelHeight.value);
-                const autosense = form.modalWithAutosense.checked;
-                const offsetLeft = parseInt(form.modalLabelOffsetLeft.value);
-                console.log("OFFSET LEFT", offsetLeft);
-                const offsetTop = parseInt(form.modalLabelOffsetTop.value);
-                console.log("OFFSET TOP", offsetTop);
-
-                let mediaType: LabelMediaGapDetectionMode;
+                const autosense         = form.modalWithAutosense.checked;
+                const offsetLeft        = parseInt(form.modalLabelOffsetLeft.value);
+                const offsetTop =         parseInt(form.modalLabelOffsetTop.value);
 
                 // Construct the config document with the values from the form
                 const configDoc = printer.getConfigDocument();
@@ -526,15 +515,24 @@
             }
         }
 
-        const btnContainer = document.getElementById("printerlist");
-        const labelForm = document.getElementById("labelForm");
-        const labelFormInstructions = document.getElementById("labelFormInstructions");
-        const configModal = document.getElementById("printerOptionModal");
+        const btnContainer          = document.getElementById("printerlist")!;
+        const labelForm             = document.getElementById("labelForm")!;
+        const labelFormInstructions = document.getElementById("labelFormInstructions")!;
+        const configModal           = document.getElementById("printerOptionModal")!;
 
         const app = new BasicLabelDesignerApp(printerMgr, btnContainer, labelForm, labelFormInstructions, configModal);
-        await app.init();
-        window.printer_app = app;
-        await printerMgr.reconnectAllPrinters();
+        await app.init();BasicLabelDesignerApp
+
+
+        // Make the TypeScript type system happy by adding a property to the Window object.
+        declare global {
+            interface Window { label_app: BasicLabelDesignerApp }
+        }
+        // Now we can access our printer in the dev console if we want to mess with it!
+        window.label_app = app;
+
+
+        await printerMgr.forceReconnect();
 
         // We're done here. Bring in the dancing lobsters.
     </script>
