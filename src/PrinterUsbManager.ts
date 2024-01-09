@@ -77,6 +77,19 @@ export class UsbDeviceManager<TDevice extends IDevice> extends EventTarget {
     super.addEventListener(type, callback, options);
   }
 
+  public removeEventListener<T extends keyof IUsbDeviceManagerEventMap<TDevice>>(
+    type: T,
+    listener: EventListenerObject | null | ((this: UsbDeviceManager<TDevice>, ev: IUsbDeviceManagerEventMap<TDevice>[T]) => void),
+    options?: boolean | AddEventListenerOptions
+  ): void;
+  public removeEventListener(
+    type: string,
+    callback: EventListenerOrEventListenerObject | null,
+    options?: boolean | EventListenerOptions | undefined
+  ): void {
+      super.removeEventListener(type, callback, options);
+  }
+
   /** Ask the user to connect to a device, using the filter from deviceCommunicationOptions. */
   public async promptForNewDevice(): Promise<boolean> {
     try {
