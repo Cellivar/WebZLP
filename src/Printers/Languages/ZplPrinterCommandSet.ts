@@ -370,7 +370,7 @@ export class ZplPrinterCommandSet extends PrinterCommandSet {
     outDoc: TranspiledDocumentState
   ): Uint8Array {
     // ZPL treats colors as print element enable. 1 means black, 0 means white.
-    const bitmap = cmd.bitmap;
+    const bitmap = cmd.bitmap.toInvertedGRF();
     // TODO: support image conversion options.
     //const imageOptions = cmd.imageConversionOptions;
 
