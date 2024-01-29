@@ -17,7 +17,8 @@
     <script type="importmap">
         {
           "imports": {
-            "webzlp": "../src/index.ts"
+            "webzlp": "../src/index.ts",
+            "web-device-mux": "https://cellivar.github.io/WebDeviceMux/src/index.ts"
           }
         }
     </script>
@@ -66,12 +67,15 @@
     <!-- Here's some actual demo code. Note that it is typescript, not javascript. -->
     <script type="text/typescript" id="cool_demo_code_to_show_off_the_lib">
         // First import the lib!
+        // This is our lib in this repo here
         import * as WebLabel from 'webzlp';
+        // This is a utility lib we'll be using that makes it easier to use devices.
+        import * as WebDevices from 'web-device-mux';
 
         // For this demo we're going to make use of the USB printer manager
         // so it can take care of concerns like the USB connect and disconnect events.
 
-        const printerMgr = new WebLabel.UsbDeviceManager<WebLabel.LabelPrinter>(
+        const printerMgr = new WebDevices.UsbDeviceManager<WebLabel.LabelPrinter>(
             window.navigator.usb,
             WebLabel.LabelPrinter.fromUSBDevice,
             {
@@ -97,7 +101,7 @@
         const refreshPrinterBtn = document.getElementById('refreshPrinters')!;
         refreshPrinterBtn.addEventListener('click', async () => printerMgr.forceReconnect());
 
-        // Next we wire up some events on the PrinterUsbManager itself.
+        // Next we wire up some events on the UsbDeviceManager itself.
         printerMgr.addEventListener('connectedDevice', ({ detail }) => {
             const printer = detail.device;
             console.log('New printer is a', printer.printerModel.model);
@@ -136,7 +140,7 @@
         // The app's logic is wrapped in a class just for ease of reading.
         class BasicLabelDesignerApp {
             constructor(
-                private manager: WebLabel.UsbDeviceManager<WebLabel.LabelPrinter>,
+                private manager: WebDevices.UsbDeviceManager<WebLabel.LabelPrinter>,
                 private btnContainer: HTMLElement,
                 private labelForm: HTMLElement,
                 private labelFormInstructions: HTMLElement,

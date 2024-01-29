@@ -7,20 +7,19 @@ import {
 } from '../Documents/LabelDocument.js';
 import { ReadyToPrintDocuments } from '../Documents/ReadyToPrintDocuments.js';
 import { WebZlpError } from '../WebZlpError.js';
-import { UsbDeviceChannel } from './Communication/UsbPrinterDeviceChannel.js';
 import { PrinterCommandLanguage, PrinterOptions } from './Configuration/PrinterOptions.js';
 import { EplPrinterCommandSet } from './Languages/EplPrinterCommandSet.js';
 import { PrinterCommandSet } from './Languages/PrinterCommandSet.js';
 import { ZplPrinterCommandSet } from './Languages/ZplPrinterCommandSet.js';
 import { PrinterModelDb } from './Models/PrinterModelDb.js';
-import { DeviceNotReadyError, type IDeviceChannel, type IDeviceCommunicationOptions, DeviceCommunicationError, type IDeviceInformation, type IDevice } from './Communication/DeviceCommunication.js';
+import { DeviceNotReadyError, type IDeviceChannel, type IDeviceCommunicationOptions, DeviceCommunicationError, type IDeviceInformation, type IDevice, UsbDeviceChannel } from 'web-device-mux';
 
 /**
  * A class for working with a label printer.
  */
 export class LabelPrinter implements IDevice {
   // Printer communication handles
-  private _channel: IDeviceChannel<Uint8Array, string>;
+  private _channel: IDeviceChannel<Uint8Array, Uint8Array>;
   private _commandSet?: PrinterCommandSet;
 
   private _printerOptions: PrinterOptions;
@@ -59,7 +58,7 @@ export class LabelPrinter implements IDevice {
   }
 
   constructor(
-    channel: IDeviceChannel<Uint8Array, string>,
+    channel: IDeviceChannel<Uint8Array, Uint8Array>,
     deviceCommunicationOptions: IDeviceCommunicationOptions = { debug: false },
     printerOptions?: PrinterOptions,
   ) {
