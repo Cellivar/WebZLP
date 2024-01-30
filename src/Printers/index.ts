@@ -1,6 +1,4 @@
-export * from './Communication/DeviceCommunication.js'
 export * from './Communication/LineBreakTransformer.js'
-export * from './Communication/UsbPrinterDeviceChannel.js'
 export * from './Configuration/MediaOptions.js'
 export * from './Configuration/PrinterOptions.js'
 export * from './Configuration/SerialPortSettings.js'
