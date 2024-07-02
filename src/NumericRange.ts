@@ -6,6 +6,10 @@ export type NumericRange<F extends number, T extends number> = Exclude<Enumerate
 
 export type Percent = NumericRange<0, 101>;
 
+export function range(start: number, stop: number, step = 1) {
+  return Array.from({ length: (stop - start) / step + 1 }, (_, i) => start + i * step);
+}
+
 /** Clamp a number to a given range of values. */
 export function clampToRange(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
@@ -29,6 +33,13 @@ export function numberInRange(
   return val;
 }
 
+/** Create an array of a value with count number of items. */
 export function repeat<T>(val: T, count: number) {
   return new Array(count).fill(val) as T[];
+}
+
+/** Round a raw value to the nearest step. */
+export function  roundToNearestStep(value: number, step: number): number {
+  const inverse = 1.0 / step;
+  return Math.round(value * inverse) / inverse;
 }

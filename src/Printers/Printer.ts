@@ -7,24 +7,56 @@ import {
 } from '../Documents/LabelDocument.js';
 import { ReadyToPrintDocuments } from '../Documents/ReadyToPrintDocuments.js';
 import { WebZlpError } from '../WebZlpError.js';
-import { PrinterCommandLanguage, PrinterOptions } from './Configuration/PrinterOptions.js';
+import { PrinterOptions } from './Configuration/PrinterOptions.js';
 import { EplPrinterCommandSet } from './Languages/EplPrinterCommandSet.js';
 import { PrinterCommandSet } from './Languages/PrinterCommandSet.js';
-import { ZplPrinterCommandSet } from './Languages/ZplPrinterCommandSet.js';
+import { ZplPrinterCommandSet } from './Languages/Zpl/index.js';
 import { PrinterModelDb } from './Models/PrinterModelDb.js';
-import { DeviceNotReadyError, type IDeviceChannel, type IDeviceCommunicationOptions, DeviceCommunicationError, type IDeviceInformation, type IDevice, UsbDeviceChannel } from 'web-device-mux';
+import { DeviceNotReadyError, type IDeviceChannel, type IDeviceCommunicationOptions, DeviceCommunicationError, type IDeviceInformation, type IDevice, UsbDeviceChannel, InputMessageListener, type IHandlerResponse } from 'web-device-mux';
+import { deviceInfoToOptionsUpdate, type IErrorMessage, type IStatusMessage } from './Messages.js';
+import type { IPrinterCommand } from '../Documents/index.js';
 
-/**
- * A class for working with a label printer.
- */
-export class LabelPrinter implements IDevice {
+export interface LabelPrinterEventMap {
+  //disconnectedDevice: CustomEvent<string>;
+  reportedStatus: CustomEvent<IStatusMessage>;
+  reportedError: CustomEvent<IErrorMessage>;
+}
+
+type AwaitedCommand = {
+  cmd: IPrinterCommand,
+  promise: Promise<boolean>,
+  resolve?: (value: boolean) => void,
+  reject?: (reason?: unknown) => void,
+}
+
+function promiseWithTimeout<T>(
+  promise: Promise<T>,
+  ms: number,
+  timeoutError = new Error('Promise timed out')
+): Promise<T> {
+  // create a promise that rejects in milliseconds
+  const timeout = new Promise<never>((_, reject) => {
+    setTimeout(() => {
+      reject(timeoutError);
+    }, ms);
+  });
+
+  // returns a race between timeout and the passed promise
+  return Promise.race<T>([promise, timeout]);
+}
+
+/** A class for working with a label printer. */
+export class LabelPrinter extends EventTarget implements IDevice {
   // Printer communication handles
   private _channel: IDeviceChannel<Uint8Array, Uint8Array>;
+  private _streamListener?: InputMessageListener<Uint8Array>;
   private _commandSet?: PrinterCommandSet;
+
+  private _awaitedCommand?: AwaitedCommand;
 
   private _printerOptions: PrinterOptions;
   /** Gets the read-only copy of the current config of the printer. To modify use getConfigDocument. */
-  get printerOptions() { return this._printerOptions.copy(); }
+  get printerOptions() { return this._printerOptions; }
   /** Gets the model of the printer, detected from the printer's config. */
   get printerModel() { return this._printerOptions.model; }
   /** Gets the manufacturer of the printer, detected from the printer's config. */
@@ -62,10 +94,45 @@ export class LabelPrinter implements IDevice {
     deviceCommunicationOptions: IDeviceCommunicationOptions = { debug: false },
     printerOptions?: PrinterOptions,
   ) {
+    super();
     this._channel = channel;
     this._deviceCommOpts = deviceCommunicationOptions;
-    this._printerOptions = printerOptions ?? PrinterOptions.invalid;
+    this._printerOptions = printerOptions ?? new PrinterOptions();
     this._ready = this.setup();
+
+    // Once the printer is set up we should immediately query the printer config.
+    this._ready.then((ready) => {
+      if (!ready) {
+        return;
+      }
+      return this.sendDocument(ReadyToPrintDocuments.configDocument);
+    });
+  }
+
+  public addEventListener<T extends keyof LabelPrinterEventMap>(
+    type: T,
+    listener: EventListenerObject | null | ((this: LabelPrinter, ev: LabelPrinterEventMap[T]) => void),
+    options?: boolean | AddEventListenerOptions
+  ): void;
+  public addEventListener(
+    type: string,
+    callback: EventListenerOrEventListenerObject | null,
+    options?: boolean | AddEventListenerOptions
+  ): void {
+    super.addEventListener(type, callback, options);
+  }
+
+  public removeEventListener<T extends keyof LabelPrinterEventMap>(
+    type: T,
+    listener: EventListenerObject | null | ((this: LabelPrinter, ev: LabelPrinterEventMap[T]) => void),
+    options?: boolean | AddEventListenerOptions
+  ): void;
+  public removeEventListener(
+    type: string,
+    callback: EventListenerOrEventListenerObject | null,
+    options?: boolean | EventListenerOptions | undefined
+  ): void {
+      super.removeEventListener(type, callback, options);
   }
 
   private async setup() {
@@ -75,8 +142,18 @@ export class LabelPrinter implements IDevice {
       return false;
     }
 
+    this._printerOptions.update(deviceInfoToOptionsUpdate(this._channel.getDeviceInfo()));
+
     await this.refreshPrinterConfiguration(this._channel.getDeviceInfo());
     return true;
+  }
+
+  /** Close the connection to this printer, preventing future communication. */
+  public async dispose() {
+    this._disposed = true;
+    this._ready = Promise.resolve(false);
+    this._streamListener?.dispose();
+    await this._channel.dispose();
   }
 
   /** Gets a document for configuring this printer. */
@@ -112,13 +189,6 @@ export class LabelPrinter implements IDevice {
     }
 
     await this._channel.sendCommands(compiled.commandBuffer);
-  }
-
-  /** Close the connection to this printer, preventing future communication. */
-  public async dispose() {
-    this._disposed = true;
-    this._ready = Promise.resolve(false);
-    await this._channel.dispose();
   }
 
   /** Refresh the printer information cache directly from the printer. */
@@ -212,9 +282,116 @@ export class LabelPrinter implements IDevice {
     return config;
   }
 
+  private sendEvent(
+    eventName: keyof LabelPrinterEventMap,
+    detail: IErrorMessage | IStatusMessage
+  ): boolean {
+    return super.dispatchEvent(new CustomEvent<IErrorMessage | IStatusMessage>(eventName, { detail }));
+  }
+
+  private async sendTransactionAndWait(
+    transaction: Transaction<Uint8Array>
+  ): Promise<boolean> {
+    this.logIfDebug('RAW TRANSACTION: ', asciiToDisplay(...transaction.commands));
+
+    if (transaction.awaitedCommand !== undefined) {
+      this.logIfDebug(`Transaction will await a response to '${transaction.awaitedCommand.toDisplay()}'.`);
+      let awaitResolve;
+      let awaitReject;
+      const awaiter: AwaitedCommand = {
+        cmd: transaction.awaitedCommand,
+        promise: new Promise<boolean>((resolve, reject) => {
+          awaitResolve = resolve;
+          awaitReject = reject;
+        })
+      };
+      awaiter.reject = awaitReject;
+      awaiter.resolve = awaitResolve;
+      this._awaitedCommand = awaiter;
+    }
+
+    await promiseWithTimeout(
+      this._channel.sendCommands(transaction.commands),
+      5000,
+      new DeviceCommunicationError(`Timed out sending commands to printer, is there a problem with the printer?`)
+    );
+
+    // TODO: timeout!
+    await this._awaitedCommand?.promise;
+    if (this._awaitedCommand) {
+      this.logIfDebug(`Awaiting response to command '${this._awaitedCommand.cmd.name}'...`);
+      await promiseWithTimeout(
+        this._awaitedCommand.promise,
+        5000,
+        new DeviceCommunicationError(`Timed out waiting for '${this._awaitedCommand.cmd.name}' response.`)
+      );
+      this.logIfDebug(`Got a response to command '${this._awaitedCommand.cmd.name}'!`);
+    }
+    return true;
+  }
+
+  private async parseMessage(input: Uint8Array[]): Promise<IHandlerResponse<Uint8Array>> {
+    if (this._commandSet === undefined) { return { remainderData: input } }
+    let msg = this._commandSet.combineCommands(...input);
+    if (msg.length === 0) { return {}; }
+    let incomplete = false;
+
+    do {
+      this.logIfDebug(`Parsing ${msg.length} long message from printer: `, asciiToDisplay(...msg));
+      if (this._awaitedCommand !== undefined) {
+        this.logIfDebug(`Checking if the messages is a response to '${this._awaitedCommand.cmd.name}'.`);
+      } else {
+        this.logIfDebug(`Not waiting a command. This message was a surprise, to be sure, but a welcome one.`);
+      }
+
+      const parseResult = this._commandSet.parseMessage(msg, this._awaitedCommand?.cmd);
+      this.logIfDebug(`Raw parse result: `, parseResult);
+
+      msg = parseResult.remainder;
+      incomplete = parseResult.messageIncomplete;
+
+      if (parseResult.messageMatchedExpectedCommand) {
+        this.logIfDebug('Received message was expected, marking awaited response resolved.');
+        if (this._awaitedCommand?.resolve === undefined) {
+          console.error('Resolve callback was undefined for awaited command, this may cause a deadlock! This is a bug in the library.');
+        } else {
+          this._awaitedCommand.resolve(true);
+        }
+      }
+
+      parseResult.messages.forEach(m => {
+        switch (m.messageType) {
+          case 'ErrorMessage':
+            this.sendEvent('reportedError', m);
+            this.logIfDebug('Error message sent.', m);
+            break;
+          case 'StatusMessage':
+            this.sendEvent('reportedStatus', m);
+            this.logIfDebug('Status message sent.', m);
+            break;
+          case 'SettingUpdateMessage':
+            this._printerOptions.update(m);
+            this.logIfDebug('Settings update message applied.', m);
+            break;
+        }
+      });
+
+    } while (incomplete === false && msg.length > 0)
+
+    this.logIfDebug(`Returning unused ${msg.length} bytes.`);
+    const remainderData = msg.length === 0 ? [] : [msg];
+    return { remainderData }
+  }
+
   private logIfDebug(...obj: unknown[]) {
     if (this._deviceCommOpts.debug) {
       console.debug(...obj);
+    }
+  }
+
+  private logResultIfDebug(fn: () => string) {
+    if (this._deviceCommOpts.debug) {
+      console.debug(fn());
     }
   }
 }

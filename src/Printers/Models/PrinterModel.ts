@@ -1,5 +1,6 @@
 import { WebZlpError } from '../../WebZlpError.js';
-import { PrinterCommandLanguage, PrintSpeed } from '../Configuration/PrinterOptions.js';
+import { PrintSpeed } from '../Configuration/PrinterOptions.js';
+import { PrinterCommandLanguage } from '../Languages/index.js';
 
 export enum PrinterModel {
   unknown = 'unknown',
@@ -16,40 +17,8 @@ export enum PrinterModel {
   tlp2844z = 'TPL2844Z'
 }
 
-export interface IPrinterModelInfo {
-  /** Gets the command language for this printer. */
-  get commandLanguage(): PrinterCommandLanguage;
-
-  /** Gets the DPI of this printer. */
-  get dpi(): number;
-
-  /** Gets the model of this printer. */
-  get model(): PrinterModel | string;
-
-  /** Gets the map of speeds this printer supports. */
-  get speedTable(): ReadonlyMap<PrintSpeed, number>;
-
-  /** Gets the max value of the darkness, to map to a percent. */
-  get maxDarkness(): number;
-
-  /** Determine if a given speed will work with this model. */
-  isSpeedValid(speed: PrintSpeed): boolean;
-
-  /** Get the raw value this model understands as the speed. */
-  getSpeedValue(speed: PrintSpeed): number;
-
-  /** Get a print speed for this printer. Defaults to minimum. */
-  fromRawSpeed(rawSpeed?: number): PrintSpeed;
-}
-
-export abstract class BasePrinterInfo implements IPrinterModelInfo {
-  /** Gets the command language for this printer. */
-  abstract get commandLanguage(): PrinterCommandLanguage;
-  /** Gets the DPI of this printer. */
-  abstract get dpi(): number;
-  /** Gets the model of this printer. */
-  abstract get model(): PrinterModel | string;
-
+/** Class for representing a printer's relationship between speeds and raw values */
+export class SpeedTable {
   // Speed is determined by what the printer supports
   // EPL printers have a table that determines their setting and it needs to be hardcoded.
   // ZPL printers follow this pattern:
@@ -73,24 +42,46 @@ export abstract class BasePrinterInfo implements IPrinterModelInfo {
   // Every speed table should also have entries for ipsPrinterMin, ipsPrinterMax, and auto.
   // These should be duplicate entries of real values in the speed table so that
   // we have sane defaults for commands to default to.
-  /** Gets the map of speeds this printer supports. */
-  abstract get speedTable(): ReadonlyMap<PrintSpeed, number>;
-  /** Gets the max value of the darkness, to map to a percent. */
-  abstract get maxDarkness(): number;
+  constructor(
+    private readonly speedTable: Map<PrintSpeed, number> = new Map<PrintSpeed, number>()
+  ) {}
+
+  // My kingdom for extension methods on enums in a reasonable manner.
+  /** Look up a speed enum value from a given whole number */
+  public static getSpeedFromWholeNumber(speed: number): PrintSpeed {
+    switch (speed) {
+      default: return PrintSpeed.unknown;
+      case 0:  return PrintSpeed.ipsAuto;
+      case 1:  return PrintSpeed.ips1;
+      case 2:  return PrintSpeed.ips2;
+      case 3:  return PrintSpeed.ips3;
+      case 4:  return PrintSpeed.ips4;
+      case 5:  return PrintSpeed.ips5;
+      case 6:  return PrintSpeed.ips6;
+      case 7:  return PrintSpeed.ips7;
+      case 8:  return PrintSpeed.ips8;
+      case 9:  return PrintSpeed.ips9;
+      case 10: return PrintSpeed.ips10;
+      case 11: return PrintSpeed.ips11;
+      case 12: return PrintSpeed.ips12;
+      case 13: return PrintSpeed.ips13;
+      case 14: return PrintSpeed.ips14;
+    }
+  }
 
   /** Determine if a given speed will work with this model. */
-  public isSpeedValid(speed: PrintSpeed): boolean {
+  isValid(speed: PrintSpeed): boolean {
     return this.speedTable.has(speed);
   }
 
-  /** Get the raw value this model understands as the speed. */
-  public getSpeedValue(speed: PrintSpeed): number {
+  /** Get a raw value to send to the printer for a speed. */
+  toRawSpeed(speed: PrintSpeed): number {
     const val = this.speedTable.get(speed) ?? this.speedTable.get(PrintSpeed.ipsAuto);
     return val ?? 0;
   }
 
-  /** Get a print speed for this printer for  */
-  public fromRawSpeed(rawSpeed: number): PrintSpeed {
+  /** Get a speed value from the raw value sent by the printer. Defaults to minimum if parse fails. */
+  fromRawSpeed(rawSpeed?: number): PrintSpeed {
     for (const [key, val] of this.speedTable) {
       if (
         val === rawSpeed &&
@@ -105,6 +96,61 @@ export abstract class BasePrinterInfo implements IPrinterModelInfo {
   }
 }
 
+/** A detail entry listing a printer's hardware capabilities. */
+export interface IPrinterModelDetails {
+  /** The model name of the printer, as reported via the USB descriptor. */
+  readonly model: string;
+
+  /** The command languages the printer supports. */
+  readonly commandLanguages: PrinterCommandLanguage
+
+  /** The DPI of the printer. */
+  readonly dpi: number;
+
+  /** The speed table of supported speed. */
+  readonly speedTable: SpeedTable;
+
+  /** The maximum value for the darkness value. */
+  readonly maxDarkness: number;
+
+  /** The maximum print width, in dots. */
+  readonly maxMediaWidthDots: number;
+
+  /** The maximum print length, in dots. */
+  readonly maxMediaLengthDots: number;
+}
+
+export interface IPrinterModelInfo {
+  /** Gets the command language for this printer. */
+  get commandLanguage(): PrinterCommandLanguage;
+
+  /** Gets the DPI of this printer. */
+  get dpi(): number;
+
+  /** Gets the model of this printer. */
+  get model():  string;
+
+  /** Gets the map of speeds this printer supports. */
+  get speedTable(): SpeedTable;
+
+  /** Gets the max value of the darkness, to map to a percent. */
+  get maxDarkness(): number;
+}
+
+export abstract class BasePrinterInfo implements IPrinterModelInfo {
+  /** Gets the command language for this printer. */
+  abstract get commandLanguage(): PrinterCommandLanguage;
+  /** Gets the DPI of this printer. */
+  abstract get dpi(): number;
+  /** Gets the model of this printer. */
+  abstract get model():  string;
+
+  /** Gets the map of speeds this printer supports. */
+  abstract get speedTable(): SpeedTable;
+  /** Gets the max value of the darkness, to map to a percent. */
+  abstract get maxDarkness(): number;
+}
+
 /** Class representing a printer that could not be identified. */
 export class UnknownPrinter extends BasePrinterInfo {
   get commandLanguage(): PrinterCommandLanguage {
@@ -113,8 +159,8 @@ export class UnknownPrinter extends BasePrinterInfo {
   get speedTable(): ReadonlyMap<PrintSpeed, number> {
     throw new WebZlpError('Unknown printer, cannot read metadata.');
   }
-  get model(): PrinterModel {
-    return PrinterModel.unknown;
+  get model(): string {
+    return '';
   }
   get dpi(): number {
     throw new WebZlpError('Unknown printer, cannot read metadata.');

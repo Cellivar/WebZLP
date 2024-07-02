@@ -12,9 +12,9 @@ If you have a printer that acts differently from this information or sends more 
 
 Some of the EPL config lines are straightforward and are documented in examples below.
 
-Some of the config lines are densely packed, broken out here for ease of reading.
+Some of the config lines are densely packed, broken out here for ease of reading. The numbers of sections come from page 36 of the EPL programming manual from 12/12/2013.
 
-### Config settings 1
+### Config settings J
 
 `I8,A,001 rY JF WY`
 
@@ -23,7 +23,7 @@ Some of the config lines are densely packed, broken out here for ease of reading
 * JF - Maybe top of form backup? Maybe related to `JC` and `JF` commands?
 * WY - Windows mode? Maybe related to `W` command? `WY` and `WN` observed.
 
-### Config settings 2
+### Config settings K
 
 `S4 D08 R112,000 ZB UN`
 
@@ -33,14 +33,14 @@ Some of the config lines are densely packed, broken out here for ease of reading
 * Z - Print Orientation
 * U - Error status (UN means no error)
 
-### Config settings 3 (Form buffer dimensions)
+### Config settings L (Form buffer dimensions)
 
 `q600 Q208,25`
 
 * q - Form width (q command)
 * Q - Form height and gap length (Q command)
 
-### Config settings 4 (Hardware options)
+### Config settings M1 (Hardware options)
 
 `Option:D,Ff`
 
@@ -61,7 +61,7 @@ Assuming these values correspond to the O command (hardware options). These have
   * i - Ignore feed button
 * S - Reverse gap sensor mode (black line detect?)
 
-### Config settings 5 (Line mode font settings)
+### Config settings M2 (Line mode font settings)
 
 `oEv,w,x,y,z`
 
@@ -69,7 +69,7 @@ This _seems_ to be related to the `oE` command's Line Mode Font Substitution for
 
 Since WebZLP doesn't support EPL1 emulation this is ignored.
 
-### Config setting 6 (Autosense settings)
+### Config setting N (Autosense settings)
 
 These are the result of the autosense routine detecting the label gap. The
 sensor values are recorded as:
@@ -79,6 +79,24 @@ sensor values are recorded as:
 3. Label Transparent point.
 
 These can't be set directly, the printer determines them from the `xa` command.
+
+### Config Settings O (Cover open sensor)
+
+Later series printers added another IR proximity sensor to detect the head open state. If this is exposed in the firmware it wil show up here.
+
+`Cover: T=143, C=166`
+
+* T = Threshold of sensor open/closed state
+* C = Current sensor value
+
+### Config Settings P (Date and Time)
+
+An onboard RTC with a battery was an upgrade option for some models. If equipped the current configured date and time will be displayed.
+
+These battery-backed modules can fail and must be replaced.
+
+`Date: 10-05-94`  
+`Time:01:00:00`
 
 ## Example complete config
 
@@ -99,13 +117,13 @@ Fmem used: 0 (bytes)    # Form storage (different format!)
 Gmem used: 0            # Graphics storage (different format!)
 Emem used: 0            # Soft font storage (different format!)
 Available: 130559       # Total memory for Forms, Fonts, or Graphics
-I8,A,001 rY JF WY       # Config settings 1
-S4 D08 R112,000 ZB UN   # Config settings 2
-q600 Q208,25            # Config settings 3
-Option:D,Ff             # Config settings 4
-oEv,w,x,y,z             # Config settings 5
-06 10 14                # Config settings 6
-Cover: T=118, C=129             # (T)reshold and (C)urrent Head Up (open) sensor.
+I8,A,001 rY JF WY       # Config settings J
+S4 D08 R112,000 ZB UN   # Config settings K
+q600 Q208,25            # Config settings L
+Option:D,Ff             # Config settings M1
+oEv,w,x,y,z             # Config settings M2
+06 10 14                # Config settings N
+Cover: T=118, C=129     # (T)reshold and (C)urrent Head Up (open) sensor.
 
 ## Observed configs
 
@@ -120,12 +138,12 @@ Image buffer size:0245K # Image buffer size in use
 Fmem:000.0K,060.9K avl  # Form storage
 Gmem:000K,0037K avl     # Graphics storage
 Emem:031K,0037K avl     # Soft font storage
-I8,A,001 rY JF WY       # Config settings 1
-S4 D08 R112,000 ZB UN   # Config settings 2
-q600 Q208,25            # Config settings 3
-Option:D,Ff             # Config settings 4
-oEv,w,x,y,z             # Config settings 5
-06 10 14                # Config settings 6
+I8,A,001 rY JF WY       # Config settings J
+S4 D08 R112,000 ZB UN   # Config settings K
+q600 Q208,25            # Config settings L
+Option:D,Ff             # Config settings M1
+oEv,w,x,y,z             # Config settings M2
+06 10 14                # Config settings N
 
 ### 4.45 LP2844ps
 
@@ -140,11 +158,11 @@ Fmem used: 0 (bytes)            # Form storage
 Gmem used: 0                    # Graphics storage
 Emem used: 0                    # Soft font storage
 Available: 130559               # Total memory for Forms, Fonts, or Graphics
-I8,A,001 rY JF WY               # Config settings 1
-S4 D10 R000,000 ZT UN           # Config settings 2
-q832 Q934,24                    # Config settings 3
-Option:D                        # Config settings 4
-13 18 24                        # Config settings 6
+I8,A,001 rY JF WY               # Config settings J
+S4 D10 R000,000 ZT UN           # Config settings K
+q832 Q934,24                    # Config settings L
+Option:D                        # Config settings M1
+13 18 24                        # Config settings N
 Cover: T=118, C=129             # (T)reshold and (C)urrent Head Up (open) sensor.
 
 ### 4.70.1A
@@ -158,12 +176,12 @@ Fmem used: 0 (bytes)        # Form storage
 Gmem used: 0                # Graphics storage
 Emem used: 151215           # Soft fonts
 Available: 503632           # Total memory for Forms, Fonts, or Graphics
-I8,0,001 rY JF WY           # Config settings 1
-S4 D10 R8,0 ZT UN           # Config settings 2
-q816 Q923,25                # Config settings 3
-Option:D,Ff                 # Config settings 3
-oEv,w,x,y,z                 # Config settings 4
-15 21 28                    # Config settings 6
+I8,0,001 rY JF WY           # Config settings J
+S4 D10 R8,0 ZT UN           # Config settings K
+q816 Q923,25                # Config settings L
+Option:D,Ff                 # Config settings M1
+oEv,w,x,y,z                 # Config settings M2
+15 21 28                    # Config settings N
 Cover: T=144, C=167         # (T)reshold and (C)urrent Head Up (open) sensor.
 
 ### Others

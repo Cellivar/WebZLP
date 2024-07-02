@@ -15,7 +15,7 @@ export class ConfigDocumentBuilder
   extends DocumentBuilder<IConfigDocumentBuilder>
   implements IConfigDocumentBuilder {
   get commandReorderBehavior() {
-    return Commands.CommandReorderBehavior.nonFormCommandsAfterForms;
+    return Commands.CommandReorderBehavior.afterAllForms;
   }
 
   constructor(config?: Options.PrinterOptions) {

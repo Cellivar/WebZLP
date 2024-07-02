@@ -1,21 +1,26 @@
+import { clampToRange } from '../NumericRange.js';
 import * as Options from '../Printers/Configuration/PrinterOptions.js';
+import type { PrinterCommandLanguage } from '../Printers/Languages/index.js';
 import type { BitmapGRF, ImageConversionOptions } from './BitmapGRF.js';
 
-/** Flags to indicate special operations a command might cause. */
-export enum PrinterCommandEffectFlags {
-  /** No special side-effects outside of what the command does. */
-  none = 0,
-  /** The effects of this command cannot be determined automatically. */
-  unknownEffects = 1 << 0,
+export type PrinterCommandEffectTypes
+  = "unknown"
   /** Changes the printer config, necessitating an update of the cached config. */
-  altersPrinterConfig = 1 << 1,
+  | "altersConfig"
   /** Causes the printer motor to engage, even if nothing is printed. */
-  feedsLabel = 1 << 2,
+  | "feedsPaper"
+  /** Causes the printer to print labels, regardless of peel settings. */
+  | "feedsPaperIgnoringPeeler"
   /** Causes the printer to disconnect or otherwise need reconnecting. */
-  lossOfConnection = 1 << 3,
-  /** Causes something sharp to move */
-  actuatesCutter = 1 << 4
-}
+  | "lossOfConnection"
+  /** Causes something sharp to move. */
+  | "actuatesCutter"
+  /** Expects a response from the printer. */
+  | "waitsForResponse";
+
+/** Flags to indicate special operations a command might cause. */
+export class CommandEffectFlags extends Set<PrinterCommandEffectTypes> { }
+export const NoEffect = new CommandEffectFlags();
 
 /** A command that can be sent to a printer. */
 export interface IPrinterCommand {
@@ -24,7 +29,7 @@ export interface IPrinterCommand {
   /** Get the command type of this command. */
   readonly type: CommandType;
   /** Any effects this command may cause the printer to undergo. */
-  readonly printerEffectFlags: PrinterCommandEffectFlags;
+  readonly effectFlags: CommandEffectFlags;
 
   /** Get the human-readable output of this command. */
   toDisplay(): string;
@@ -36,7 +41,7 @@ export interface IPrinterExtendedCommand extends IPrinterCommand {
   get typeExtended(): symbol;
 
   /** Gets the command languages this extended command can apply to. */
-  get commandLanguageApplicability(): Options.PrinterCommandLanguage;
+  get commandLanguageApplicability(): PrinterCommandLanguage;
 }
 
 /** List of colors to draw elements with */
@@ -50,146 +55,149 @@ export enum DrawColor {
 /** Behavior to take for commands that belong inside or outside of a form. */
 export enum CommandReorderBehavior {
   /** Perform no reordering, non-form commands will be interpreted as form closing.  */
-  none = 0,
+  closeForm = 0,
   /** Reorder non-form commands to the end, retaining order. */
-  nonFormCommandsAfterForms
+  afterAllForms,
+  /** Reorder non-form commands before all forms, retaining order.  */
+  beforeAllForms,
+  /**
+   * Throw an exception if a non-form command is within a form.
+   * You will need to explicitly close and open forms to use this option.
+   */
+  throwError,
 }
 
 /** Union type of all possible commands that must be handled by command sets. */
 export type CommandType
   // Users/PCLs may supply printer commands. This uses a different lookup table.
   = "CustomCommand"
-  | "AddBoxCommand"
-  | "AddImageCommand"
-  | "AddLineCommand"
-  | "AutosenseLabelDimensionsCommand"
-  | "ClearImageBufferCommand"
-  | "CutNowCommand"
-  | "EnableFeedBackupCommand"
-  | "NewLabelCommand"
-  | "OffsetCommand"
-  | "PrintCommand"
-  | "PrintConfigurationCommand"
-  | "QueryConfigurationCommand"
-  | "RawDocumentCommand"
-  | "RebootPrinterCommand"
-  | "SaveCurrentConfigurationCommand"
-  | "SetDarknessCommand"
-  | "SetLabelDimensionsCommand"
-  | "SetLabelHomeCommand"
-  | "SetLabelPrintOriginOffsetCommand"
-  | "SetLabelToContinuousMediaCommand"
-  | "SetLabelToWebGapMediaCommand"
-  | "SetLabelToMarkMediaCommand"
-  | "SetPrintDirectionCommand"
-  | "SetPrintSpeedCommand"
-  |"SuppressFeedBackupCommand"
+  // General printer commands
+  | "RebootPrinter"
+  | "Raw"
+  | "GetError"
+  // Status commands
+  | "PrintConfiguration"
+  | "QueryConfiguration"
+  // Configuration commands
+  | "SaveCurrentConfiguration"
+  | "AutosenseLabelDimensions"
+  | "SetDarkness"
+  | "SetLabelDimensions"
+  | "SetLabelHome"
+  | "SetLabelPrintOriginOffset"
+  | "SetLabelToContinuousMedia"
+  | "SetLabelToWebGapMedia"
+  | "SetLabelToMarkMedia"
+  | "SetPrintDirection"
+  | "SetPrintSpeed"
+  // Document handling
+  | "NewLabel"
+  | "StartLabel"
+  | "EndLabel"
+  | "CutNow"
+  | "EnableFeedBackup"
+  | "SuppressFeedBackup"
+  | "Print"
+  // Content
+  | "ClearImageBuffer"
+  | "AddBox"
+  | "AddImage"
+  | "AddLine"
+  | "Offset"
 
-export class NewLabelCommand implements IPrinterCommand {
-  get name() { return 'End previous label and begin a new label.'; }
-  get type(): CommandType { return 'NewLabelCommand'; }
-  toDisplay(): string {
-    return this.name;
+abstract class BasicCommand implements IPrinterCommand {
+  abstract name: string;
+  abstract type: CommandType;
+  effectFlags: CommandEffectFlags;
+  toDisplay() { return this.name; }
+  constructor(effects: PrinterCommandEffectTypes[] = []) {
+    this.effectFlags = new CommandEffectFlags(effects);
   }
-  printerEffectFlags = PrinterCommandEffectFlags.none;
+}
+
+export class StartLabel extends BasicCommand {
+  name = 'Explicitly start a new label.';
+  type: CommandType = 'StartLabel';
+  constructor() { super([]); }
+}
+
+export class EndLabel extends BasicCommand {
+  name = 'Explicitly end a label.';
+  type: CommandType = 'EndLabel';
+  constructor() { super([]); }
 }
 
 export class PrintCommand implements IPrinterCommand {
-  get name() { return 'Print label'; }
-  get type(): CommandType { return 'PrintCommand'; }
+  name = 'Print label';
+  type: CommandType = 'Print';
   toDisplay(): string {
-    return `Print ${this.count} copies of label`;
+    return `Print ${this.labelCount} copies of label`;
   }
 
-  constructor(labelCount = 1, additionalDuplicateOfEach = 1) {
+  constructor(
+    public readonly labelCount = 1,
+    public readonly additionalDuplicateOfEach = 1
+  ) {
     // TODO: If someone complains that this is lower than what ZPL allows
     // figure out a way to support the 99,999,999 supported.
     // Who needs to print > 65 thousand labels at once??? I want to know.
-    this.count = labelCount <= 0 || labelCount > 65535 ? 0 : labelCount;
-    this.additionalDuplicateOfEach =
-      additionalDuplicateOfEach <= 0 || additionalDuplicateOfEach > 65535
-        ? 0
-        : additionalDuplicateOfEach;
+    this.labelCount = clampToRange(labelCount, 0, 65534);
+    this.additionalDuplicateOfEach = clampToRange(additionalDuplicateOfEach, 0, 65534);
   }
 
-  count: number;
-  additionalDuplicateOfEach: number;
-
-  printerEffectFlags = PrinterCommandEffectFlags.feedsLabel;
+  effectFlags = new CommandEffectFlags(['feedsPaper']);
 }
 
-export class CutNowCommand implements IPrinterCommand {
-  get name() { return 'Cycle the media cutter now'; }
-  get type(): CommandType { return 'CutNowCommand'; }
-  toDisplay(): string {
-    return this.name;
-  }
-
-  printerEffectFlags = PrinterCommandEffectFlags.actuatesCutter;
+export class CutNowCommand extends BasicCommand {
+  name = 'Cycle the media cutter now';
+  type: CommandType = 'CutNow';
+  constructor() { super(['actuatesCutter']); }
 }
 
-export class SuppressFeedBackupCommand implements IPrinterCommand {
-  get name() { return 'Disable feed backup after printing label (be sure to re-enable!)'; }
-  get type(): CommandType { return 'SuppressFeedBackupCommand'; }
-  toDisplay(): string {
-    return this.name;
-  }
-  printerEffectFlags = PrinterCommandEffectFlags.none;
+export class SuppressFeedBackupCommand extends BasicCommand {
+  name = 'Disable feed backup after printing label (be sure to re-enable!)';
+  type: CommandType = 'SuppressFeedBackup';
+  constructor() { super([]); }
 }
 
-export class EnableFeedBackupCommand implements IPrinterCommand {
-  get name() { return 'Enable feed backup after printing label.'; }
-  get type(): CommandType { return 'EnableFeedBackupCommand'; }
-  toDisplay(): string {
-    return this.name;
-  }
-  printerEffectFlags = PrinterCommandEffectFlags.none;
+export class EnableFeedBackupCommand extends BasicCommand {
+  name = 'Enable feed backup after printing label.';
+  type: CommandType = 'EnableFeedBackup';
+  constructor() { super([]); }
 }
 
 /** A command to clear the image buffer. */
-export class ClearImageBufferCommand implements IPrinterCommand {
-  get name() { return 'Clear image buffer'; }
-  get type(): CommandType { return 'ClearImageBufferCommand'; }
-  toDisplay(): string {
-    return this.name;
-  }
-  printerEffectFlags = PrinterCommandEffectFlags.none;
+export class ClearImageBufferCommand extends BasicCommand {
+  name = 'Clear image buffer';
+  type: CommandType = 'ClearImageBuffer';
+  constructor() { super([]); }
 }
 
 /** A command to have the printer send its configuration back over serial. */
-export class QueryConfigurationCommand implements IPrinterCommand {
-  get name() { return 'Query for printer config'; }
-  get type(): CommandType { return 'QueryConfigurationCommand'; }
-  toDisplay(): string {
-    return this.name;
-  }
-  printerEffectFlags = PrinterCommandEffectFlags.none;
+export class QueryConfigurationCommand extends BasicCommand {
+  name = 'Query for printer config';
+  type: CommandType = 'QueryConfiguration';
+  constructor() { super([]); }
 }
 
 /** A command to have the printer print its configuration labels. */
-export class PrintConfigurationCommand implements IPrinterCommand {
+export class PrintConfigurationCommand extends BasicCommand {
   get name() { return "Print printer's config onto labels"; }
-  get type(): CommandType { return 'PrintConfigurationCommand'; }
-  toDisplay(): string {
-    return this.name;
-  }
-  printerEffectFlags = PrinterCommandEffectFlags.feedsLabel;
+  type: CommandType = 'PrintConfiguration';
+  constructor() { super([]); }
 }
 
 /** A command to store the current configuration as the stored configuration. */
-export class SaveCurrentConfigurationCommand implements IPrinterCommand {
-  get name() { return 'Store the current configuration as the saved configuration.'; }
-  get type(): CommandType { return 'SaveCurrentConfigurationCommand'; }
-  toDisplay(): string {
-    return this.name;
-  }
-  printerEffectFlags = PrinterCommandEffectFlags.altersPrinterConfig;
+export class SaveCurrentConfigurationCommand extends BasicCommand {
+  name = 'Store the current configuration as the saved configuration.';
+  type: CommandType = 'SaveCurrentConfiguration';
+  constructor() { super([]); }
 }
 
 /** A command to set the darkness the printer prints at. */
 export class SetDarknessCommand implements IPrinterCommand {
-  get name() { return 'Set darkness'; }
-  get type(): CommandType { return 'SetDarknessCommand'; }
+  name = 'Set darkness';
+  type: CommandType = 'SetDarkness';
   toDisplay(): string {
     return `Set darkness to ${this.darknessPercent}%`;
   }
@@ -203,34 +211,29 @@ export class SetDarknessCommand implements IPrinterCommand {
     return Math.ceil((this.darknessPercent * this.darknessMax) / 100);
   }
 
-  printerEffectFlags = PrinterCommandEffectFlags.altersPrinterConfig;
+  effectFlags = new CommandEffectFlags(['altersConfig']);
 }
 
 /** A command to set the direction a label prints, either upside down or not. */
 export class SetPrintDirectionCommand implements IPrinterCommand {
-  get name() { return 'Set print direction'; }
-  get type(): CommandType { return 'SetPrintDirectionCommand'; }
+  name = 'Set print direction';
+  type: CommandType = 'SetPrintDirection';
   toDisplay(): string {
     return `Print labels ${this.upsideDown ? 'upside-down' : 'right-side up'}`;
   }
+  effectFlags = new CommandEffectFlags(['altersConfig']);
 
-  constructor(upsideDown: boolean) {
-    this.upsideDown = upsideDown;
-  }
-
-  /** Whether to print labels upside-down. */
-  upsideDown: boolean;
-
-  printerEffectFlags = PrinterCommandEffectFlags.altersPrinterConfig;
+  constructor(public readonly upsideDown: boolean) { }
 }
 
 /** A command to set the print speed a printer prints at. Support varies per printer. */
 export class SetPrintSpeedCommand implements IPrinterCommand {
-  get name() { return 'Set print speed'; }
-  get type(): CommandType { return 'SetPrintSpeedCommand'; }
+  name = 'Set print speed';
+  type: CommandType = 'SetPrintSpeed';
   toDisplay(): string {
     return `Set print speed to ${Options.PrintSpeed[this.speed]} (inches per second).`;
   }
+  effectFlags = new CommandEffectFlags(['altersConfig']);
 
   constructor(
     public readonly speed: Options.PrintSpeed,
@@ -238,14 +241,12 @@ export class SetPrintSpeedCommand implements IPrinterCommand {
     public readonly mediaSlewSpeed: Options.PrintSpeed,
     public readonly mediaSpeedVal: number
   ) { }
-
-  printerEffectFlags = PrinterCommandEffectFlags.altersPrinterConfig;
 }
 
 /** A command to set the label dimensions of this label. */
 export class SetLabelDimensionsCommand implements IPrinterCommand {
-  get name() { return 'Set label dimensions'; }
-  get type(): CommandType { return 'SetLabelDimensionsCommand'; }
+  name = 'Set label dimensions';
+  type: CommandType = 'SetLabelDimensions';
   toDisplay(): string {
     let str = `Set label size to ${this.widthInDots} wide`;
     if (this.heightInDots) {
@@ -268,64 +269,64 @@ export class SetLabelDimensionsCommand implements IPrinterCommand {
     public readonly heightInDots?: number,
     public readonly gapLengthInDots?: number) { }
 
-  printerEffectFlags = PrinterCommandEffectFlags.altersPrinterConfig;
+  effectFlags = new CommandEffectFlags(['altersConfig']);
 }
 
 export class SetLabelHomeCommand implements IPrinterCommand {
-  get name() { return 'Sets the label home (origin) offset'; }
-  get type(): CommandType { return 'SetLabelHomeCommand'; }
+  name = 'Sets the label home (origin) offset';
+  type: CommandType = 'SetLabelHome';
   toDisplay(): string {
-    return `Set the label home (origin) to ${this.xOffset},${this.yOffset} from the top-left.`;
+    return `Set the label home (origin) to ${this.offset.left},${this.offset.top} from the top-left.`;
   }
-  printerEffectFlags = PrinterCommandEffectFlags.altersPrinterConfig;
+  effectFlags = new CommandEffectFlags(['altersConfig']);
 
-  constructor(public xOffset: number, public yOffset: number) { }
+  constructor(public offset: Options.Coordinate) { }
 }
 
 /** Command class to set the print offset from the top-left of the label. */
 export class SetLabelPrintOriginOffsetCommand implements IPrinterCommand {
-  get name() { return 'Sets the print offset from the top left corner.'; }
-  get type(): CommandType { return 'SetLabelPrintOriginOffsetCommand'; }
+  name = 'Sets the print offset from the top left corner.';
+  type: CommandType = 'SetLabelPrintOriginOffset';
   toDisplay(): string {
-    return `Sets the print offset to ${this.xOffset} in and ${this.yOffset} down from the top-left.`;
+    return `Sets the print offset to ${this.offset.left} in and ${this.offset.top} down from the top-left.`;
   }
-  printerEffectFlags = PrinterCommandEffectFlags.altersPrinterConfig;
+  effectFlags = new CommandEffectFlags(['altersConfig']);
 
-  constructor(public xOffset: number, public yOffset: number) { }
+  constructor(public offset: Options.Coordinate) { }
 }
 
 /** A command class to set the media handling mode to continuous media. */
 export class SetLabelToContinuousMediaCommand implements IPrinterCommand {
-  get name() { return 'Sets the media handling mode to continuous media.'; }
-  get type(): CommandType { return 'SetLabelToContinuousMediaCommand'; }
+  name = 'Sets the media handling mode to continuous media.';
+  type: CommandType = 'SetLabelToContinuousMedia';
   toDisplay(): string {
     return this.name;
   }
-  printerEffectFlags = PrinterCommandEffectFlags.altersPrinterConfig;
+  effectFlags = new CommandEffectFlags(['altersConfig']);
 
   constructor(public labelLengthInDots: number, public labelGapInDots = 0) { }
 }
 
 /** A command class to set the media handling mode to web gap detection. */
 export class SetLabelToWebGapMediaCommand implements IPrinterCommand {
-  get name() { return 'Sets the media handling mode to web gap detection.'; }
-  get type(): CommandType { return 'SetLabelToWebGapMediaCommand'; }
+  name = 'Sets the media handling mode to web gap detection.';
+  type: CommandType = 'SetLabelToWebGapMedia';
   toDisplay(): string {
     return this.name;
   }
-  printerEffectFlags = PrinterCommandEffectFlags.altersPrinterConfig;
+  effectFlags = new CommandEffectFlags(['altersConfig']);
 
   constructor(public labelLengthInDots: number, public labelGapInDots: number) { }
 }
 
 /** A command class to set the media handling mode to black mark detection. */
 export class SetLabelToMarkMediaCommand implements IPrinterCommand {
-  get name() { return 'Sets the media handling mode to black mark detection.'; }
-  get type(): CommandType { return 'SetLabelToMarkMediaCommand'; }
+  name = 'Sets the media handling mode to black mark detection.';
+  type: CommandType = 'SetLabelToMarkMedia';
   toDisplay(): string {
     return this.name;
   }
-  printerEffectFlags = PrinterCommandEffectFlags.altersPrinterConfig;
+  effectFlags = new CommandEffectFlags(['altersConfig']);
 
   constructor(
     public labelLengthInDots: number,
@@ -335,21 +336,19 @@ export class SetLabelToMarkMediaCommand implements IPrinterCommand {
 }
 
 /** Command class to cause the printer to auto-sense the media length. */
-export class AutosenseLabelDimensionsCommand implements IPrinterCommand {
+export class AutosenseLabelDimensionsCommand extends BasicCommand {
   get name() { return 'Auto-sense the label length by feeding several labels.'; }
-  get type(): CommandType { return 'AutosenseLabelDimensionsCommand'; }
+  type: CommandType = 'AutosenseLabelDimensions';
+  constructor() { super (['altersConfig', 'feedsPaperIgnoringPeeler', 'feedsPaper'])}
   toDisplay(): string {
     return this.name;
   }
-
-  printerEffectFlags =
-    PrinterCommandEffectFlags.altersPrinterConfig | PrinterCommandEffectFlags.feedsLabel;
 }
 
 /** Command class to modify an offset. */
 export class OffsetCommand implements IPrinterCommand {
-  get name() { return 'Modify offset'; }
-  get type(): CommandType { return 'OffsetCommand'; }
+  name = 'Modify offset';
+  type: CommandType = 'Offset';
   toDisplay(): string {
     let str = `Set offset to ${this.horizontal} from the left`;
     if (this.vertical) {
@@ -358,40 +357,34 @@ export class OffsetCommand implements IPrinterCommand {
     str += this.absolute ? `of the label.` : ` of the current offset.`;
     return str;
   }
-  printerEffectFlags = PrinterCommandEffectFlags.none;
+  effectFlags = NoEffect;
 
-  constructor(horizontal: number, vertical?: number, absolute = false) {
+  constructor(
+    public readonly horizontal: number,
+    public readonly vertical?: number,
+    public readonly absolute = false
+  ) {
     this.horizontal = Math.floor(horizontal);
     this.vertical = vertical !== undefined ? Math.floor(vertical) : undefined;
     this.absolute = absolute;
   }
-
-  horizontal: number;
-  vertical?: number;
-  absolute = false;
 }
 
 /** Command class to force a printer to reset. */
-export class RebootPrinterCommand implements IPrinterCommand {
+export class RebootPrinterCommand extends BasicCommand {
   get name() { return 'Simulate a power-cycle for the printer. This should be the final command.'; }
-  get type(): CommandType { return 'RebootPrinterCommand'; }
-  toDisplay(): string {
-    return this.name;
-  }
-  printerEffectFlags = PrinterCommandEffectFlags.lossOfConnection;
+  type: CommandType = 'RebootPrinter';
+  constructor() { super(['lossOfConnection']); }
 }
 
 /** Command class to draw an image into the image buffer for immediate print. */
 export class AddImageCommand implements IPrinterCommand {
-  get name() { return 'Add image to label'; }
-  get type(): CommandType { return 'AddImageCommand'; }
+  name = 'Add image to label';
+  type: CommandType = 'AddImage';
   toDisplay(): string {
-    if (!this.bitmap) {
-      return 'Adds a blank image';
-    }
     return `Adds a ${this.bitmap.width} wide x ${this.bitmap.height} high image.`;
   }
-  printerEffectFlags = PrinterCommandEffectFlags.none;
+  effectFlags = NoEffect;
 
   constructor(
     public bitmap: BitmapGRF,
@@ -401,12 +394,12 @@ export class AddImageCommand implements IPrinterCommand {
 
 /** Command class to draw a straight line. */
 export class AddLineCommand implements IPrinterCommand {
-  get name() { return 'Add perpendicular line to label'; }
-  get type(): CommandType { return 'AddLineCommand'; }
+  name = 'Add perpendicular line to label';
+  type: CommandType = 'AddLine';
   toDisplay(): string {
     return `Add a ${DrawColor[this.color]} line ${this.lengthInDots} wide by ${this.heightInDots} high.`;
   }
-  printerEffectFlags = PrinterCommandEffectFlags.none;
+  effectFlags = NoEffect;
 
   constructor(
     public readonly lengthInDots: number,
@@ -417,12 +410,12 @@ export class AddLineCommand implements IPrinterCommand {
 
 /** Command to draw a box on a label */
 export class AddBoxCommand implements IPrinterCommand {
-  get name() { return 'Add a box to label'; }
-  get type(): CommandType { return 'AddBoxCommand'; }
+  name = 'Add a box to label';
+  type: CommandType = 'AddBox';
   toDisplay(): string {
     return `Add a box ${this.lengthInDots} wide by ${this.heightInDots} high.`;
   }
-  printerEffectFlags = PrinterCommandEffectFlags.none;
+  effectFlags = NoEffect;
 
   constructor(
     public readonly lengthInDots: number,
@@ -431,13 +424,14 @@ export class AddBoxCommand implements IPrinterCommand {
   ) { }
 }
 
-export class RawDocumentCommand implements IPrinterCommand {
-  get name() { return 'Sends a raw set of commands directly to the printer unmodified.'; }
-  get type(): CommandType { return 'RawDocumentCommand'; }
+/** Sending a raw instruction to the printer. */
+export class Raw implements IPrinterCommand {
+  name = 'Sends a raw set of commands directly to the printer unmodified.';
+  type: CommandType = 'Raw';
   toDisplay(): string { return this.name; }
 
   constructor(
     public readonly rawDocument: string,
-    public readonly printerEffectFlags = PrinterCommandEffectFlags.unknownEffects
+    public readonly effectFlags: CommandEffectFlags
   ) { }
 }

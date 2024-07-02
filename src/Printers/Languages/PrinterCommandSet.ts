@@ -1,105 +1,9 @@
 import { CompiledDocument, type IDocument } from '../../Documents/Document.js';
-import { WebZlpError } from '../../WebZlpError.js';
-import { PrinterCommandLanguage, PrinterOptions, type IPrinterLabelMediaOptions } from '../Configuration/PrinterOptions.js';
 import * as Commands from '../../Documents/Commands.js';
-
-/** A manifest for a custom extended printer command. */
-export interface IPrinterExtendedCommandMapping<TOutput> {
-  extendedTypeSymbol: symbol,
-  delegate: TranspileCommandDelegate<TOutput>,
-}
-
-export type TranspileCommandDelegate<TOutput> = (
-  cmd: Commands.IPrinterCommand,
-  formDoc: TranspiledDocumentState,
-  commandSet: PrinterCommandSet
-) => TOutput;
 
 type RawCommandForm = { commands: Array<Commands.IPrinterCommand>; withinForm: boolean };
 
 export abstract class PrinterCommandSet {
-  /** Encode a raw string command into a Uint8Array according to the command language rules. */
-  public abstract encodeCommand(str?: string, withNewline?: boolean): Uint8Array;
-
-  private readonly _noop = new Uint8Array();
-  /** Get an empty command to be used as a no-op. */
-  protected get noop() {
-    return this._noop;
-  }
-
-  /** Gets the command to start a new form. */
-  protected abstract get formStartCommand(): Uint8Array;
-  /** Gets the command to end a form. */
-  protected abstract get formEndCommand(): Uint8Array;
-  /** Gets the command language this command set implements */
-  abstract get commandLanguage(): PrinterCommandLanguage;
-
-  protected extendedCommandMap = new Map<symbol, TranspileCommandDelegate<Uint8Array>>;
-
-  protected constructor(
-    public readonly implementedLanguage: PrinterCommandLanguage,
-    extendedCommands: Array<IPrinterExtendedCommandMapping<Uint8Array>> = []
-  ) {
-    extendedCommands.forEach(c => this.extendedCommandMap.set(c.extendedTypeSymbol, c.delegate));
-  }
-
-  /** Transpile a command to its native command equivalent. */
-  public abstract transpileCommand(
-    cmd: Commands.IPrinterCommand,
-    docState: TranspiledDocumentState
-  ): Uint8Array | TranspileDocumentError;
-
-  // protected transpileCommand(
-  //   command: Commands.IPrinterCommand,
-  //   formMetadata: TranspilationFormMetadata
-  // ) {
-  //   let lookup: symbol | Commands.CommandType;
-  //   if (
-  //     command.type === Commands.CommandType.CommandCustomSpecificCommand ||
-  //     command.type === Commands.CommandType.CommandLanguageSpecificCommand
-  //   ) {
-  //     lookup = (command as Commands.IPrinterExtendedCommand).typeExtended;
-  //   } else {
-  //     lookup = command.type;
-  //   }
-
-  //   if (!lookup) {
-  //     throw new TranspileDocumentError(
-  //       `Command '${command.constructor.name}' did not have a valid lookup element. If you're trying to implement a custom command check the documentation for correct formatting.`
-  //     );
-  //   }
-
-  //   const func = this.transpileCommandMap.get(lookup);
-  //   if (func === undefined) {
-  //     throw new TranspileDocumentError(
-  //       `Unknown command '${command.constructor.name}' was not found in the command map for ${PrinterCommandLanguage[this.commandLanguage]} command language. If you're trying to implement a custom command check the documentation for correctly adding mappings.`
-  //     );
-  //   }
-
-  //   return func(command, formMetadata, this);
-  // }
-
-  protected extendedCommandHandler(
-    cmd: Commands.IPrinterCommand,
-    docState: TranspiledDocumentState
-  ) {
-    const lookup = (cmd as Commands.IPrinterExtendedCommand).typeExtended;
-    if (!lookup) {
-      throw new TranspileDocumentError(
-        `Command '${cmd.constructor.name}' did not have a value for typeExtended. If you're trying to implement a custom command check the documentation.`
-      )
-    }
-
-    const cmdHandler = this.extendedCommandMap.get(lookup);
-
-    if (cmdHandler === undefined) {
-      throw new TranspileDocumentError(
-        `Unknown command '${cmd.constructor.name}' was not found in the command map for ${this.commandLanguage} command language. If you're trying to implement a custom command check the documentation for correctly adding mappings.`
-      );
-    }
-    return cmdHandler(cmd, docState, this);
-  }
-
   public transpileDoc(doc: IDocument): Readonly<CompiledDocument> {
     const validationErrors: TranspileDocumentError[] = [];
     const { forms, effects } = this.splitCommandsByFormInclusion(
@@ -156,10 +60,10 @@ export abstract class PrinterCommandSet {
     const nonForms: Array<RawCommandForm> = [];
     let effects = Commands.PrinterCommandEffectFlags.none;
     for (const command of commands) {
-      effects |= command.printerEffectFlags;
+      effects |= command.effectFlags;
       if (
         this.isCommandNonFormCommand(command) &&
-        reorderBehavior === Commands.CommandReorderBehavior.nonFormCommandsAfterForms
+        reorderBehavior === Commands.CommandReorderBehavior.afterAllForms
       ) {
         nonForms.push({ commands: [command], withinForm: false });
         continue;
@@ -197,68 +101,13 @@ export abstract class PrinterCommandSet {
     );
   }
 
-  protected unprocessedCommand(cmd: Commands.IPrinterCommand): Uint8Array {
-    throw new TranspileDocumentError(
-      `Unhandled meta-command '${cmd.constructor.name}' was not preprocessed. This is a bug in WebZLP, please submit an issue.`
-    );
-  }
-
-  /**
-   * Round a raw value to the nearest step.
-   */
-  protected roundToNearestStep(value: number, step: number): number {
-    const inverse = 1.0 / step;
-    return Math.round(value * inverse) / inverse;
-  }
-
   /** Strip a string of invalid characters for a command. */
-  protected cleanString(str: string) {
-    return str
-      .replace(/\\/gi, '\\\\')
-      .replace(/"/gi, '\\"')
-      .replace(/[\r\n]+/gi, ' ');
-  }
-
-  /** Apply an offset command to a document. */
-  protected modifyOffset(
-    cmd: Commands.OffsetCommand,
-    outDoc: TranspiledDocumentState,
-    cmdSet: PrinterCommandSet
-  ) {
-    const newHoriz = cmd.absolute ? cmd.horizontal : outDoc.horizontalOffset + cmd.horizontal;
-    outDoc.horizontalOffset = newHoriz < 0 ? 0 : newHoriz;
-    if (cmd.vertical) {
-      const newVert = cmd.absolute ? cmd.vertical : outDoc.verticalOffset + cmd.vertical;
-      outDoc.verticalOffset = newVert < 0 ? 0 : newVert;
-    }
-    return cmdSet.noop;
-  }
-
-  /** Combine two commands into one command array. */
-  protected combineCommands(cmd1: Uint8Array, cmd2: Uint8Array) {
-    const merged = new Uint8Array(cmd1.length + cmd2.length);
-    merged.set(cmd1);
-    merged.set(cmd2, cmd1.length);
-    return merged;
-  }
-
-  /** Parse the response of a configuration inqury in the command set language. */
-  abstract parseConfigurationResponse(
-    rawText: string,
-    mediaOptions: IPrinterLabelMediaOptions
-  ): PrinterOptions;
-}
-
-export function exhaustiveMatchGuard(_: never): never {
-  throw new Error('Invalid case received!' + _);
-}
-
-/** How a command should be wrapped into a form, if at all */
-export enum CommandFormInclusionMode {
-  /** Command can appear in a shared form with other commands. */
-  sharedForm = 0,
-  /** Command should not be wrapped in a form at all. */
-  noForm
+  // protected cleanString(str: string) {
+  //   return str
+  //     .replace(/\\/gi, '\\\\')
+  //     .replace(/"/gi, '\\"')
+  //     .replace(/[\r\n]+/gi, ' ');
+  // }
 }
 
 export class TranspilationFormList {
@@ -307,18 +156,5 @@ export class TranspiledDocumentState {
       },
       { buffer: new Uint8Array(bufferLen), offset: 0 }
     ).buffer;
-  }
-}
-
-/** Represents an error when validating a document against a printer's capabilities. */
-export class TranspileDocumentError extends WebZlpError {
-  private _innerErrors: TranspileDocumentError[] = [];
-  get innerErrors() {
-    return this._innerErrors;
-  }
-
-  constructor(message: string, innerErrors?: TranspileDocumentError[]) {
-    super(message);
-    this._innerErrors = innerErrors ?? [];
   }
 }

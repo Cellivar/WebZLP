@@ -14,7 +14,7 @@ export class LabelDocumentBuilder
   implements ILabelDocumentBuilder {
 
   get commandReorderBehavior(): Commands.CommandReorderBehavior {
-    return Commands.CommandReorderBehavior.none;
+    return Commands.CommandReorderBehavior.closeForm;
   }
 
   constructor(
@@ -42,7 +42,7 @@ export class LabelDocumentBuilder
   }
 
   startNewLabel(): ILabelDocumentBuilder {
-    return this.andThen(new Commands.NewLabelCommand());
+    return this.andThen(new Commands.NewLabel());
   }
 
   suppressFeedBackupForLabel(): ILabelDocumentBuilder {
