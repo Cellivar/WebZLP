@@ -83,6 +83,7 @@ export class PrinterModelDb {
     switch (true) {
       // LP2844-Z
       // ZTC LP2844-Z-200dpi
+      case /LP 2824 Plus/gim.test(modelName):
       case /\sLP2844-Z-200dpi/gim.test(modelName):
       case /\sLP2824-Z-200dpi/gim.test(modelName):
         return PrinterCommandLanguage.zplEmulateEpl;
