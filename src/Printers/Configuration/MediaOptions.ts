@@ -136,13 +136,13 @@ export enum PrintSpeed {
   ipsPrinterMin,
   ips1,
   /** EPL-only. Not often supported */
-  ips1_5, // eslint-disable-line
+  ips1_5,
   ips2,
   /** EPL-only. Not often supported */
-  ips2_5, // eslint-disable-line
+  ips2_5,
   ips3,
   /** EPL-only. Not often supported */
-  ips3_5, // eslint-disable-line
+  ips3_5,
   ips4,
   ips5,
   ips6,

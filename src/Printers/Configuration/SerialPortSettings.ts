@@ -60,13 +60,13 @@ export enum SerialPortStopBits {
 /** Serial protocol flow control mode. ZPL only. */
 export enum SerialPortHandshake {
   /** Software flow control */
-  xon_xoff, //eslint-disable-line
+  xon_xoff,
   /** Hardware flow control */
-  dtr_dsr, //eslint-disable-line
+  dtr_dsr,
   /** Hardware pacing control */
-  rts_cts, //eslint-disable-line
+  rts_cts,
   /** Auto-detect flow control based on first flow control detected. G-series printers only */
-  dtr_dsr_and_xon_xoff //eslint-disable-line
+  dtr_dsr_and_xon_xoff
 }
 
 /** Error checking protocol. You probably want this to always be none. ZPL only. */
@@ -74,7 +74,7 @@ export enum SerialPortZebraProtocol {
   /** No error checking handshake. Default. */
   none,
   /** Send ACK/NAK packets back to host. */
-  ack_nak, //eslint-disable-line
+  ack_nak,
   /** ack_nak with sequencing. Requires DSR/DTR. */
   zebra
 }

@@ -1,5 +1,6 @@
 // Has to be a hard version so the URL doesn't redirect, which prevents loading.
-importScripts('https://unpkg.com/typescript@5.2.2/lib/typescript.js');
+// eslint-disable-next-line no-undef
+importScripts('https://unpkg.com/typescript@5.5.4/lib/typescript.js');
 
 const log = (...obj) => console.log('SHENANIGANS', ...obj);
 
