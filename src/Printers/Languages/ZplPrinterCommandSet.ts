@@ -471,7 +471,7 @@ export class ZplPrinterCommandSet extends PrinterCommandSet {
   ): Uint8Array {
     const length = Math.trunc(cmd.labelLengthInDots);
     const lineOffset = Math.trunc(cmd.blackLineOffset);
-    return this.encodeCommand(`^MNM,${length}^LL${lineOffset}`);
+    return this.encodeCommand(`^MNM,${lineOffset}\n^LL${length}`);
   }
 
   private printCommand(

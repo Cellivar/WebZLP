@@ -459,9 +459,9 @@
                 // Figure out the right printer
                 const formElement = this.configModal.querySelector('form')!;
                 const form = formElement.elements as HTMLFormControlsCollection;
-                const printerIdx = parseInt(formElement.querySelector('#modalPrinterIndexText')!.innerText);
+                const printerIdx = parseInt((formElement.querySelector('#modalPrinterIndexText') as HTMLFormElement).innerText);
                 const printer = this.printers[printerIdx];
-                if (printer == undefined) {
+                if (printer === undefined) {
                     return;
                 }
 
@@ -498,10 +498,11 @@
 
                 configDoc
                     .setPrintDirection()
+                    .setLabelHomeOffsetDots(0, 0)
                     .setLabelPrintOriginOffsetCommand(offsetLeft, offsetTop)
                     .setPrintSpeed(rawSpeed)
                     .setDarknessConfig(darkness)
-                    .setLabelDimensions(labelWidthInches);
+                    .setLabelDimensions(labelWidthInches, autosense ? undefined : labelHeightInches);
                 const doc = autosense
                     ? configDoc.autosenseLabelLength()
                     : configDoc.finalize();
@@ -526,10 +527,10 @@
 
         // Make the TypeScript type system happy by adding a property to the Window object.
         declare global {
-            interface Window { label_app: BasicLabelDesignerApp }
+            interface Window { printer_app: BasicLabelDesignerApp }
         }
         // Now we can access our printer in the dev console if we want to mess with it!
-        window.label_app = app;
+        window.printer_app = app;
 
 
         await printerMgr.forceReconnect();
