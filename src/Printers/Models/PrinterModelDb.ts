@@ -2,7 +2,7 @@ import { PrinterModel } from './PrinterModel.js';
 import { PrinterCommandLanguage } from '../Configuration/PrinterOptions.js';
 import * as EPL from './EplPrinterModels.js';
 import { type IPrinterModelInfo, UnknownPrinter } from './PrinterModel.js';
-import type { IDeviceInformation } from '../Communication/DeviceCommunication.js';
+import type { IDeviceInformation } from 'web-device-mux';
 
 export class PrinterModelDb {
   /** Determine a printer model based on the printer-reported model. */
@@ -83,6 +83,7 @@ export class PrinterModelDb {
     switch (true) {
       // LP2844-Z
       // ZTC LP2844-Z-200dpi
+      case /LP 2824 Plus/gim.test(modelName):
       case /\sLP2844-Z-200dpi/gim.test(modelName):
       case /\sLP2824-Z-200dpi/gim.test(modelName):
         return PrinterCommandLanguage.zplEmulateEpl;

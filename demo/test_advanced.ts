@@ -1,4 +1,6 @@
 import * as WebLabel from '../src/index.js';
+import * as WebDevices from 'web-device-mux';
+import bootstrap from 'bootstrap';
 // This file exists to test the index.html's typescript. Unfortunately there isn't
 // a good way to configure Visual Studio Code to, well, treat it as typescript.
 ////////////////////////////////////////////////////////////////////////////////
@@ -9,7 +11,7 @@ import * as WebLabel from '../src/index.js';
 // For this demo we're going to make use of the USB printer manager
 // so it can take care of concerns like the USB connect and disconnect events.
 
-const printerMgr = new WebLabel.UsbDeviceManager<WebLabel.LabelPrinter>(
+const printerMgr = new WebDevices.UsbDeviceManager<WebLabel.LabelPrinter>(
     window.navigator.usb,
     WebLabel.LabelPrinter.fromUSBDevice,
     {
@@ -35,7 +37,7 @@ addPrinterBtn.addEventListener('click', async () => printerMgr.promptForNewDevic
 const refreshPrinterBtn = document.getElementById('refreshPrinters')!;
 refreshPrinterBtn.addEventListener('click', async () => printerMgr.forceReconnect());
 
-// Next we wire up some events on the PrinterUsbManager itself.
+// Next we wire up some events on the UsbDeviceManager itself.
 printerMgr.addEventListener('connectedDevice', ({ detail }) => {
     const printer = detail.device;
     console.log('New printer is a', printer.printerModel.model);
@@ -71,10 +73,24 @@ printerMgr.addEventListener('disconnectedDevice', ({ detail }) => {
 
 // The rest of this demo is an example of a basic label generator app.
 
+// First we create an interface to describe our settings form.
+interface ConfigModalForm extends HTMLCollection {
+    modalCancel         : HTMLButtonElement
+    modalDarkness       : HTMLSelectElement
+    modalLabelHeight    : HTMLInputElement
+    modalLabelOffsetLeft: HTMLInputElement
+    modalLabelOffsetTop : HTMLInputElement
+    modalLabelWidth     : HTMLInputElement
+    modalMediaType      : HTMLSelectElement
+    modalSpeed          : HTMLSelectElement
+    modalSubmit         : HTMLButtonElement
+    modalWithAutosense  : HTMLInputElement
+}
+
 // The app's logic is wrapped in a class just for ease of reading.
 class BasicLabelDesignerApp {
     constructor(
-        private manager: WebLabel.UsbDeviceManager<WebLabel.LabelPrinter>,
+        private manager: WebDevices.UsbDeviceManager<WebLabel.LabelPrinter>,
         private btnContainer: HTMLElement,
         private labelForm: HTMLElement,
         private labelFormInstructions: HTMLElement,
@@ -124,7 +140,7 @@ class BasicLabelDesignerApp {
 
     // Some storage fields and utility properties
     private fontName: string;
-    private configModalHandle: any;
+    private configModalHandle: bootstrap.Modal;
 
     get printers(): readonly WebLabel.LabelPrinter[] {
         return this.manager.devices;
@@ -156,10 +172,10 @@ class BasicLabelDesignerApp {
         const config = printer.printerOptions;
 
         // Translate the available speeds to options to be selected
-        const speedSelect = this.configModal.querySelector('#modalSpeed')!;
+        const speedSelect = this.configModal.querySelector('#modalSpeed')! as HTMLSelectElement;
         speedSelect.innerHTML = '';
         const speedTable = printer.printerModel.speedTable as ReadonlyMap<WebLabel.PrintSpeed, number>;
-        for (const [key, val] of speedTable) {
+        for (const [key] of speedTable) {
             // Skip utility values, so long as there's more than the defaults.
             // Mobile printers *only* support auto, for example.
             if ((speedTable.size > 3)
@@ -170,13 +186,13 @@ class BasicLabelDesignerApp {
                 continue;
             }
             const opt = document.createElement('option');
-            opt.value = key;
+            opt.value = key.toString();
             opt.innerHTML = WebLabel.PrintSpeed[key].substring(3).replaceAll('_', '.') + ' ips';
             speedSelect.appendChild(opt);
         }
-        speedSelect.value = config.speed.printSpeed;
+        speedSelect.value = config.speed.printSpeed.toString();
 
-        const mediaSelect = this.configModal.querySelector('#modalMediaType')!;
+        const mediaSelect = this.configModal.querySelector('#modalMediaType')! as HTMLSelectElement;
         switch (config.labelGapDetectMode) {
             case WebLabel.LabelMediaGapDetectionMode.continuous:
                 mediaSelect.value = "continuous";
@@ -190,13 +206,13 @@ class BasicLabelDesignerApp {
                 break;
         }
 
-        this.configModal.querySelector('#modalPrinterIndex')!.value = config.serialNumber;
-        this.configModal.querySelector('#modalPrinterIndexText')!.textContent = printerIdx;
-        this.configModal.querySelector('#modalLabelWidth')!.value = config.labelWidthInches;
-        this.configModal.querySelector('#modalLabelHeight')!.value = config.labelHeightInches;
-        this.configModal.querySelector('#modalDarkness')!.value = config.darknessPercent;
-        this.configModal.querySelector('#modalLabelOffsetLeft')!.value = config.labelPrintOriginOffsetDots.left;
-        this.configModal.querySelector('#modalLabelOffsetTop')!.value = config.labelPrintOriginOffsetDots.top;
+        (this.configModal.querySelector('#modalPrinterIndex') as HTMLInputElement)!.value            = config.serialNumber;
+        (this.configModal.querySelector('#modalPrinterIndexText') as HTMLSelectElement)!.textContent = printerIdx.toString();
+        (this.configModal.querySelector('#modalLabelWidth') as HTMLSelectElement)!.value             = config.labelWidthInches.toString();
+        (this.configModal.querySelector('#modalLabelHeight') as HTMLSelectElement)!.value            = config.labelHeightInches.toString();
+        (this.configModal.querySelector('#modalDarkness') as HTMLSelectElement)!.value               = config.darknessPercent.toString();
+        (this.configModal.querySelector('#modalLabelOffsetLeft') as HTMLSelectElement)!.value        = config.labelPrintOriginOffsetDots.left.toString();
+        (this.configModal.querySelector('#modalLabelOffsetTop') as HTMLSelectElement)!.value         = config.labelPrintOriginOffsetDots.top.toString();
         this.configModalHandle.show();
     }
 
@@ -396,8 +412,8 @@ style="background: linear-gradient(to right, ${highlight}, ${highlight}, grey, g
 
         // Figure out the right printer
         const formElement = this.configModal.querySelector('form')!;
-        const form = formElement.elements as HTMLFormControlsCollection;
-        const printerIdx = parseInt(formElement.querySelector('#modalPrinterIndexText')!.innerText);
+        const form = formElement.elements as ConfigModalForm;
+        const printerIdx = parseInt((formElement.querySelector('#modalPrinterIndexText') as HTMLInputElement)!.innerText);
         const printer = this.printers[printerIdx];
         if (printer == undefined) {
             return;
@@ -407,8 +423,8 @@ style="background: linear-gradient(to right, ${highlight}, ${highlight}, grey, g
         form.modalCancel.setAttribute("disabled", "");
 
         // Pull the values out of the form.
-        const darkness          = parseInt(form.modalDarkness.value) as DarknessPercent;
-        const rawSpeed          = parseInt(form.modalSpeed.value) as PrintSpeed;
+        const darkness          = parseInt(form.modalDarkness.value) as WebLabel.DarknessPercent;
+        const rawSpeed          = parseInt(form.modalSpeed.value) as WebLabel.PrintSpeed;
         const labelWidthInches  = parseFloat(form.modalLabelWidth.value);
         const labelHeightInches = parseFloat(form.modalLabelHeight.value);
         const autosense         = form.modalWithAutosense.checked;
@@ -459,7 +475,7 @@ const labelFormInstructions = document.getElementById("labelFormInstructions")!;
 const configModal           = document.getElementById("printerOptionModal")!;
 
 const app = new BasicLabelDesignerApp(printerMgr, btnContainer, labelForm, labelFormInstructions, configModal);
-await app.init();BasicLabelDesignerApp
+await app.init();
 
 
 // Make the TypeScript type system happy by adding a property to the Window object.
