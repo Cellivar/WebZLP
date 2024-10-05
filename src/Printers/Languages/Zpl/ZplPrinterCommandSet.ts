@@ -232,7 +232,7 @@ export class ZplPrinterCommandSet extends StringCommandSet {
   ): string {
     const length = Math.trunc(cmd.labelLengthInDots);
     const lineOffset = Math.trunc(cmd.blackLineOffset);
-    return `^MNM,${length}^LL${lineOffset}`;
+    return `^MNM,${lineOffset}\n^LL${length}`;
   }
 
   private printCommand(

@@ -13,11 +13,16 @@ export default defineConfig({
     },
     minify: false,
   },
+  define: {
+    'import.meta.vitest': 'undefined',
+  },
   plugins: [dts(), eslint({
     failOnError: false
   })],
   test: {
+    includeSource: ['src/**/*.{js,ts}'],
     coverage: {
+      enabled: true,
       reporter: ['text', 'json-summary', 'json'],
       reportOnFailure: true,
     }
