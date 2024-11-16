@@ -1,9 +1,9 @@
-import * as Options from '../../Configuration/PrinterOptions.js';
-import * as Commands from '../../../Documents/index.js';
-import { clampToRange } from '../../../NumericRange.js';
+import * as Options from '../../Printers/Configuration/PrinterOptions.js';
+import * as Commands from '../../Documents/index.js';
+import { clampToRange } from '../../NumericRange.js';
 import { PrinterCommandLanguage } from '../index.js';
 import { StringCommandSet } from '../StringCommandSet.js';
-import { exhaustiveMatchGuard } from '../../../EnumUtils.js';
+import { exhaustiveMatchGuard } from '../../EnumUtils.js';
 
 /** Command set for communicating with a ZPL II printer. */
 export class ZplPrinterCommandSet extends StringCommandSet {
@@ -70,6 +70,10 @@ export class ZplPrinterCommandSet extends StringCommandSet {
         return '~WC';
       case 'SaveCurrentConfiguration':
         return '^JUS';
+      case 'GetStatus':
+        // HQES will return errors that other commands will hang on
+        // such as media out or head open
+        return '~HQES'
 
       case 'SetPrintDirection':
         return this.setPrintDirectionCommand((cmd as Commands.SetPrintDirectionCommand).upsideDown);

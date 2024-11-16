@@ -1,11 +1,12 @@
-import { PrinterCommandLanguage } from '../Languages/index.js';
-import type { ISettingUpdateMessage } from '../Messages.js';
+import type { IDeviceInformation } from 'web-device-mux';
+import { PrinterCommandLanguage } from '../../Languages/index.js';
+import { deviceInfoToOptionsUpdate, type ISettingUpdateMessage } from '../../Languages/Messages.js';
 import { SpeedTable } from '../Models/PrinterModel.js';
 export * from './SerialPortSettings.js';
 import * as Media from './MediaOptions.js';
 export * from './MediaOptions.js';
 
-/** Firmware information about the printer that can't be modified. */
+/** Hardware information about the printer that can't be modified. */
 export interface IPrinterFactoryInformation {
   /** The raw serial number of the printer. */
   get serialNumber(): string;
@@ -93,6 +94,10 @@ export class PrinterOptions implements IPrinterFactoryInformation, Media.IPrinte
     this._model        = msg.modelName        ?? this._model;
     this._manufacturer = msg.manufacturerName ?? this._manufacturer;
     this._serial       = msg.serialNumber     ?? this._serial;
+  }
+
+  public updateDeviceInfo(deviceInfo: IDeviceInformation) {
+    this.update(deviceInfoToOptionsUpdate(deviceInfo));
   }
 
   private dotToInch(dots?: number) {

@@ -1,4 +1,4 @@
-import { WebZlpError } from "../index.js";
+import { WebZlpError, type CommandSet, type IPrinterCommand } from "../index.js";
 import type { IDeviceInformation } from "web-device-mux";
 
 export type PrinterMessage
@@ -7,6 +7,15 @@ export type PrinterMessage
   | IErrorMessage
 
 export type MessageType = 'SettingUpdateMessage' | 'StatusMessage' | 'ErrorMessage'
+
+export type MessageArrayLike = string | Uint8Array
+
+export type AwaitedCommand = {
+  cmd: IPrinterCommand,
+  promise: Promise<boolean>,
+  resolve?: (value: boolean) => void,
+  reject?: (reason?: unknown) => void,
+}
 
 /** A printer settings message, describing printer configuration status. */
 export interface ISettingUpdateMessage {
@@ -90,4 +99,35 @@ export function deviceInfoToOptionsUpdate(deviceInfo: IDeviceInformation): ISett
     serialNumber: deviceInfo.serialNumber,
     manufacturerName: deviceInfo.manufacturerName,
   }
+}
+
+export async function parseRaw<TInput extends MessageArrayLike>(
+  input: TInput[],
+  commandSet: CommandSet<TInput>,
+  awaitedCommand?: AwaitedCommand
+) {
+  let msg = commandSet.combineCommands(...input);
+  if (msg.length === 0) { return { messages: [], remainderData: []}; }
+  let incomplete = false;
+  const messages: PrinterMessage[] = [];
+
+  do {
+    const parseResult = commandSet.parseMessage(msg, awaitedCommand?.cmd);
+
+    msg = parseResult.remainder;
+    incomplete = parseResult.messageIncomplete;
+
+    if (parseResult.messageMatchedExpectedCommand) {
+      if (awaitedCommand?.resolve === undefined) {
+        console.error('Resolve callback was undefined for awaited command, this may cause a deadlock! This is a bug in the library.');
+      } else {
+        awaitedCommand.resolve(true);
+      }
+    }
+
+    parseResult.messages.forEach(m => messages.push(m));
+  } while (incomplete === false && msg.length > 0)
+
+  const remainderData = msg.length === 0 ? [] : [msg];
+  return { remainderData, messages }
 }

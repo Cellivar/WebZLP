@@ -1,17 +1,15 @@
-import * as Commands from "../../Documents/index.js";
-import type { IMessageHandlerResult } from "../Messages.js";
-import type { IPrinterLabelMediaOptions } from "../index.js";
+import * as Commands from '../Documents/index.js';
+import type { IPrinterLabelMediaOptions } from '../Printers/Configuration/PrinterOptions.js';
+import * as Messages from './Messages.js';
 import type { PrinterCommandLanguage } from "./index.js";
 
-export abstract class RawCommandset implements Commands.CommandSet<Uint8Array> {
-  /** Encode a raw string command into a Uint8Array according to the command language rules. */
-  public abstract encodeCommand(str?: string, withNewline?: boolean): Uint8Array;
+export abstract class PrinterCommandSet<TMessageType extends Messages.MessageArrayLike> implements Commands.CommandSet<Messages.MessageArrayLike> {
+  public abstract encodeCommand<TOut extends Messages.MessageArrayLike>(cmd?: TMessageType, withNewline?: boolean): TOut;
 
-  private readonly _noop = new Uint8Array();
-  public get noop() {
-    return this._noop;
-  }
+  /** List of commands which must not appear within a form, according to this language's rules */
+  protected abstract nonFormCommands: Array<symbol | Commands.CommandType>;
 
+  public abstract get noop(): TMessageType;
   public abstract get documentStartCommands(): Commands.IPrinterCommand[];
   public abstract get documentEndCommands(): Commands.IPrinterCommand[];
   private cmdLanguage: PrinterCommandLanguage;
@@ -21,27 +19,33 @@ export abstract class RawCommandset implements Commands.CommandSet<Uint8Array> {
 
   public abstract getNewTranspileState(media: IPrinterLabelMediaOptions): Commands.TranspiledDocumentState;
 
-  protected extendedCommandMap = new Map<symbol, Commands.TranspileCommandDelegate<Uint8Array>>;
+  protected extendedCommandMap = new Map<symbol, Commands.TranspileCommandDelegate<TMessageType>>;
 
   protected constructor(
     implementedLanguage: PrinterCommandLanguage,
-    extendedCommands: Array<Commands.IPrinterExtendedCommandMapping<Uint8Array>> = []
+    extendedCommands: Array<Commands.IPrinterExtendedCommandMapping<TMessageType>> = []
   ) {
     this.cmdLanguage = implementedLanguage;
     extendedCommands.forEach(c => this.extendedCommandMap.set(c.extendedTypeSymbol, c.delegate));
   }
 
-  public abstract parseMessage(
-    msg: Uint8Array,
-    sentCommand?: Commands.IPrinterCommand
-  ): IMessageHandlerResult<Uint8Array>;
+  public abstract debugDisplayCommands(...commands: Messages.MessageArrayLike[]): string;
+
+  public abstract combineCommands(...commands: Messages.MessageArrayLike[]): Messages.MessageArrayLike;
 
   public abstract expandCommand(cmd: Commands.IPrinterCommand): Commands.IPrinterCommand[];
+
+  public abstract isCommandNonFormCommand(cmd: Commands.IPrinterCommand): boolean;
+
+  public abstract parseMessage(
+    msg: string,
+    sentCommand?: Commands.IPrinterCommand
+  ): Messages.IMessageHandlerResult<string>;
 
   public abstract transpileCommand(
     cmd: Commands.IPrinterCommand,
     docState: Commands.TranspiledDocumentState
-  ): Uint8Array | Commands.TranspileDocumentError;
+  ): string | Commands.TranspileDocumentError;
 
   protected extendedCommandHandler(
     cmd: Commands.IPrinterCommand,
@@ -64,19 +68,6 @@ export abstract class RawCommandset implements Commands.CommandSet<Uint8Array> {
     return cmdHandler(cmd, docState, this);
   }
 
-  public abstract isCommandNonFormCommand(cmd: Commands.IPrinterCommand): boolean;
-
-  public combineCommands(...commands: Uint8Array[]) {
-    const bufferLen = commands.reduce((sum, arr) => sum + arr.byteLength, 0);
-    return commands.reduce(
-      (accumulator, arr) => {
-        accumulator.buffer.set(arr, accumulator.offset);
-        return { ...accumulator, offset: arr.byteLength + accumulator.offset };
-      },
-      { buffer: new Uint8Array(bufferLen), offset: 0 }
-    ).buffer;
-  }
-
   /** Apply an offset command to a document. */
   protected modifyOffset(
     cmd: Commands.OffsetCommand,
@@ -89,5 +80,37 @@ export abstract class RawCommandset implements Commands.CommandSet<Uint8Array> {
       outDoc.verticalOffset = newVert < 0 ? 0 : newVert;
     }
     return this.noop;
+  }
+}
+
+/** Class for storing in-progress document generation information */
+export class TranspiledDocumentState {
+  horizontalOffset = 0;
+  verticalOffset = 0;
+  lineSpacingDots = 5;
+
+  commandEffectFlags = Commands.PrinterCommandEffectFlags.none;
+
+  rawCmdBuffer: Array<Uint8Array> = [];
+
+  /** Add a raw command to the internal buffer. */
+  addRawCommand(array: Uint8Array) {
+    if (array && array.length > 0) {
+      this.rawCmdBuffer.push(array);
+    }
+  }
+
+  /**
+   * Gets a single buffer of the internal command set.
+   */
+  get combinedBuffer(): Uint8Array {
+    const bufferLen = this.rawCmdBuffer.reduce((sum, arr) => sum + arr.byteLength, 0);
+    return this.rawCmdBuffer.reduce(
+      (accumulator, arr) => {
+        accumulator.buffer.set(arr, accumulator.offset);
+        return { ...accumulator, offset: arr.byteLength + accumulator.offset };
+      },
+      { buffer: new Uint8Array(bufferLen), offset: 0 }
+    ).buffer;
   }
 }

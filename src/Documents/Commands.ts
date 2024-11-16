@@ -1,6 +1,6 @@
 import { clampToRange } from '../NumericRange.js';
 import * as Options from '../Printers/Configuration/PrinterOptions.js';
-import type { PrinterCommandLanguage } from '../Printers/Languages/index.js';
+import type { PrinterCommandLanguage } from '../Languages/index.js';
 import type { BitmapGRF, ImageConversionOptions } from './BitmapGRF.js';
 
 export type PrinterCommandEffectTypes
@@ -74,7 +74,7 @@ export type CommandType
   // General printer commands
   | "RebootPrinter"
   | "Raw"
-  | "GetError"
+  | "GetStatus"
   // Status commands
   | "PrintConfiguration"
   | "QueryConfiguration"
@@ -146,6 +146,12 @@ export class PrintCommand implements IPrinterCommand {
   }
 
   effectFlags = new CommandEffectFlags(['feedsPaper']);
+}
+
+export class GetStatusCommand extends BasicCommand {
+  name = 'Get the immediate printer status';
+  type: CommandType = 'GetStatus';
+  constructor() { super(['waitsForResponse']); }
 }
 
 export class CutNowCommand extends BasicCommand {

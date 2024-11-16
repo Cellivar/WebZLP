@@ -8,25 +8,18 @@ import {
 import { ReadyToPrintDocuments } from '../Documents/ReadyToPrintDocuments.js';
 import { WebZlpError } from '../WebZlpError.js';
 import { PrinterOptions } from './Configuration/PrinterOptions.js';
-import { EplPrinterCommandSet } from './Languages/EplPrinterCommandSet.js';
-import { PrinterCommandSet } from './Languages/PrinterCommandSet.js';
-import { ZplPrinterCommandSet } from './Languages/Zpl/index.js';
 import { PrinterModelDb } from './Models/PrinterModelDb.js';
 import { DeviceNotReadyError, type IDeviceChannel, type IDeviceCommunicationOptions, DeviceCommunicationError, type IDeviceInformation, type IDevice, UsbDeviceChannel, InputMessageListener, type IHandlerResponse } from 'web-device-mux';
-import { deviceInfoToOptionsUpdate, type IErrorMessage, type IStatusMessage } from './Messages.js';
-import type { IPrinterCommand } from '../Documents/index.js';
+import { parseRaw, type AwaitedCommand, type IErrorMessage, type IStatusMessage, type MessageArrayLike } from '../Languages/Messages.js';
+import { GetStatusCommand, type CommandSet, type CompiledDocument, type Transaction } from '../Documents/index.js';
+import * as Lang from '../Languages/index.js';
+import { transpileDocument } from '../Documents/DocumentTranspiler.js';
+import { hasFlag } from '../EnumUtils.js';
 
 export interface LabelPrinterEventMap {
   //disconnectedDevice: CustomEvent<string>;
   reportedStatus: CustomEvent<IStatusMessage>;
   reportedError: CustomEvent<IErrorMessage>;
-}
-
-type AwaitedCommand = {
-  cmd: IPrinterCommand,
-  promise: Promise<boolean>,
-  resolve?: (value: boolean) => void,
-  reject?: (reason?: unknown) => void,
 }
 
 function promiseWithTimeout<T>(
@@ -46,13 +39,14 @@ function promiseWithTimeout<T>(
 }
 
 /** A class for working with a label printer. */
-export class LabelPrinter extends EventTarget implements IDevice {
+export class LabelPrinter<TMessageType extends MessageArrayLike> extends EventTarget implements IDevice {
   // Printer communication handles
-  private _channel: IDeviceChannel<Uint8Array, Uint8Array>;
-  private _streamListener?: InputMessageListener<Uint8Array>;
-  private _commandSet?: PrinterCommandSet;
+  private _channel: IDeviceChannel<TMessageType, TMessageType>;
+  private _streamListener?: InputMessageListener<TMessageType>;
+  private _commandSet?: CommandSet<TMessageType>;
 
   private _awaitedCommand?: AwaitedCommand;
+  private _awaitedCommandTimeoutMS = 5000;
 
   private _printerOptions: PrinterOptions;
   /** Gets the read-only copy of the current config of the printer. To modify use getConfigDocument. */
@@ -71,89 +65,9 @@ export class LabelPrinter extends EventTarget implements IDevice {
   }
 
   private _disposed = false;
-  private _ready: Promise<boolean>;
-  /** A promise indicating this printer is ready to be used. */
-  get ready() {
-    return this._ready;
-  }
   get connected() {
     return !this._disposed
       && this._channel.connected
-  }
-
-  /** Construct a new printer from a given USB device. */
-  static fromUSBDevice(
-    device: USBDevice,
-    options: IDeviceCommunicationOptions
-  ): LabelPrinter {
-    return new LabelPrinter(new UsbDeviceChannel(device, options), options);
-  }
-
-  constructor(
-    channel: IDeviceChannel<Uint8Array, Uint8Array>,
-    deviceCommunicationOptions: IDeviceCommunicationOptions = { debug: false },
-    printerOptions?: PrinterOptions,
-  ) {
-    super();
-    this._channel = channel;
-    this._deviceCommOpts = deviceCommunicationOptions;
-    this._printerOptions = printerOptions ?? new PrinterOptions();
-    this._ready = this.setup();
-
-    // Once the printer is set up we should immediately query the printer config.
-    this._ready.then((ready) => {
-      if (!ready) {
-        return;
-      }
-      return this.sendDocument(ReadyToPrintDocuments.configDocument);
-    });
-  }
-
-  public addEventListener<T extends keyof LabelPrinterEventMap>(
-    type: T,
-    listener: EventListenerObject | null | ((this: LabelPrinter, ev: LabelPrinterEventMap[T]) => void),
-    options?: boolean | AddEventListenerOptions
-  ): void;
-  public addEventListener(
-    type: string,
-    callback: EventListenerOrEventListenerObject | null,
-    options?: boolean | AddEventListenerOptions
-  ): void {
-    super.addEventListener(type, callback, options);
-  }
-
-  public removeEventListener<T extends keyof LabelPrinterEventMap>(
-    type: T,
-    listener: EventListenerObject | null | ((this: LabelPrinter, ev: LabelPrinterEventMap[T]) => void),
-    options?: boolean | AddEventListenerOptions
-  ): void;
-  public removeEventListener(
-    type: string,
-    callback: EventListenerOrEventListenerObject | null,
-    options?: boolean | EventListenerOptions | undefined
-  ): void {
-      super.removeEventListener(type, callback, options);
-  }
-
-  private async setup() {
-    const channelReady = await this._channel.ready;
-    if (!channelReady) {
-      // If the channel failed to connect we have no hope.
-      return false;
-    }
-
-    this._printerOptions.update(deviceInfoToOptionsUpdate(this._channel.getDeviceInfo()));
-
-    await this.refreshPrinterConfiguration(this._channel.getDeviceInfo());
-    return true;
-  }
-
-  /** Close the connection to this printer, preventing future communication. */
-  public async dispose() {
-    this._disposed = true;
-    this._ready = Promise.resolve(false);
-    this._streamListener?.dispose();
-    await this._channel.dispose();
   }
 
   /** Gets a document for configuring this printer. */
@@ -168,118 +82,62 @@ export class LabelPrinter extends EventTarget implements IDevice {
     return new LabelDocumentBuilder(this._printerOptions, docType);
   }
 
-  /** Send a document to the printer, applying the commands. */
-  public async sendDocument(doc: IDocument) {
-    await this.ready;
-    if (!this.connected || this._commandSet === undefined) {
-      throw new DeviceNotReadyError("Printer is not ready to communicate.");
-    }
-
-    if (this._deviceCommOpts.debug) {
-      console.debug('SENDING COMMANDS TO PRINTER:');
-      console.debug(doc.showCommands());
-    }
-
-    // Exceptions are thrown and handled elsewhere.
-    const compiled = this._commandSet.transpileDoc(doc);
-
-    if (this._deviceCommOpts.debug) {
-      console.debug('RAW COMMAND BUFFER:');
-      console.debug(compiled.commandBufferString);
-    }
-
-    await this._channel.sendCommands(compiled.commandBuffer);
+  /** Construct a new printer from a given USB device. */
+  static async fromUSBDevice(
+    device: USBDevice,
+    options: IDeviceCommunicationOptions
+  ) {
+    const p = new LabelPrinter(new UsbDeviceChannel(device, options), options);
+    await p.setup();
+    return p;
   }
 
-  /** Refresh the printer information cache directly from the printer. */
-  public async refreshPrinterConfiguration(deviceInfo?: IDeviceInformation): Promise<PrinterOptions> {
-    if (!this._printerOptions.valid) {
-      // First time pulling the config. Detect language and model.
-      this._printerOptions = await this.detectLanguageAndSetConfig(deviceInfo);
-    } else {
-      this._printerOptions = await this.tryGetConfig(this._commandSet);
-    }
-
-    if (!this._printerOptions.valid) {
-      throw new WebZlpError(
-        'Failed to detect the printer information, either the printer is unknown or the config can not be parsed. This printer can not be used.'
-      );
-    }
-    return this._printerOptions;
+  /** Construct a new printer from a raw channel object */
+  static async fromChannel<TMessageType extends MessageArrayLike>(
+    channel: IDeviceChannel<TMessageType, TMessageType>,
+    deviceCommunicationOptions: IDeviceCommunicationOptions = { debug: false },
+    printerOptions?: PrinterOptions,
+  ) {
+    const p = new LabelPrinter(channel, deviceCommunicationOptions, printerOptions);
+    await p.setup();
+    return p;
   }
 
-  private async detectLanguageAndSetConfig(deviceInfo?: IDeviceInformation): Promise<PrinterOptions> {
-    const guess = PrinterModelDb.guessLanguageFromModelHint(deviceInfo);
-    // Guess order is easiest to detect and support.. to least
-    const guessOrder = [
-      guess,
-      PrinterCommandLanguage.epl,
-      PrinterCommandLanguage.zpl,
-      PrinterCommandLanguage.cpcl
-    ];
-
-    // For each language, we send the appropriate command to try and get the
-    // config dump. If we get something legible back break out.
-    for (let i = 0; i < guessOrder.length; i++) {
-      const set = this.getCommandSetForLanguage(guessOrder[i]);
-      if (set === undefined) {
-        continue;
-      }
-      this.logIfDebug('Trying printer language guess', PrinterCommandLanguage[guessOrder[i]]);
-      const config = await this.tryGetConfig(set);
-      if (config.valid) {
-        this._commandSet = set;
-        return config;
-      }
-    }
-
-    return { valid: false } as PrinterOptions;
+  protected constructor(
+    channel: IDeviceChannel<TMessageType, TMessageType>,
+    deviceCommunicationOptions: IDeviceCommunicationOptions = { debug: false },
+    printerOptions?: PrinterOptions,
+  ) {
+    super();
+    this._channel = channel;
+    this._deviceCommOpts = deviceCommunicationOptions;
+    this._printerOptions = printerOptions ?? new PrinterOptions();
   }
 
-  private getCommandSetForLanguage(lang: PrinterCommandLanguage): PrinterCommandSet | undefined {
-    // In order of preferred communication method
-    if (PrinterCommandLanguage.zpl === (lang & PrinterCommandLanguage.zpl)) {
-      return new ZplPrinterCommandSet();
-    }
-    if (PrinterCommandLanguage.epl === (lang & PrinterCommandLanguage.epl)) {
-      return new EplPrinterCommandSet();
-    }
-    return undefined;
+  public addEventListener<T extends keyof LabelPrinterEventMap>(
+    type: T,
+    listener: EventListenerObject | null | ((this: LabelPrinter<TMessageType>, ev: LabelPrinterEventMap[T]) => void),
+    options?: boolean | AddEventListenerOptions
+  ): void;
+  public addEventListener(
+    type: string,
+    callback: EventListenerOrEventListenerObject | null,
+    options?: boolean | AddEventListenerOptions
+  ): void {
+    super.addEventListener(type, callback, options);
   }
 
-  private async tryGetConfig(cmdSet?: PrinterCommandSet): Promise<PrinterOptions> {
-    let config = PrinterOptions.invalid;
-    if (cmdSet === undefined) { return config; }
-
-    const compiled = cmdSet.transpileDoc(ReadyToPrintDocuments.configDocument);
-    this.logIfDebug('Querying printer config with', compiled.commandBufferString);
-
-    // Querying for a config doesn't always.. work? Like, just straight up
-    // for reasons I can't figure out some printers will refuse to return
-    // a valid config. Mostly EPL models.
-    // Give it 3 chances before we give up.
-    let retryLimit = 3;
-    do {
-      retryLimit--;
-
-      // Start listening for the return from the printer
-      const awaitInput = this._channel.getInput(); // this.listenForData();
-
-      // Config isn't set up yet, send command directly without the send command.
-      await this._channel.sendCommands(compiled.commandBuffer);
-      const rawResult = await awaitInput;
-      if (rawResult instanceof DeviceCommunicationError) {
-        continue;
-      }
-      config = cmdSet.parseConfigurationResponse(
-        rawResult.join(),
-        this._printerOptions
-      );
-    } while (!config.valid && retryLimit > 0);
-
-    this.logIfDebug(`Config result is ${config.valid ? 'valid' : 'not valid.'}`);
-
-    return config;
+  public removeEventListener<T extends keyof LabelPrinterEventMap>(
+    type: T,
+    listener: EventListenerObject | null | ((this: LabelPrinter<TMessageType>, ev: LabelPrinterEventMap[T]) => void),
+    options?: boolean | AddEventListenerOptions
+  ): void;
+  public removeEventListener(
+    type: string,
+    callback: EventListenerOrEventListenerObject | null,
+    options?: boolean | EventListenerOptions | undefined
+  ): void {
+    super.removeEventListener(type, callback, options);
   }
 
   private sendEvent(
@@ -289,11 +147,192 @@ export class LabelPrinter extends EventTarget implements IDevice {
     return super.dispatchEvent(new CustomEvent<IErrorMessage | IStatusMessage>(eventName, { detail }));
   }
 
-  private async sendTransactionAndWait(
-    transaction: Transaction<Uint8Array>
-  ): Promise<boolean> {
-    this.logIfDebug('RAW TRANSACTION: ', asciiToDisplay(...transaction.commands));
+  private async setup() {
+    const channelReady = await this._channel.ready;
+    if (!channelReady) {
+      // If the channel failed to connect we have no hope.
+      await this.dispose();
+      return false;
+    }
 
+    this._printerOptions.updateDeviceInfo(this._channel.getDeviceInfo());
+
+    this._commandSet = await this.detectLanguage(this._printerOptions);
+
+    this._streamListener = new InputMessageListener<TMessageType>(
+      this._channel.getInput.bind(this._channel),
+      this.parseAndDispatchMessage.bind(this),
+      this._deviceCommOpts.debug,
+    );
+    this._streamListener.start();
+
+    // Now that we're listening for messages we can query for the full config.
+    await this.refreshPrinterConfiguration();
+
+    return true;
+  }
+
+  public async dispose() {
+    this._disposed = true;
+    this._streamListener?.dispose();
+    await this._channel.dispose();
+  }
+
+  /** Refresh the printer information cache directly from the printer. */
+  public async refreshPrinterConfiguration(): Promise<PrinterOptions> {
+    // Querying for a config doesn't always.. work? Like, just straight up
+    // for reasons I can't figure out some printers will refuse to return
+    // a valid config. Mostly EPL models.
+    // Give it 3 chances before we give up.
+    let retryLimit = 3;
+    do {
+      retryLimit--;
+      try {
+        await this.sendDocument(ReadyToPrintDocuments.configDocument);
+        return this.printerOptions;
+      }
+      catch (e) {
+        this.logIfDebug(`Error trying to read printer config, trying ${retryLimit} more times.`, e);
+      }
+    } while (retryLimit > 0);
+
+    throw new DeviceCommunicationError(`Tried ${retryLimit} times to read config and failed.`);
+  }
+
+  /** Send a document to the printer, applying the commands. */
+  public async sendDocument(
+    doc: IDocument,
+    commandSet = this._commandSet
+  ) {
+    if (!this.connected) {
+      throw new DeviceNotReadyError("Printer is not ready to communicate.");
+    }
+    if (commandSet === undefined) {
+      throw new DeviceNotReadyError("No command set provided to send, is the printer connected?");
+    }
+
+    this.logResultIfDebug(() => 'SENDING DOCUMENT TO PRINTER:\n' + doc.commands.map((c) => c.toDisplay()).join('\n'));
+
+    // Exceptions are thrown and handled elsewhere.
+    const state = commandSet.getNewTranspileState(this._printerOptions);
+    const compiledDocument = transpileDocument(doc, commandSet, state);
+
+    return this.sendCompiledDocument(compiledDocument);
+  }
+
+  /** Send a compiled document to the printer. */
+  public async sendCompiledDocument(doc: CompiledDocument<TMessageType>): Promise<boolean> {
+    if (this._disposed == true) {
+      throw new DeviceNotReadyError("Printer is not ready to communicate.");
+    }
+
+    for (const trans of doc.transactions) {
+      try {
+        const result = await this.sendTransactionAndWait(trans);
+        if (!result) { return false; }
+      } catch (e) {
+        // TODO: Just throw this instead
+        if (e instanceof DeviceCommunicationError) {
+          console.error(e);
+          return false;
+        } else {
+          throw e;
+        }
+      }
+    }
+
+    return true;
+  }
+
+  private async detectLanguage(deviceInfo?: IDeviceInformation): Promise<CommandSet<TMessageType>> {
+    const guess = PrinterModelDb.guessLanguageFromModelHint(deviceInfo);
+    // Guess order is easiest to detect and support.. to least
+    const guessOrder = [
+      guess,
+      Lang.PrinterCommandLanguage.zpl,
+      Lang.PrinterCommandLanguage.epl,
+      Lang.PrinterCommandLanguage.cpcl
+    ];
+
+    const doc = { commands: [new GetStatusCommand()]} as IDocument
+    const awaitedTimeoutOriginal = this._awaitedCommandTimeoutMS;
+
+    // For each language, we send the appropriate command to try and get the
+    // config dump. If we get something legible back declare success.
+    for (let i = 0; i < guessOrder.length; i++) {
+      const set = this.getCommandSetForLanguage(guessOrder[i]);
+      if (set === undefined) {
+        continue;
+      }
+      this.logIfDebug('Trying printer language guess', Lang.PrinterCommandLanguage[guessOrder[i]]);
+
+      // Set up a message listener to listen for a response from a status query.
+      // We don't actually care about the contents, just that the printer responds
+      // to the query we made. Sending a status query will be an awaited command
+      // and the message parser will make sure it's a valid response to what we
+      // asked. If we time out waiting for the response we move on to the next.
+      this._awaitedCommandTimeoutMS = 1000;
+      const tmpListener = new InputMessageListener(
+        this._channel.getInput.bind(this._channel),
+        async (i) => {
+          const remainderData = (await parseRaw(i, set, this._awaitedCommand)).remainderData
+          return { remainderData }
+        },
+        this._deviceCommOpts.debug,
+      );
+      tmpListener.start();
+
+      // Make sure that listener gets disposed.
+      try {
+        // For reasons I don't fully understand sometimes EPL printers in particular
+        // take more than one try to get this right.
+        let retryLimit = 3;
+        do {
+          retryLimit--;
+          try {
+            await this.sendDocument(doc, set);
+            this.logIfDebug('Got response, valid language detected!');
+            return set;
+          }
+          catch (e) {
+            if (
+              e instanceof DeviceCommunicationError &&
+              e.message.startsWith(`Timed out waiting for '${doc.commands[0].name}' response.`)
+            ) {
+              // Response timeout means we guessed wrong, move on
+              this.logIfDebug('Timed out waiting for response, moving onto next guess.');
+              continue;
+            } else {
+              throw e;
+            }
+          }
+        } while (retryLimit > 0);
+      }
+      finally {
+        tmpListener.dispose();
+        this._awaitedCommandTimeoutMS = awaitedTimeoutOriginal;
+      }
+    }
+
+    throw new WebZlpError(
+      'Failed to detect the printer information, either the printer is unknown or the config can not be parsed. This printer can not be used.'
+    );
+  }
+
+  private getCommandSetForLanguage(lang: Lang.PrinterCommandLanguage): CommandSet<TMessageType> | undefined {
+    // In order of preferred communication method
+    if (hasFlag(lang, Lang.PrinterCommandLanguage.zpl)) {
+      return new Lang.ZplPrinterCommandSet();
+    }
+    if (hasFlag(lang, Lang.PrinterCommandLanguage.epl)) {
+      return new Lang.EplPrinterCommandSet();
+    }
+    return undefined;
+  }
+
+  private async sendTransactionAndWait(
+    transaction: Transaction<TMessageType>
+  ): Promise<boolean> {
     if (transaction.awaitedCommand !== undefined) {
       this.logIfDebug(`Transaction will await a response to '${transaction.awaitedCommand.toDisplay()}'.`);
       let awaitResolve;
@@ -316,13 +355,13 @@ export class LabelPrinter extends EventTarget implements IDevice {
       new DeviceCommunicationError(`Timed out sending commands to printer, is there a problem with the printer?`)
     );
 
-    // TODO: timeout!
-    await this._awaitedCommand?.promise;
+    // TODO: Still needed??
+    //await this._awaitedCommand?.promise;
     if (this._awaitedCommand) {
       this.logIfDebug(`Awaiting response to command '${this._awaitedCommand.cmd.name}'...`);
       await promiseWithTimeout(
         this._awaitedCommand.promise,
-        5000,
+        this._awaitedCommandTimeoutMS,
         new DeviceCommunicationError(`Timed out waiting for '${this._awaitedCommand.cmd.name}' response.`)
       );
       this.logIfDebug(`Got a response to command '${this._awaitedCommand.cmd.name}'!`);
@@ -330,56 +369,38 @@ export class LabelPrinter extends EventTarget implements IDevice {
     return true;
   }
 
-  private async parseMessage(input: Uint8Array[]): Promise<IHandlerResponse<Uint8Array>> {
+  private async parseAndDispatchMessage(
+    input: TMessageType[]
+  ): Promise<IHandlerResponse<TMessageType>> {
     if (this._commandSet === undefined) { return { remainderData: input } }
-    let msg = this._commandSet.combineCommands(...input);
-    if (msg.length === 0) { return {}; }
-    let incomplete = false;
 
-    do {
-      this.logIfDebug(`Parsing ${msg.length} long message from printer: `, asciiToDisplay(...msg));
-      if (this._awaitedCommand !== undefined) {
-        this.logIfDebug(`Checking if the messages is a response to '${this._awaitedCommand.cmd.name}'.`);
-      } else {
-        this.logIfDebug(`Not waiting a command. This message was a surprise, to be sure, but a welcome one.`);
+    if (this._awaitedCommand !== undefined) {
+      this.logIfDebug(`Checking if the messages is a response to '${this._awaitedCommand.cmd.name}'.`);
+    } else {
+      this.logIfDebug(`Not awaiting a command. This message was a surprise, to be sure, but a welcome one.`);
+    }
+
+    const parsed = await parseRaw(input, this._commandSet, this._awaitedCommand);
+
+    parsed.messages.forEach(m => {
+      switch (m.messageType) {
+        case 'ErrorMessage':
+          this.sendEvent('reportedError', m);
+          this.logIfDebug('Error message sent.', m);
+          break;
+        case 'StatusMessage':
+          this.sendEvent('reportedStatus', m);
+          this.logIfDebug('Status message sent.', m);
+          break;
+        case 'SettingUpdateMessage':
+          this._printerOptions.update(m);
+          this.logIfDebug('Settings update message applied.', m);
+          break;
       }
+    });
 
-      const parseResult = this._commandSet.parseMessage(msg, this._awaitedCommand?.cmd);
-      this.logIfDebug(`Raw parse result: `, parseResult);
-
-      msg = parseResult.remainder;
-      incomplete = parseResult.messageIncomplete;
-
-      if (parseResult.messageMatchedExpectedCommand) {
-        this.logIfDebug('Received message was expected, marking awaited response resolved.');
-        if (this._awaitedCommand?.resolve === undefined) {
-          console.error('Resolve callback was undefined for awaited command, this may cause a deadlock! This is a bug in the library.');
-        } else {
-          this._awaitedCommand.resolve(true);
-        }
-      }
-
-      parseResult.messages.forEach(m => {
-        switch (m.messageType) {
-          case 'ErrorMessage':
-            this.sendEvent('reportedError', m);
-            this.logIfDebug('Error message sent.', m);
-            break;
-          case 'StatusMessage':
-            this.sendEvent('reportedStatus', m);
-            this.logIfDebug('Status message sent.', m);
-            break;
-          case 'SettingUpdateMessage':
-            this._printerOptions.update(m);
-            this.logIfDebug('Settings update message applied.', m);
-            break;
-        }
-      });
-
-    } while (incomplete === false && msg.length > 0)
-
-    this.logIfDebug(`Returning unused ${msg.length} bytes.`);
-    const remainderData = msg.length === 0 ? [] : [msg];
+    this.logIfDebug(`Returning unused ${parsed.remainderData.length} bytes.`);
+    const remainderData = parsed.remainderData.length === 0 ? [] : [...parsed.remainderData];
     return { remainderData }
   }
 

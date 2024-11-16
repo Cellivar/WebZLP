@@ -1,4 +1,4 @@
-import type { PrinterCommandLanguage } from "../Printers/Languages/index.js";
+import type { PrinterCommandLanguage } from "../Languages/index.js";
 import { CommandReorderBehavior, type CommandEffectFlags, type IPrinterCommand } from "./Commands.js";
 
 /** A prepared document, ready to be compiled and sent. */

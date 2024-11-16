@@ -1,5 +1,5 @@
-import * as Options from '../../Configuration/PrinterOptions.js';
-import * as Commands from '../../../Documents/index.js';
+import * as Options from '../../Printers/Configuration/PrinterOptions.js';
+import * as Commands from '../../Documents/index.js';
 import { WebZlpError } from '../../WebZlpError.js';
 import * as Options from '../Configuration/PrinterOptions.js';
 import { PrinterOptions } from '../Configuration/PrinterOptions.js';
@@ -9,7 +9,7 @@ import * as Commands from '../../Documents/Commands.js';
 import { clampToRange } from '../../NumericRange.js';
 import { PrinterCommandLanguage } from '../index.js';
 import { StringCommandSet } from '../StringCommandSet.js';
-import { exhaustiveMatchGuard } from '../../../EnumUtils.js';
+import { exhaustiveMatchGuard } from '../../EnumUtils.js';
 
 /** Command set for communicating with an EPL II printer. */
 export class EplPrinterCommandSet extends StringCommandSet {
@@ -75,7 +75,8 @@ export class EplPrinterCommandSet extends StringCommandSet {
       case 'SaveCurrentConfiguration':
         // EPL doesn't have an explicit save step.
         return this.noop;
-      case 'GetError':
+      case 'GetStatus':
+        // Referred to as 'return error' but really returns general status info.
         return this.encodeCommand('^ee');
 
       case 'SetPrintDirection':

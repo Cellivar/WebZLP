@@ -1,3 +1,10 @@
+import type { CommandSet } from '../Documents/index.js'
+import { hasFlag } from '../EnumUtils.js'
+import type { MessageArrayLike } from './Messages.js'
+
+import * as Zpl from './Zpl/index.js'
+import * as Epl from './Epl/index.js'
+
 export * from './Epl/index.js'
 export * from './Zpl/index.js'
 export * from './Cpcl/index.js'
@@ -5,7 +12,6 @@ export * from './Dpl/index.js'
 export * from './Ipl/index.js'
 
 export * from './PrinterCommandSet.js'
-export * from './LanguageDetector.js'
 
 // [flags] I miss C#.
 /** Command languages a printer could support. One printer may support multiple. */
@@ -27,4 +33,17 @@ export enum PrinterCommandLanguage {
   zplEmulateEpl = epl | zpl,
   /** Printer is CPCL native and can emulate EPL and ZPL. */
   cpclEmulateBoth = cpcl | epl | zpl
+}
+
+export function getCommandSetForLanguage<TMessageType extends MessageArrayLike>(
+  lang: PrinterCommandLanguage
+) : CommandSet<TMessageType> | undefined {
+  // In order of preferred communication method
+  if (hasFlag(lang, PrinterCommandLanguage.zpl)) {
+    return new Zpl.ZplPrinterCommandSet();
+  }
+  if (hasFlag(lang, PrinterCommandLanguage.epl)) {
+    return new Epl.EplPrinterCommandSet();
+  }
+  return undefined;
 }

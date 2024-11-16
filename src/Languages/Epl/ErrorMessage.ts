@@ -1,6 +1,6 @@
-import { DecodeAscii } from "../../../ASCII.js";
-import * as Cmds from "../../../Documents/Commands.js"
-import type { IErrorMessage, IMessageHandlerResult } from "../../index.js";
+import { DecodeAscii } from "../../ASCII.js";
+import * as Cmds from "../../Documents/Commands.js"
+import type { IErrorMessage, IMessageHandlerResult } from "../../Printers/index.js";
 
 export function getErrorMessage(
   msg: Uint8Array,
@@ -136,6 +136,7 @@ export enum EplErrorCode {
   BatteryLowWarning40Percent                              = 15,
   BatteryLowLimit20Percent                                = 16,
   PrinterBusyProcessingPrintJob                           = 50,
+  // These can require a reset command or feed button push
   UndefinedError                                          = 80,
   CutterJammedOrNotInstalled                              = 81,
   AutoSenseOrSensorFailure                                = 82,

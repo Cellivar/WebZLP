@@ -1,8 +1,8 @@
-import * as Options from '../../Configuration/PrinterOptions.js';
-import * as Commands from '../../../Documents/index.js';
-import { AutodetectedPrinter, PrinterModel } from '../../Models/PrinterModel.js';
-import { PrinterModelDb } from '../../Models/PrinterModelDb.js';
-import { range } from '../../../NumericRange.js';
+import * as Options from '../../Printers/Configuration/PrinterOptions.js';
+import * as Commands from '../../Documents/index.js';
+import { AutodetectedPrinter, PrinterModel } from '../../Printers/Models/PrinterModel.js';
+import { PrinterModelDb } from '../../Printers/Models/PrinterModelDb.js';
+import { range } from '../../NumericRange.js';
 
 export function parseConfigurationResponse(
   rawText: string,

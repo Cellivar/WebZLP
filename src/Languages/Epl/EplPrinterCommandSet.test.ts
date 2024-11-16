@@ -3,7 +3,7 @@ import {
   AddImageCommand,
   EplPrinterCommandSet,
   TranspiledDocumentState
-} from '../../index.js';
+} from '../../Printers/index.js';
 import { BitmapGRF } from '../../Documents/BitmapGRF.js';
 
 // Class pulled from jest-mock-canvas which I can't seem to actually import.

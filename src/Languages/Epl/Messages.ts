@@ -1,6 +1,6 @@
-import { AsciiCodeNumbers, hex } from "../../../ASCII.js";
-import { MessageParsingError, type IMessageHandlerResult } from "../../Messages.js";
-import * as Cmds from "../../../Documents/Commands.js"
+import { AsciiCodeNumbers, hex } from "../../ASCII.js";
+import { MessageParsingError, type IMessageHandlerResult } from "../Messages.js";
+import * as Cmds from "../../Documents/Commands.js"
 import { getErrorMessage } from "./ErrorMessage.js";
 import { parseConfiguration } from "./ConfigParser.js";
 
@@ -62,7 +62,10 @@ export function handleMessage(
 
   switch (true) {
     case (firstByte === AsciiCodeNumbers.ACK):
-      // Sent when error reporting enabled and printer finishes doing something.
+      // Different depending on error reporting mode:
+      // Normal mode: either finished printing, or label taken when sensor enabled.
+      // Alternate mode: last line of label has been rasterized
+      // We can't know at the moment here which one we received.
       result.messages.push({
         messageType: 'StatusMessage'
         // No news is good news.
@@ -73,7 +76,7 @@ export function handleMessage(
       result.remainder = msg.slice(1);
       break;
 
-    case (firstByte === AsciiCodeNumbers.DEL):
+    case (firstByte === AsciiCodeNumbers.DLE):
       // Sent when alternate error reporting is enabled w/peeler taken sensor.
       result.messages.push({
         messageType: 'StatusMessage',
@@ -93,7 +96,7 @@ export function handleMessage(
     }
 
     default: {
-      // Everything else needs to be fully interpreted as an  ASCII message.
+      // Everything else needs to be fully interpreted as an ASCII message.
       // Command responses may be fixed or variable length, usually with an
       // indicator of how many to expect.
       if (sentCommand === undefined) {
@@ -104,10 +107,10 @@ export function handleMessage(
       }
 
       const messageHandlerMap = new Map<symbol | Cmds.CommandType, MessageHandlerDelegate>([
-        ['GetError', getErrorMessage],
-        ['QueryConfiguration', parseConfiguration],
+        ['GetStatus', getErrorMessage], // ^ee command
+        ['QueryConfiguration', parseConfiguration], // UQ command
       ]);
-      
+
       // Since we know this is a command response and we have a command to check
       // we can kick this out to a lookup function. That function will need to
       // do the slicing for us as we don't know how long the message might be.

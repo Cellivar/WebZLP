@@ -2,7 +2,7 @@ import { PrinterModel } from './PrinterModel.js';
 import * as EPL from './EplPrinterModels.js';
 import { type IPrinterModelInfo, UnknownPrinter } from './PrinterModel.js';
 import type { IDeviceInformation } from 'web-device-mux';
-import { PrinterCommandLanguage } from '../Languages/index.js';
+import { PrinterCommandLanguage } from '../../Languages/index.js';
 
 export class PrinterModelDb {
   /** Determine a printer model based on the printer-reported model. */

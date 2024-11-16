@@ -1,6 +1,6 @@
 import { WebZlpError } from '../../WebZlpError.js';
 import { PrintSpeed } from '../Configuration/PrinterOptions.js';
-import { PrinterCommandLanguage } from '../Languages/index.js';
+import { PrinterCommandLanguage } from '../../Languages/index.js';
 
 export enum PrinterModel {
   unknown = 'unknown',

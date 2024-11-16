@@ -1,6 +1,6 @@
-import type { PrinterCommandLanguage } from "../Printers/Languages/index.js";
+import type { PrinterCommandLanguage } from "../Languages/index.js";
 import * as Commands from './Commands.js';
-import type { Coordinate, IMessageHandlerResult, IPrinterLabelMediaOptions } from "../Printers/index.js";
+import type { Coordinate, IMessageHandlerResult, IPrinterLabelMediaOptions, MessageArrayLike } from "../Printers/index.js";
 import type { TranspileDocumentError } from "./TranspileDocumentError.js";
 
 /** How a command should be wrapped into a form, if at all */
@@ -11,14 +11,17 @@ export enum CommandFormInclusionMode {
   noForm
 }
 
-export interface CommandSet<TOutput> {
+export interface CommandSet<TMessageType extends MessageArrayLike> {
   /** Encode a raw string command into a raw command according to the command language rules. */
-  encodeCommand(str?: string, withNewline?: boolean): TOutput;
+  encodeCommand<TOut extends MessageArrayLike>(cmd?: TMessageType, withNewline?: boolean): TOut;
+
+  /** Display raw commands in a debugger-friendly string. */
+  debugDisplayCommands<TCommands extends MessageArrayLike>(...commands: TCommands[]): string;
 
   /** Gets the command language this command set implements */
   get commandLanguage(): PrinterCommandLanguage;
   /** Get an empty command to do nothing at all. */
-  get noop(): TOutput;
+  get noop(): TMessageType;
   /** Gets the commands to start a new document. */
   get documentStartCommands(): Commands.IPrinterCommand[];
   /** Gets the commands to end a document. */
@@ -28,9 +31,9 @@ export interface CommandSet<TOutput> {
 
   /** Parse a message object received from the printer. */
   parseMessage(
-    msg: TOutput,
+    msg: TMessageType,
     sentCommand?: Commands.IPrinterCommand
-  ): IMessageHandlerResult<TOutput>;
+  ): IMessageHandlerResult<TMessageType>;
 
   /** Get expanded commands for a given command, if applicable. */
   expandCommand(cmd: Commands.IPrinterCommand): Commands.IPrinterCommand[];
@@ -41,10 +44,10 @@ export interface CommandSet<TOutput> {
   transpileCommand(
     cmd: Commands.IPrinterCommand,
     docMetadata: TranspiledDocumentState
-  ): TOutput | TranspileDocumentError;
+  ): TMessageType | TranspileDocumentError;
 
   /** Combine separate commands into one series of commands. */
-  combineCommands(...commands: TOutput[]): TOutput;
+  combineCommands(...commands: TMessageType[]): TMessageType;
 }
 
 /** Interface of document state effects carried between individual commands. */
@@ -65,14 +68,14 @@ export interface TranspiledDocumentState {
 }
 
 /** A method for transpiling a given command to its native command. */
-export type TranspileCommandDelegate<TOutput> = (
+export type TranspileCommandDelegate<TOutput extends MessageArrayLike> = (
   cmd: Commands.IPrinterCommand,
   docState: TranspiledDocumentState,
   commandSet: CommandSet<TOutput>
 ) => TOutput;
 
 /** A manifest for a custom extended printer command. */
-export interface IPrinterExtendedCommandMapping<TOutput> {
+export interface IPrinterExtendedCommandMapping<TOutput extends MessageArrayLike> {
   extendedTypeSymbol: symbol,
   delegate: TranspileCommandDelegate<TOutput>,
 }

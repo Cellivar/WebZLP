@@ -2,6 +2,7 @@ import { ConfigDocumentBuilder } from '../Documents/ConfigDocument.js';
 import { LabelDocumentBuilder } from '../Documents/LabelDocument.js';
 import { LabelPrinter } from '../Printers/Printer.js';
 import { type DarknessPercent, PrintSpeed } from '../Printers/Configuration/PrinterOptions.js';
+import type { MessageArrayLike } from '../Languages/Messages.js';
 
 /** Collection of handy documents ready to go. */
 export class ReadyToPrintDocuments {
@@ -78,8 +79,8 @@ export class ReadyToPrintDocuments {
   }
 
   /** Combine the common label settings into one config document. */
-  static configLabelSettings(
-    printer: LabelPrinter,
+  static configLabelSettings<TMessageType extends MessageArrayLike>(
+    printer: LabelPrinter<TMessageType>,
     labelWidthInches: number,
     darknessPercent: DarknessPercent
   ) {

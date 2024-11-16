@@ -1,6 +1,6 @@
 import { PrinterModel, BasePrinterInfo, SpeedTable } from './PrinterModel.js';
 import { PrintSpeed } from '../Configuration/PrinterOptions.js';
-import { PrinterCommandLanguage } from '../Languages/index.js';
+import { PrinterCommandLanguage } from '../../Languages/index.js';
 
 /** EPL printers have a lot in common. */
 export abstract class EplPrinter extends BasePrinterInfo {

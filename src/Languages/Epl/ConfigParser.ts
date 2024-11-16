@@ -1,6 +1,6 @@
-import { DecodeAscii } from "../../../ASCII.js";
-import { WebZlpError } from "../../../index.js";
-import type { IMessageHandlerResult, ISettingUpdateMessage } from "../../index.js";
+import { DecodeAscii } from "../../ASCII.js";
+import { WebZlpError } from "../../index.js";
+import type { IMessageHandlerResult, ISettingUpdateMessage } from "../../Printers/index.js";
 
 export function parseConfiguration(
   msg: Uint8Array,
