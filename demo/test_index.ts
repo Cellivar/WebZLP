@@ -1,5 +1,4 @@
 import * as WebLabel from '../src/index.js';
-import * as WebDevices from 'web-device-mux';
 import bootstrap from 'bootstrap';
 // This file exists to test the index.html's typescript. Unfortunately there isn't
 // a good way to configure Visual Studio Code to, well, treat it as typescript.
@@ -11,7 +10,7 @@ import bootstrap from 'bootstrap';
 // For this demo we're going to make use of the USB printer manager
 // so it can take care of concerns like the USB connect and disconnect events.
 
-const printerMgr = new WebDevices.UsbDeviceManager<WebLabel.LabelPrinter>(
+const printerMgr = new WebLabel.UsbDeviceManager<WebLabel.LabelPrinter>(
     window.navigator.usb,
     WebLabel.LabelPrinter.fromUSBDevice,
     {
@@ -37,7 +36,7 @@ addPrinterBtn.addEventListener('click', async () => printerMgr.promptForNewDevic
 const refreshPrinterBtn = document.getElementById('refreshPrinters')!;
 refreshPrinterBtn.addEventListener('click', async () => printerMgr.forceReconnect());
 
-// Next we wire up some events on the WebDeviceManager itself.
+// Next we wire up some events on the PrinterUsbManager itself.
 printerMgr.addEventListener('connectedDevice', ({ detail }) => {
     const printer = detail.device;
     console.log('New printer is a', printer.printerModel.model);
@@ -88,7 +87,7 @@ interface ConfigModalForm extends HTMLCollection {
 // The app's logic is wrapped in a class just for ease of reading.
 class BasicLabelDesignerApp {
     constructor(
-        private manager: WebDevices.UsbDeviceManager<WebLabel.LabelPrinter>,
+        private manager: WebLabel.UsbDeviceManager<WebLabel.LabelPrinter>,
         private btnContainer: HTMLElement,
         private labelForm: HTMLElement,
         private labelFormInstructions: HTMLElement,
