@@ -1,12 +1,11 @@
-import * as Options from '../../Printers/Configuration/PrinterOptions.js';
 import * as Commands from '../../Documents/index.js';
+import * as Messages from '../index.js';
 import { clampToRange } from '../../NumericRange.js';
-import { PrinterCommandLanguage } from '../index.js';
-import { StringCommandSet } from '../StringCommandSet.js';
 import { exhaustiveMatchGuard } from '../../EnumUtils.js';
+import { handleMessage } from './Messages.js';
 
 /** Command set for communicating with a ZPL II printer. */
-export class ZplPrinterCommandSet extends StringCommandSet {
+export class ZplPrinterCommandSet extends Messages.StringCommandSet implements Commands.CommandSet<string> {
   get documentStartCommands(): Commands.IPrinterCommand[] {
     // All ZPL documents start with the start-of-document command.
     return [new Commands.StartLabel()]
@@ -15,20 +14,6 @@ export class ZplPrinterCommandSet extends StringCommandSet {
   get documentEndCommands(): Commands.IPrinterCommand[] {
     // All ZPL documents end with the end-of-document command.
     return [new Commands.EndLabel()]
-  }
-
-  public encodeCommand(str = '', withNewline = true): string {
-    // TODO: ZPL supports omitting the newline, figure out a clever way to
-    // handle situations where newlines are optional to reduce line noise.
-    return str + (withNewline ? '\n' : '');
-  }
-
-  public getNewTranspileState(
-    media: Options.IPrinterLabelMediaOptions
-  ): Commands.TranspiledDocumentState {
-    return {
-
-    }
   }
 
   protected nonFormCommands: (symbol | Commands.CommandType)[] = [
@@ -41,7 +26,14 @@ export class ZplPrinterCommandSet extends StringCommandSet {
   constructor(
     extendedCommands: Array<Commands.IPrinterExtendedCommandMapping<string>> = []
   ) {
-    super(PrinterCommandLanguage.zpl, extendedCommands);
+    super(Messages.PrinterCommandLanguage.zpl, extendedCommands);
+  }
+
+  public parseMessage<TReceived extends Messages.MessageArrayLike>(
+    msg: TReceived,
+    sentCommand?: Commands.IPrinterCommand
+  ): Messages.IMessageHandlerResult<TReceived> {
+    return handleMessage(msg, sentCommand);
   }
 
   public transpileCommand(
@@ -53,11 +45,11 @@ export class ZplPrinterCommandSet extends StringCommandSet {
         exhaustiveMatchGuard(cmd.type);
         break;
       case 'CustomCommand':
-        return this.extendedCommandHandler(cmd, docState);
+        return this.getExtendedCommand(cmd)(cmd, docState, this);
       case 'StartLabel':
-        return '\n^XA\n';
+        return '\n' +'^XA' +'\n';
       case 'EndLabel':
-        return '\n^XZ\n';
+        return '\n' + '^XZ' +'\n';
       case 'NewLabel':
         // Should have been compiled out at a higher step.
         return this.noop;
@@ -65,7 +57,7 @@ export class ZplPrinterCommandSet extends StringCommandSet {
       case 'RebootPrinter':
         return '~JR';
       case 'QueryConfiguration':
-        return '^HZA\r\n^HH';
+        return '^HZA' + '\n' + '^HH';
       case 'PrintConfiguration':
         return '~WC';
       case 'SaveCurrentConfiguration':
@@ -111,7 +103,7 @@ export class ZplPrinterCommandSet extends StringCommandSet {
         return this.noop;
 
       case 'Offset':
-        return this.modifyOffset(cmd as Commands.OffsetCommand, docState);
+        return this.applyOffset(cmd as Commands.OffsetCommand, docState);
       case 'Raw':
         return (cmd as Commands.Raw).rawDocument;
       case 'AddBox':
@@ -170,7 +162,7 @@ export class ZplPrinterCommandSet extends StringCommandSet {
     // Finally, bump the document offset according to the image height.
     outDoc.verticalOffset += bitmap.boundingBox.height;
 
-    return this.combineCommands(fieldStart, graphicCmd, fieldEnd);
+    return fieldStart + graphicCmd + fieldEnd;
   }
 
   private setPrintDirectionCommand(upsideDown: boolean) {
@@ -190,13 +182,15 @@ export class ZplPrinterCommandSet extends StringCommandSet {
 
   private setLabelDimensionsCommand(cmd: Commands.SetLabelDimensionsCommand) {
     const width = Math.trunc(cmd.widthInDots);
-    const widthCmd = `^PW${width}`;
+    let outCmd = `^PW${width}`;
+
     if (cmd.setsHeight && cmd.heightInDots !== undefined && cmd.gapLengthInDots !== undefined) {
       const height = Math.trunc(cmd.heightInDots);
       const heightCmd = `^LL${height},N`; // TODO: this probably isn't right
-      return this.combineCommands(widthCmd, heightCmd);
+      outCmd += heightCmd;
     }
-    return widthCmd;
+
+    return outCmd;
   }
 
   private setLabelHomeCommand(cmd: Commands.SetLabelHomeCommand) {

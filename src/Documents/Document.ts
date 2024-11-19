@@ -1,4 +1,4 @@
-import type { PrinterCommandLanguage } from "../Languages/index.js";
+import type { MessageArrayLike, PrinterCommandLanguage } from "../Languages/index.js";
 import { CommandReorderBehavior, type CommandEffectFlags, type IPrinterCommand } from "./Commands.js";
 
 /** A prepared document, ready to be compiled and sent. */
@@ -8,19 +8,19 @@ export interface IDocument {
 }
 
 /** Stream of commands, optionally ended by an awaited command. */
-export class Transaction<T>{
+export class Transaction{
   constructor(
-    public readonly commands: T,
+    public readonly commands: MessageArrayLike,
     public readonly awaitedCommand: IPrinterCommand | undefined,
   ) {}
 }
 
 /** Compiled document of commands ready to be sent to a printer which supports the PCL. */
-export class CompiledDocument<T> {
+export class CompiledDocument {
   constructor(
     public readonly language: PrinterCommandLanguage,
     public readonly effects: CommandEffectFlags,
-    public readonly transactions: Transaction<T>[]
+    public readonly transactions: Transaction[]
   ) {}
 }
 

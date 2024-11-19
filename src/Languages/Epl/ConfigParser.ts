@@ -1,5 +1,6 @@
 import { DecodeAscii } from "../../ASCII.js";
 import { WebZlpError } from "../../index.js";
+import * as Cmds from "../../Documents/index.js";
 import type { IMessageHandlerResult, ISettingUpdateMessage } from "../../Printers/index.js";
 
 export function parseConfiguration(

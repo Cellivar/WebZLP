@@ -11,7 +11,12 @@ export * from './Cpcl/index.js'
 export * from './Dpl/index.js'
 export * from './Ipl/index.js'
 
+export * from './Messages.js'
+
+// Extension point for extending the library
 export * from './PrinterCommandSet.js'
+export * from './RawCommandSet.js'
+export * from './StringCommandSet.js'
 
 // [flags] I miss C#.
 /** Command languages a printer could support. One printer may support multiple. */
@@ -35,9 +40,7 @@ export enum PrinterCommandLanguage {
   cpclEmulateBoth = cpcl | epl | zpl
 }
 
-export function getCommandSetForLanguage<TMessageType extends MessageArrayLike>(
-  lang: PrinterCommandLanguage
-) : CommandSet<TMessageType> | undefined {
+export function getCommandSetForLanguage(lang: PrinterCommandLanguage): CommandSet<MessageArrayLike> | undefined {
   // In order of preferred communication method
   if (hasFlag(lang, PrinterCommandLanguage.zpl)) {
     return new Zpl.ZplPrinterCommandSet();

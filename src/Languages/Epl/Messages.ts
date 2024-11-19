@@ -1,5 +1,5 @@
 import { AsciiCodeNumbers, hex } from "../../ASCII.js";
-import { MessageParsingError, type IMessageHandlerResult } from "../Messages.js";
+import { asString, asUint8Array, MessageParsingError, type IMessageHandlerResult, type MessageArrayLike } from "../Messages.js";
 import * as Cmds from "../../Documents/Commands.js"
 import { getErrorMessage } from "./ErrorMessage.js";
 import { parseConfiguration } from "./ConfigParser.js";
@@ -34,16 +34,18 @@ export function sliceToNewline(msg: Uint8Array): {
   };
 }
 
-export function handleMessage(
-  msg: Uint8Array,
+export function handleMessage<TReceived extends MessageArrayLike>(
+  message: TReceived,
   sentCommand?: Cmds.IPrinterCommand
-): IMessageHandlerResult<Uint8Array> {
-  const result: IMessageHandlerResult<Uint8Array> = {
+): IMessageHandlerResult<TReceived> {
+  const result: IMessageHandlerResult<TReceived> = {
     messageIncomplete: false,
     messageMatchedExpectedCommand: false,
     messages: [],
-    remainder: msg,
+    remainder: message,
   }
+  const msg = asUint8Array(message);
+  let remainder = msg;
   if (msg === undefined || msg.length === 0) { return result; }
 
   // EPL is fast and loose with what it considers to be a response.
@@ -73,7 +75,7 @@ export function handleMessage(
         // for certain we omit that detail here.
       });
       // TODO: Does the ack include a CR LF?
-      result.remainder = msg.slice(1);
+      remainder = msg.slice(1);
       break;
 
     case (firstByte === AsciiCodeNumbers.DLE):
@@ -83,7 +85,7 @@ export function handleMessage(
         LabelWasTaken: true,
       });
       // TODO: Does the ack include a CR LF?
-      result.remainder = msg.slice(1);
+      remainder = msg.slice(1);
       break;
 
     case (firstByte === AsciiCodeNumbers.NAK): {
@@ -91,7 +93,7 @@ export function handleMessage(
       // is the same as the error query command.
       const errorResult = getErrorMessage(msg.slice(1));
       result.messages.push(...errorResult.messages);
-      result.remainder = errorResult.remainder;
+      remainder = errorResult.remainder;
       break;
     }
 
@@ -127,9 +129,16 @@ export function handleMessage(
 
       const handled = handler(msg, sentCommand);
       result.messages.push(...handled.messages);
-      result.remainder = handled.remainder;
       result.messageIncomplete = handled.messageIncomplete;
       result.messageMatchedExpectedCommand = handled.messageMatchedExpectedCommand;
+
+      if (typeof result.remainder === "string") {
+        result.remainder = asString(remainder) as TReceived;
+      } else if (result.remainder instanceof Uint8Array) {
+        result.remainder = remainder as TReceived;
+      } else {
+        throw new Error("Unknown message type not implemented!");
+      }
       break;
     }
   }

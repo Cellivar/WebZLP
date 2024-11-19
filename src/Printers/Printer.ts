@@ -1,25 +1,16 @@
-import { type IDocument } from '../Documents/Document.js';
-import { ConfigDocumentBuilder, type IConfigDocumentBuilder } from '../Documents/ConfigDocument.js';
-import {
-  type ILabelDocumentBuilder,
-  LabelDocumentBuilder,
-  LabelDocumentType
-} from '../Documents/LabelDocument.js';
-import { ReadyToPrintDocuments } from '../Documents/ReadyToPrintDocuments.js';
+import * as Docs from '../Documents/index.js';
+import * as Lang from '../Languages/index.js';
+import * as Messages from '../Languages/index.js'
 import { WebZlpError } from '../WebZlpError.js';
 import { PrinterOptions } from './Configuration/PrinterOptions.js';
 import { PrinterModelDb } from './Models/PrinterModelDb.js';
-import { DeviceNotReadyError, type IDeviceChannel, type IDeviceCommunicationOptions, DeviceCommunicationError, type IDeviceInformation, type IDevice, UsbDeviceChannel, InputMessageListener, type IHandlerResponse } from 'web-device-mux';
-import { parseRaw, type AwaitedCommand, type IErrorMessage, type IStatusMessage, type MessageArrayLike } from '../Languages/Messages.js';
-import { GetStatusCommand, type CommandSet, type CompiledDocument, type Transaction } from '../Documents/index.js';
-import * as Lang from '../Languages/index.js';
-import { transpileDocument } from '../Documents/DocumentTranspiler.js';
-import { hasFlag } from '../EnumUtils.js';
+import * as Mux from 'web-device-mux';
+import { exhaustiveMatchGuard } from '../EnumUtils.js';
 
 export interface LabelPrinterEventMap {
   //disconnectedDevice: CustomEvent<string>;
-  reportedStatus: CustomEvent<IStatusMessage>;
-  reportedError: CustomEvent<IErrorMessage>;
+  reportedStatus: CustomEvent<Lang.IStatusMessage>;
+  reportedError: CustomEvent<Lang.IErrorMessage>;
 }
 
 function promiseWithTimeout<T>(
@@ -39,13 +30,15 @@ function promiseWithTimeout<T>(
 }
 
 /** A class for working with a label printer. */
-export class LabelPrinter<TMessageType extends MessageArrayLike> extends EventTarget implements IDevice {
+export class LabelPrinter<TChannelType extends Lang.MessageArrayLike> extends EventTarget implements Mux.IDevice {
   // Printer communication handles
-  private _channel: IDeviceChannel<TMessageType, TMessageType>;
-  private _streamListener?: InputMessageListener<TMessageType>;
-  private _commandSet?: CommandSet<TMessageType>;
+  private _channel: Mux.IDeviceChannel<TChannelType, TChannelType>;
+  private _channelType: Lang.MessageArrayLikeType;
+  private _channelMessageTransformer: Lang.MessageTransformer<TChannelType>;
+  private _streamListener?: Mux.InputMessageListener<TChannelType>;
+  private _commandSet?: Docs.CommandSet<Lang.MessageArrayLike>;
 
-  private _awaitedCommand?: AwaitedCommand;
+  private _awaitedCommand?: Lang.AwaitedCommand;
   private _awaitedCommandTimeoutMS = 5000;
 
   private _printerOptions: PrinterOptions;
@@ -58,7 +51,7 @@ export class LabelPrinter<TMessageType extends MessageArrayLike> extends EventTa
   /** Gets the serial number of the printer, detected from the printer's config. */
   get printerSerial() { return this._printerOptions.serialNumber; }
 
-  private _deviceCommOpts: IDeviceCommunicationOptions;
+  private _deviceCommOpts: Mux.IDeviceCommunicationOptions;
   /** Gets the configured printer communication options. */
   get printerCommunicationOptions() {
     return this._deviceCommOpts;
@@ -70,53 +63,67 @@ export class LabelPrinter<TMessageType extends MessageArrayLike> extends EventTa
       && this._channel.connected
   }
 
+  get ready() {
+    return this._channel.ready;
+  }
+
   /** Gets a document for configuring this printer. */
-  public getConfigDocument(): IConfigDocumentBuilder {
-    return new ConfigDocumentBuilder(this._printerOptions);
+  public getConfigDocument(): Docs.IConfigDocumentBuilder {
+    return new Docs.ConfigDocumentBuilder(this._printerOptions);
   }
 
   /** Gets a document for printing a label. */
   public getLabelDocument(
-    docType: LabelDocumentType = LabelDocumentType.instanceForm
-  ): ILabelDocumentBuilder {
-    return new LabelDocumentBuilder(this._printerOptions, docType);
+    docType: Docs.LabelDocumentType = Docs.LabelDocumentType.instanceForm
+  ): Docs.ILabelDocumentBuilder {
+    return new Docs.LabelDocumentBuilder(this._printerOptions, docType);
   }
 
   /** Construct a new printer from a given USB device. */
   static async fromUSBDevice(
     device: USBDevice,
-    options: IDeviceCommunicationOptions
+    options: Mux.IDeviceCommunicationOptions
   ) {
-    const p = new LabelPrinter(new UsbDeviceChannel(device, options), options);
+    const p = new LabelPrinter(
+      new Mux.UsbDeviceChannel(device, options),
+      new Lang.RawMessageTransformer(),
+      'Uint8Array',
+      options);
     await p.setup();
     return p;
   }
 
   /** Construct a new printer from a raw channel object */
-  static async fromChannel<TMessageType extends MessageArrayLike>(
-    channel: IDeviceChannel<TMessageType, TMessageType>,
-    deviceCommunicationOptions: IDeviceCommunicationOptions = { debug: false },
+  static async fromChannel<TChannelType extends Lang.MessageArrayLike>(
+    channel: Mux.IDeviceChannel<TChannelType, TChannelType>,
+    channelMessageTransformer: Lang.MessageTransformer<TChannelType>,
+    channelType: Lang.MessageArrayLikeType,
+    deviceCommunicationOptions: Mux.IDeviceCommunicationOptions = { debug: false },
     printerOptions?: PrinterOptions,
   ) {
-    const p = new LabelPrinter(channel, deviceCommunicationOptions, printerOptions);
+    const p = new LabelPrinter(channel, channelMessageTransformer, channelType, deviceCommunicationOptions, printerOptions);
     await p.setup();
     return p;
   }
 
   protected constructor(
-    channel: IDeviceChannel<TMessageType, TMessageType>,
-    deviceCommunicationOptions: IDeviceCommunicationOptions = { debug: false },
+    channel: Mux.IDeviceChannel<TChannelType, TChannelType>,
+    channelMessageTransformer: Lang.MessageTransformer<TChannelType>,
+    channelMessageType: Lang.MessageArrayLikeType,
+    deviceCommunicationOptions: Mux.IDeviceCommunicationOptions = { debug: false },
     printerOptions?: PrinterOptions,
   ) {
     super();
     this._channel = channel;
+    this._channelMessageTransformer = channelMessageTransformer;
+    this._channelType = channelMessageType;
     this._deviceCommOpts = deviceCommunicationOptions;
     this._printerOptions = printerOptions ?? new PrinterOptions();
   }
 
   public addEventListener<T extends keyof LabelPrinterEventMap>(
     type: T,
-    listener: EventListenerObject | null | ((this: LabelPrinter<TMessageType>, ev: LabelPrinterEventMap[T]) => void),
+    listener: EventListenerObject | null | ((this: LabelPrinter<TChannelType>, ev: LabelPrinterEventMap[T]) => void),
     options?: boolean | AddEventListenerOptions
   ): void;
   public addEventListener(
@@ -129,7 +136,7 @@ export class LabelPrinter<TMessageType extends MessageArrayLike> extends EventTa
 
   public removeEventListener<T extends keyof LabelPrinterEventMap>(
     type: T,
-    listener: EventListenerObject | null | ((this: LabelPrinter<TMessageType>, ev: LabelPrinterEventMap[T]) => void),
+    listener: EventListenerObject | null | ((this: LabelPrinter<TChannelType>, ev: LabelPrinterEventMap[T]) => void),
     options?: boolean | AddEventListenerOptions
   ): void;
   public removeEventListener(
@@ -142,9 +149,9 @@ export class LabelPrinter<TMessageType extends MessageArrayLike> extends EventTa
 
   private sendEvent(
     eventName: keyof LabelPrinterEventMap,
-    detail: IErrorMessage | IStatusMessage
+    detail: Lang.IErrorMessage | Lang.IStatusMessage
   ): boolean {
-    return super.dispatchEvent(new CustomEvent<IErrorMessage | IStatusMessage>(eventName, { detail }));
+    return super.dispatchEvent(new CustomEvent<Lang.IErrorMessage | Lang.IStatusMessage>(eventName, { detail }));
   }
 
   private async setup() {
@@ -159,7 +166,7 @@ export class LabelPrinter<TMessageType extends MessageArrayLike> extends EventTa
 
     this._commandSet = await this.detectLanguage(this._printerOptions);
 
-    this._streamListener = new InputMessageListener<TMessageType>(
+    this._streamListener = new Mux.InputMessageListener<TChannelType>(
       this._channel.getInput.bind(this._channel),
       this.parseAndDispatchMessage.bind(this),
       this._deviceCommOpts.debug,
@@ -188,7 +195,7 @@ export class LabelPrinter<TMessageType extends MessageArrayLike> extends EventTa
     do {
       retryLimit--;
       try {
-        await this.sendDocument(ReadyToPrintDocuments.configDocument);
+        await this.sendDocument(Docs.ReadyToPrintDocuments.configDocument);
         return this.printerOptions;
       }
       catch (e) {
@@ -196,34 +203,34 @@ export class LabelPrinter<TMessageType extends MessageArrayLike> extends EventTa
       }
     } while (retryLimit > 0);
 
-    throw new DeviceCommunicationError(`Tried ${retryLimit} times to read config and failed.`);
+    throw new Mux.DeviceCommunicationError(`Tried ${retryLimit} times to read config and failed.`);
   }
 
   /** Send a document to the printer, applying the commands. */
   public async sendDocument(
-    doc: IDocument,
+    doc: Docs.IDocument,
     commandSet = this._commandSet
   ) {
     if (!this.connected) {
-      throw new DeviceNotReadyError("Printer is not ready to communicate.");
+      throw new Mux.DeviceNotReadyError("Printer is not ready to communicate.");
     }
     if (commandSet === undefined) {
-      throw new DeviceNotReadyError("No command set provided to send, is the printer connected?");
+      throw new Mux.DeviceNotReadyError("No command set provided to send, is the printer connected?");
     }
 
     this.logResultIfDebug(() => 'SENDING DOCUMENT TO PRINTER:\n' + doc.commands.map((c) => c.toDisplay()).join('\n'));
 
     // Exceptions are thrown and handled elsewhere.
-    const state = commandSet.getNewTranspileState(this._printerOptions);
-    const compiledDocument = transpileDocument(doc, commandSet, state);
+    const state = this.getNewTranspileState(this._printerOptions);
+    const compiledDocument = Docs.transpileDocument(doc, commandSet, state);
 
     return this.sendCompiledDocument(compiledDocument);
   }
 
   /** Send a compiled document to the printer. */
-  public async sendCompiledDocument(doc: CompiledDocument<TMessageType>): Promise<boolean> {
+  public async sendCompiledDocument(doc: Docs.CompiledDocument): Promise<boolean> {
     if (this._disposed == true) {
-      throw new DeviceNotReadyError("Printer is not ready to communicate.");
+      throw new Mux.DeviceNotReadyError("Printer is not ready to communicate.");
     }
 
     for (const trans of doc.transactions) {
@@ -232,7 +239,7 @@ export class LabelPrinter<TMessageType extends MessageArrayLike> extends EventTa
         if (!result) { return false; }
       } catch (e) {
         // TODO: Just throw this instead
-        if (e instanceof DeviceCommunicationError) {
+        if (e instanceof Mux.DeviceCommunicationError) {
           console.error(e);
           return false;
         } else {
@@ -244,7 +251,26 @@ export class LabelPrinter<TMessageType extends MessageArrayLike> extends EventTa
     return true;
   }
 
-  private async detectLanguage(deviceInfo?: IDeviceInformation): Promise<CommandSet<TMessageType>> {
+  private getNewTranspileState(op: PrinterOptions): Docs.TranspiledDocumentState {
+    return {
+      characterSize: {
+        left: -1,
+        top: -1
+      },
+      commandEffectFlags: new Docs.CommandEffectFlags(),
+      horizontalOffset: op.labelPrintOriginOffsetDots.left,
+      verticalOffset: op.labelPrintOriginOffsetDots.top,
+      lineSpacingDots: 1,
+      printWidth: op.labelWidthDots,
+      margin: {
+        leftChars: 0,
+        rightChars: 0
+      }
+
+    }
+  }
+
+  private async detectLanguage(deviceInfo?: Mux.IDeviceInformation): Promise<Docs.CommandSet<Lang.MessageArrayLike>> {
     const guess = PrinterModelDb.guessLanguageFromModelHint(deviceInfo);
     // Guess order is easiest to detect and support.. to least
     const guessOrder = [
@@ -254,13 +280,13 @@ export class LabelPrinter<TMessageType extends MessageArrayLike> extends EventTa
       Lang.PrinterCommandLanguage.cpcl
     ];
 
-    const doc = { commands: [new GetStatusCommand()]} as IDocument
+    const doc = { commands: [new Docs.GetStatusCommand()]} as Docs.IDocument
     const awaitedTimeoutOriginal = this._awaitedCommandTimeoutMS;
 
     // For each language, we send the appropriate command to try and get the
     // config dump. If we get something legible back declare success.
     for (let i = 0; i < guessOrder.length; i++) {
-      const set = this.getCommandSetForLanguage(guessOrder[i]);
+      const set = Lang.getCommandSetForLanguage(guessOrder[i]);
       if (set === undefined) {
         continue;
       }
@@ -272,11 +298,12 @@ export class LabelPrinter<TMessageType extends MessageArrayLike> extends EventTa
       // and the message parser will make sure it's a valid response to what we
       // asked. If we time out waiting for the response we move on to the next.
       this._awaitedCommandTimeoutMS = 1000;
-      const tmpListener = new InputMessageListener(
+      const tmpListener = new Mux.InputMessageListener(
         this._channel.getInput.bind(this._channel),
         async (i) => {
-          const remainderData = (await parseRaw(i, set, this._awaitedCommand)).remainderData
-          return { remainderData }
+          const msg = this._channelMessageTransformer.combineMessages(...i);
+          const remainderData = (await Lang.parseRaw(msg, set, this._awaitedCommand)).remainderData
+          return { remainderData: [remainderData] }
         },
         this._deviceCommOpts.debug,
       );
@@ -296,7 +323,7 @@ export class LabelPrinter<TMessageType extends MessageArrayLike> extends EventTa
           }
           catch (e) {
             if (
-              e instanceof DeviceCommunicationError &&
+              e instanceof Mux.DeviceCommunicationError &&
               e.message.startsWith(`Timed out waiting for '${doc.commands[0].name}' response.`)
             ) {
               // Response timeout means we guessed wrong, move on
@@ -319,25 +346,14 @@ export class LabelPrinter<TMessageType extends MessageArrayLike> extends EventTa
     );
   }
 
-  private getCommandSetForLanguage(lang: Lang.PrinterCommandLanguage): CommandSet<TMessageType> | undefined {
-    // In order of preferred communication method
-    if (hasFlag(lang, Lang.PrinterCommandLanguage.zpl)) {
-      return new Lang.ZplPrinterCommandSet();
-    }
-    if (hasFlag(lang, Lang.PrinterCommandLanguage.epl)) {
-      return new Lang.EplPrinterCommandSet();
-    }
-    return undefined;
-  }
-
   private async sendTransactionAndWait(
-    transaction: Transaction<TMessageType>
+    transaction: Docs.Transaction
   ): Promise<boolean> {
     if (transaction.awaitedCommand !== undefined) {
       this.logIfDebug(`Transaction will await a response to '${transaction.awaitedCommand.toDisplay()}'.`);
       let awaitResolve;
       let awaitReject;
-      const awaiter: AwaitedCommand = {
+      const awaiter: Lang.AwaitedCommand = {
         cmd: transaction.awaitedCommand,
         promise: new Promise<boolean>((resolve, reject) => {
           awaitResolve = resolve;
@@ -349,10 +365,24 @@ export class LabelPrinter<TMessageType extends MessageArrayLike> extends EventTa
       this._awaitedCommand = awaiter;
     }
 
+    // TODO: Better type guards??
+    let sendCmds: TChannelType;
+    switch(this._channelType) {
+      default:
+        exhaustiveMatchGuard(this._channelType);
+        break;
+      case 'Uint8Array':
+        sendCmds = Messages.asUint8Array(transaction.commands) as TChannelType;
+        break;
+      case 'string':
+        sendCmds = Messages.asString(transaction.commands) as TChannelType;
+        break;
+    }
+
     await promiseWithTimeout(
-      this._channel.sendCommands(transaction.commands),
+      this._channel.sendCommands(sendCmds),
       5000,
-      new DeviceCommunicationError(`Timed out sending commands to printer, is there a problem with the printer?`)
+      new Mux.DeviceCommunicationError(`Timed out sending commands to printer, is there a problem with the printer?`)
     );
 
     // TODO: Still needed??
@@ -362,7 +392,7 @@ export class LabelPrinter<TMessageType extends MessageArrayLike> extends EventTa
       await promiseWithTimeout(
         this._awaitedCommand.promise,
         this._awaitedCommandTimeoutMS,
-        new DeviceCommunicationError(`Timed out waiting for '${this._awaitedCommand.cmd.name}' response.`)
+        new Mux.DeviceCommunicationError(`Timed out waiting for '${this._awaitedCommand.cmd.name}' response.`)
       );
       this.logIfDebug(`Got a response to command '${this._awaitedCommand.cmd.name}'!`);
     }
@@ -370,8 +400,8 @@ export class LabelPrinter<TMessageType extends MessageArrayLike> extends EventTa
   }
 
   private async parseAndDispatchMessage(
-    input: TMessageType[]
-  ): Promise<IHandlerResponse<TMessageType>> {
+    input: TChannelType[]
+  ): Promise<Mux.IHandlerResponse<TChannelType>> {
     if (this._commandSet === undefined) { return { remainderData: input } }
 
     if (this._awaitedCommand !== undefined) {
@@ -380,7 +410,8 @@ export class LabelPrinter<TMessageType extends MessageArrayLike> extends EventTa
       this.logIfDebug(`Not awaiting a command. This message was a surprise, to be sure, but a welcome one.`);
     }
 
-    const parsed = await parseRaw(input, this._commandSet, this._awaitedCommand);
+    const msg = this._channelMessageTransformer.combineMessages(...input);
+    const parsed = await Lang.parseRaw(msg, this._commandSet, this._awaitedCommand);
 
     parsed.messages.forEach(m => {
       switch (m.messageType) {
@@ -400,7 +431,7 @@ export class LabelPrinter<TMessageType extends MessageArrayLike> extends EventTa
     });
 
     this.logIfDebug(`Returning unused ${parsed.remainderData.length} bytes.`);
-    const remainderData = parsed.remainderData.length === 0 ? [] : [...parsed.remainderData];
+    const remainderData = parsed.remainderData.length === 0 ? [] : [parsed.remainderData];
     return { remainderData }
   }
 

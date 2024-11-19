@@ -1,18 +1,10 @@
-import * as Options from '../../Printers/Configuration/PrinterOptions.js';
 import * as Commands from '../../Documents/index.js';
-import { WebZlpError } from '../../WebZlpError.js';
-import * as Options from '../Configuration/PrinterOptions.js';
-import { PrinterOptions } from '../Configuration/PrinterOptions.js';
-import { PrinterModelDb } from '../Models/PrinterModelDb.js';
-import { PrinterModel } from '../Models/PrinterModel.js';
-import * as Commands from '../../Documents/Commands.js';
-import { clampToRange } from '../../NumericRange.js';
-import { PrinterCommandLanguage } from '../index.js';
-import { StringCommandSet } from '../StringCommandSet.js';
+import * as Messages from '../index.js';
 import { exhaustiveMatchGuard } from '../../EnumUtils.js';
+import { handleMessage } from './Messages.js';
 
 /** Command set for communicating with an EPL II printer. */
-export class EplPrinterCommandSet extends StringCommandSet {
+export class EplPrinterCommandSet extends Messages.StringCommandSet {
   get documentStartCommands(): Commands.IPrinterCommand[] {
     // All ZPL documents start with the start-of-document command.
     return [new Commands.ClearImageBufferCommand()]
@@ -21,19 +13,6 @@ export class EplPrinterCommandSet extends StringCommandSet {
   get documentEndCommands(): Commands.IPrinterCommand[] {
     // There's no formal command for the end of an EPL doc
     return []
-  }
-
-  public encodeCommand(str = '', withNewline = true): string {
-    // Every command in EPL ends with a newline.
-    return str + (withNewline ? '\r\n' : '');
-  }
-
-  public getNewTranspileState(
-    media: Options.IPrinterLabelMediaOptions
-  ): Commands.TranspiledDocumentState {
-    return {
-
-    }
   }
 
   protected nonFormCommands: (symbol | Commands.CommandType)[] = [
@@ -46,7 +25,14 @@ export class EplPrinterCommandSet extends StringCommandSet {
   constructor(
     extendedCommands: Array<Commands.IPrinterExtendedCommandMapping<string>> = []
   ) {
-    super(PrinterCommandLanguage.epl, extendedCommands);
+    super(Messages.PrinterCommandLanguage.epl, extendedCommands);
+  }
+
+  public parseMessage<TReceived extends Messages.MessageArrayLike>(
+    msg: TReceived,
+    sentCommand?: Commands.IPrinterCommand
+  ): Messages.IMessageHandlerResult<TReceived> {
+    return handleMessage(msg, sentCommand);
   }
 
   public transpileCommand(
@@ -58,33 +44,33 @@ export class EplPrinterCommandSet extends StringCommandSet {
         exhaustiveMatchGuard(cmd.type);
         break;
       case 'CustomCommand':
-        return this.extendedCommandHandler(cmd, docState);
+        return this.getExtendedCommand(cmd)(cmd, docState, this);
       case 'StartLabel':
-        return '\r\nN\r\n'
+        return '\r\n' + 'N' + '\r\n';
       case 'EndLabel':
       case 'NewLabel':
         // Should have been compiled out at a higher step.
         return this.noop;
 
       case 'RebootPrinter':
-        return this.encodeCommand('^@');
+        return '^@' + '\r\n';
       case 'QueryConfiguration':
-        return this.encodeCommand('UQ');
+        return 'UQ' + '\r\n';
       case 'PrintConfiguration':
-        return this.encodeCommand('U');
+        return 'U' + '\r\n';
       case 'SaveCurrentConfiguration':
         // EPL doesn't have an explicit save step.
         return this.noop;
       case 'GetStatus':
         // Referred to as 'return error' but really returns general status info.
-        return this.encodeCommand('^ee');
+        return '^ee' + '\r\n';
 
       case 'SetPrintDirection':
         return this.setPrintDirectionCommand((cmd as Commands.SetPrintDirectionCommand).upsideDown);
       case 'SetDarkness':
         return this.setDarknessCommand((cmd as Commands.SetDarknessCommand).darknessSetting);
       case 'AutosenseLabelDimensions':
-        return this.encodeCommand('xa');
+        return 'xa' + '\r\n';
       case 'SetPrintSpeed':
         // EPL has no separate media slew speed setting.
         return this.setPrintSpeedCommand((cmd as Commands.SetPrintSpeedCommand).speedVal);
@@ -105,15 +91,15 @@ export class EplPrinterCommandSet extends StringCommandSet {
         return '\r\nN';
       case 'SuppressFeedBackup':
         // EPL uses an on/off style for form backup, it'll remain off until reenabled.
-        return this.encodeCommand('JB');
+        return 'JB' + '\r\n';
       case 'EnableFeedBackup':
         // Thus EPL needs an explicit command to re-enable.
-        return this.encodeCommand('JF');
+        return 'JF' + '\r\n';
 
       case 'Offset':
-        return this.modifyOffset(cmd as Commands.OffsetCommand, docState);
+        return this.applyOffset(cmd as Commands.OffsetCommand, docState);
       case 'Raw':
-        return this.encodeCommand((cmd as Commands.Raw).rawDocument, false);
+        return (cmd as Commands.Raw).rawDocument;
       case 'AddBox':
         return this.addBoxCommand(cmd as Commands.AddBoxCommand, docState);
       case 'AddImage':
@@ -121,7 +107,7 @@ export class EplPrinterCommandSet extends StringCommandSet {
       case 'AddLine':
         return this.addLineCommand(cmd as Commands.AddLineCommand, docState);
       case 'CutNow':
-        return this.encodeCommand('C');
+        return 'C' + '\r\n';
 
       case 'Print':
         return this.printCommand(cmd as Commands.PrintCommand);
@@ -132,14 +118,14 @@ export class EplPrinterCommandSet extends StringCommandSet {
     upsideDown: boolean
   ): string {
     const dir = upsideDown ? 'T' : 'B';
-    return this.encodeCommand(`Z${dir}`);
+    return `Z${dir}` + '\r\n';
   }
 
   private setDarknessCommand(
     darkness: number
   ): string {
     const dark = Math.trunc(darkness);
-    return this.encodeCommand(`D${dark}`);
+    return `D${dark}` + '\r\n';
   }
 
   private setPrintSpeedCommand(
@@ -147,28 +133,29 @@ export class EplPrinterCommandSet extends StringCommandSet {
   ): string {
     // Validation should have happened on setup, printer will just reject
     // invalid speeds.
-    return this.encodeCommand(`S${speed}`);
+    return `S${speed}` + '\r\n';
   }
 
   private setLabelDimensionsCommand(
     cmd: Commands.SetLabelDimensionsCommand,
   ): string {
     const width = Math.trunc(cmd.widthInDots);
-    const widthCmd = this.encodeCommand(`q${width}`);
+    let outCmd = `q${width}` + '\r\n';
+
     if (cmd.setsHeight && cmd.heightInDots !== undefined && cmd.gapLengthInDots !== undefined) {
       const height = Math.trunc(cmd.heightInDots);
       const gap = Math.trunc(cmd.gapLengthInDots);
-      const heightCmd = this.encodeCommand(`Q${height},${gap}`);
-      return this.combineCommands(widthCmd, heightCmd);
+      outCmd += `Q${height},${gap}` + '\r\n';
     }
-    return widthCmd;
+
+    return outCmd;
   }
 
   private setLabelHomeCommand(
     cmd: Commands.SetLabelHomeCommand,
     outDoc: Commands.TranspiledDocumentState
   ): string {
-    return this.modifyOffset(
+    return this.applyOffset(
       new Commands.OffsetCommand(cmd.offset.left, cmd.offset.top, true),
       outDoc
     );
@@ -179,7 +166,7 @@ export class EplPrinterCommandSet extends StringCommandSet {
   ): string {
     const xOffset = Math.trunc(cmd.offset.left);
     const yOffset = Math.trunc(cmd.offset.top);
-    return this.encodeCommand(`R${xOffset},${yOffset}`);
+    return `R${xOffset},${yOffset}` + '\r\n';
   }
 
   private setLabelToContinuousMediaCommand(
@@ -188,7 +175,7 @@ export class EplPrinterCommandSet extends StringCommandSet {
     // EPL seems to not have a static label length? All labels are variable?
     // Needs testing.
     const length = Math.trunc(cmd.labelLengthInDots);
-    return this.encodeCommand(`Q${length},0`);
+    return `Q${length},0` + '\r\n';
   }
 
   private setLabelToWebGapMediaCommand(
@@ -196,7 +183,7 @@ export class EplPrinterCommandSet extends StringCommandSet {
   ): string {
     const length = Math.trunc(cmd.labelLengthInDots);
     const gap = Math.trunc(cmd.labelGapInDots);
-    return this.encodeCommand(`Q${length},${gap}`);
+    return `Q${length},${gap}` + '\r\n';
   }
 
   private setLabelToMarkMediaCommand(
@@ -205,7 +192,7 @@ export class EplPrinterCommandSet extends StringCommandSet {
     const length = Math.trunc(cmd.labelLengthInDots);
     const lineLength = Math.trunc(cmd.blackLineThicknessInDots);
     const lineOffset = Math.trunc(cmd.blackLineOffset);
-    return this.encodeCommand(`Q${length},B${lineLength},${lineOffset}`);
+    return `Q${length},B${lineLength},${lineOffset}` + '\r\n';
   }
 
   private printCommand(
@@ -213,7 +200,7 @@ export class EplPrinterCommandSet extends StringCommandSet {
   ): string {
     const total = Math.trunc(cmd.labelCount);
     const dup = Math.trunc(cmd.additionalDuplicateOfEach);
-    return this.encodeCommand(`P${total},${dup}`);
+    return `P${total},${dup}` + '\r\n';
   }
 
   private addImageCommand(
@@ -228,18 +215,14 @@ export class EplPrinterCommandSet extends StringCommandSet {
 
     // Add the text command prefix to the buffer data
     const parameters = [
-      'GW' + Math.trunc(outDoc.horizontalOffset + bitmap.boundingBox.paddingLeft),
+      Math.trunc(outDoc.horizontalOffset + bitmap.boundingBox.paddingLeft),
       Math.trunc(outDoc.verticalOffset + bitmap.boundingBox.paddingTop),
       bitmap.bytesPerRow,
       bitmap.height
     ];
     // Bump the offset according to the image being added.
     outDoc.verticalOffset += bitmap.boundingBox.height;
-    const rawCmd = this.encodeCommand(parameters.join(',') + ',', false);
-    return this.combineCommands(
-      rawCmd,
-      this.combineCommands(buffer, this.encodeCommand(''))
-    );
+    return 'GW' + parameters.join(',') + ',' + buffer + '\r\n';
   }
 
   private addLineCommand(
@@ -258,9 +241,8 @@ export class EplPrinterCommandSet extends StringCommandSet {
         break;
     }
 
-    return this.encodeCommand(
-      `${drawMode}${outDoc.horizontalOffset},${outDoc.verticalOffset},${length},${height}`
-    );
+    const params = [outDoc.horizontalOffset, outDoc.verticalOffset, length, height]
+    return drawMode + params.join(',') + '\r\n';
   }
 
   private addBoxCommand(
@@ -271,8 +253,8 @@ export class EplPrinterCommandSet extends StringCommandSet {
     const height = Math.trunc(cmd.heightInDots) || 0;
     const thickness = Math.trunc(cmd.thickness) || 0;
 
-    return this.encodeCommand(
-      `X${outDoc.horizontalOffset},${outDoc.verticalOffset},${thickness},${length},${height}`
-    );
+
+    const params = [outDoc.horizontalOffset, outDoc.verticalOffset, thickness, length, height]
+    return 'X' + params.join(',') + '\r\n';
   }
 }

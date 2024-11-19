@@ -1,10 +1,7 @@
 import { expect, describe, it } from 'vitest';
-import {
-  AddImageCommand,
-  EplPrinterCommandSet,
-  TranspiledDocumentState
-} from '../../Printers/index.js';
 import { BitmapGRF } from '../../Documents/BitmapGRF.js';
+import { EplPrinterCommandSet } from './index.js';
+import { AddImageCommand } from '../../Documents/index.js';
 
 // Class pulled from jest-mock-canvas which I can't seem to actually import.
 class ImageData {

@@ -1,6 +1,8 @@
 import * as Commands from "./index.js";
-import type { CommandSet, TranspiledDocumentState } from "./CommandSet.js";
 import { exhaustiveMatchGuard } from "../EnumUtils.js";
+import type { MessageArrayLike } from "../Languages/index.js";
+import type { Coordinate } from "../Printers/index.js";
+import { WebZlpError } from "../WebZlpError.js";
 
 type PrecompiledTransaction = {
   commands: Commands.IPrinterCommand[];
@@ -13,12 +15,42 @@ interface RawCommandForm {
   withinForm: boolean;
 }
 
-export function transpileDocument<TOutput>(
+/** Interface of document state effects carried between individual commands. */
+export interface TranspiledDocumentState {
+  horizontalOffset: number;
+  verticalOffset: number;
+  lineSpacingDots: number;
+
+  margin: {
+    leftChars: number;
+    rightChars: number;
+  }
+  printWidth: number;
+
+  characterSize: Coordinate;
+
+  commandEffectFlags: Commands.CommandEffectFlags;
+}
+
+/** Represents an error when validating a document against a printer's capabilities. */
+export class TranspileDocumentError extends WebZlpError {
+  private _innerErrors: TranspileDocumentError[] = [];
+  get innerErrors() {
+    return this._innerErrors;
+  }
+
+  constructor(message: string, innerErrors?: TranspileDocumentError[]) {
+    super(message);
+    this._innerErrors = innerErrors ?? [];
+  }
+}
+
+export function transpileDocument(
   doc: Commands.IDocument,
-  commandSet: CommandSet<TOutput>,
+  commandSet: Commands.CommandSet<MessageArrayLike>,
   documentMetadata: TranspiledDocumentState,
   commandReorderBehavior: Commands.CommandReorderBehavior = Commands.CommandReorderBehavior.afterAllForms
-): Readonly<Commands.CompiledDocument<TOutput>> {
+): Readonly<Commands.CompiledDocument> {
 
   const cmdsWithinDoc = [
     ...commandSet.documentStartCommands,
@@ -39,7 +71,7 @@ export function transpileDocument<TOutput>(
 
   const errs = commandsWithMaybeErrors.flatMap(ce => ce.errors);
   if (errs.length > 0) {
-    throw new Commands.TranspileDocumentError(
+    throw new TranspileDocumentError(
       'One or more validation errors occurred transpiling the document.',
       errs
     );
@@ -54,9 +86,9 @@ export function transpileDocument<TOutput>(
   );
 }
 
-function splitTransactionsAndForms<TOutput>(
+function splitTransactionsAndForms(
   commands: ReadonlyArray<Commands.IPrinterCommand>,
-  commandSet: CommandSet<TOutput>,
+  commandSet: Commands.CommandSet<MessageArrayLike>,
   reorderBehavior: Commands.CommandReorderBehavior
 ): RawCommandForm[] {
   const forms: Array<RawCommandForm> = [];
@@ -107,7 +139,7 @@ function splitTransactionsAndForms<TOutput>(
           break;
         case Commands.CommandReorderBehavior.throwError:
           if (currentForm.withinForm) {
-            throw new Commands.TranspileDocumentError("Non-form command present within a document form and Command Reorder Behavior was set to throw errors.");
+            throw new TranspileDocumentError("Non-form command present within a document form and Command Reorder Behavior was set to throw errors.");
           }
           break;
       }
@@ -195,30 +227,30 @@ function splitTransactionsAndForms<TOutput>(
   return forms;
 }
 
-function compileTransaction<TOutput>(
+function compileTransaction(
   trans: PrecompiledTransaction,
-  commandSet: CommandSet<TOutput>,
+  commandSet: Commands.CommandSet<MessageArrayLike>,
   docState: TranspiledDocumentState,
 ): {
-  transaction: Commands.Transaction<TOutput>,
-  errors: Commands.TranspileDocumentError[]
+  transaction: Commands.Transaction,
+  errors: TranspileDocumentError[]
 } {
   const {cmds, errors} = trans.commands
     .map((cmd) => commandSet.transpileCommand(cmd, docState))
     .reduce((a, cmd) => {
-      if (cmd instanceof Commands.TranspileDocumentError) {
+      if (cmd instanceof TranspileDocumentError) {
         a.errors.push(cmd);
       } else {
         a.cmds.push(cmd);
       }
       return a;
     }, {
-      cmds: new Array<TOutput>,
-      errors: new Array<Commands.TranspileDocumentError>,
+      cmds: new Array<MessageArrayLike>,
+      errors: new Array<TranspileDocumentError>,
     });
 
   return {
-    transaction: new Commands.Transaction<TOutput>(
+    transaction: new Commands.Transaction(
       commandSet.combineCommands(...cmds),
       trans.waitCommand
     ),
