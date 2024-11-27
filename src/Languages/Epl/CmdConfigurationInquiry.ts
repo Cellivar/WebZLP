@@ -101,31 +101,31 @@ export function parseConfigResponse(
         //printerInfo.serialPort = str.substring(12).trim();
         break;
 
-      case /^q\d+\sQ/.test(str): {
+      case /^q\d+ Q/.test(str): {
         // q600 Q208,25            # Form width (q) and length (Q), with label gap
         updateFormDimensions(str.trim(), update);
         break;
       }
 
-      case /^I\d,.,\d\d\d\sr[YN]/.test(str): {
+      case /^I\d,.+,\d\d\d r[YN]/.test(str): {
         // I8,A,001 rY JF WY       # Config settings J
         updateSettingsLines(str.trim(), update);
         break;
       }
 
-      case /^S\d\sD\d\d\sR/.test(str): {
+      case /^S\d D\d\d R/.test(str): {
         // S4 D08 R112,000 ZB UN   # Config settings K
         updateSettingsLines(str.trim(), update);
         break;
       }
 
-      case /^HEAD\s\s\s\susage\s=/.test(str): {
+      case /^HEAD {4}usage =/.test(str): {
         // HEAD    usage =     249,392"    # Odometer of the head
         update.headDistanceIn = Number(str.replaceAll(/[^\d]/g, ''));
         break;
       }
 
-      case /^PRINTER\susage\s=/.test(str): {
+      case /^PRINTER usage =/.test(str): {
         // PRINTER usage =     249,392"    # Odometer of the printer
         update.printerDistanceIn = Number(str.replaceAll(/[^\d]/g, ''));
         break;
@@ -136,7 +136,13 @@ export function parseConfigResponse(
         updateHardwareOptions(str.trim(), update);
         break;
 
-      case /^Line\sMode/.test(str):
+      case /^\d\d \d\d \d\d/.test(str):
+        // 00 04 08          # Config settings N
+        // TODO: Extract threshold values for sensors?
+        //updateThresholds(str.trim(), update);
+        break;
+
+      case /^Line Mode/.test(str):
         // Line mode           # Printer is in EPL1 mode
         throw new Util.WebZlpError(
           'Printer is in EPL1 mode, this library does not support EPL1. Reset printer.'
@@ -146,7 +152,7 @@ export function parseConfigResponse(
       // We explicitly parse and handle them to better identify things we don't
       // parse, so we can log that information.
       //
-      case /^Page\sMode/.test(str):
+      case /^Page Mode/i.test(str):
       // Page mode           # Printer is in EPL2 mode
       // No-op, this is the mode we want in WebZLP
       case /^oE.,/.test(str):
@@ -155,9 +161,6 @@ export function parseConfigResponse(
       case /^oU.,/.test(str):
       // oUs,t,u                 # UNKNOWN!
       // Unknown information, only seen on a UPS model so far.
-      case /^\d\d\s\d\d\s\d\d\s$/.test(str):
-      // 06 10 14                # Config setting N
-      // Not useful information, ignored in WebZLP
       case /^Emem[:\s]/.test(str):
       // Emem:031K,0037K avl     # Soft font storage
       // Emem used: 0            # Soft font storage
@@ -270,7 +273,7 @@ function updateSettingsLines(settingLine: string, msg: Cmds.ISettingUpdateMessag
     );
 
     const rawD = Number(lineK.at(1)?.substring(1) ?? 7);
-    const percentD = Util.clampToRange(Math.ceil(rawD * (100 / 15)), 0, 15);
+    const percentD = Util.clampToRange(Math.ceil((rawD / 15) * 100), 1, 100);
     msg.printerMedia.darknessPercent = percentD as Conf.DarknessPercent;
 
     // R112,000 sets the label home origin.
@@ -306,7 +309,7 @@ function updateHardwareOptions(str: string, msg: Cmds.ISettingUpdateMessage) {
   msg.printerMedia.thermalPrintMode = Conf.ThermalPrintMode.transfer;
 
   str.substring(7).split(',').forEach(o => {
-    switch (o) {
+    switch (o.trim()) {
       case "d":
       case "D":
         msg.printerMedia.thermalPrintMode = Conf.ThermalPrintMode.direct;
@@ -333,7 +336,7 @@ function getModel(rawModel: string): Conf.IPrinterHardwareUpdate {
   const models = eplPrinters.default.models;
 
   const model = models.find(m => {
-    return m.modelHints.some(rawModel.match);
+    return m.modelHints.some(h => rawModel.match(h));
   }) ?? {
     modelName: "Unknown_EPL",
     dpi: 203,

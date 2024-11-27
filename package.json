@@ -25,6 +25,7 @@
     "build": "tsc && vite build",
     "lint": "eslint .",
     "test": "vitest --run",
+    "test:snapshot": "vitest --run -u",
     "serve-local": "export PORT=4444 || set PORT=4444 && serve .",
     "all": "npm run build && npm run lint && npm run test"
   },
