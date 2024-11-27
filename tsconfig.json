@@ -1,5 +1,8 @@
 {
   "compilerOptions": {
+    "types": [
+      "vitest/importMeta"
+    ],
     "target": "ES2022",
     "module": "nodenext",
     "moduleResolution": "nodenext",
@@ -21,7 +24,8 @@
     "noUnusedParameters": true,
     "forceConsistentCasingInFileNames": true,
     "verbatimModuleSyntax": true,
-    "incremental": true
+    "incremental": true,
+    "resolveJsonModule": true
   },
   "include": [
     "src"
