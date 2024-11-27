@@ -1,7 +1,7 @@
-import * as Commands from './Commands.js';
+import * as Util from '../Util/index.js';
+import * as Conf from '../Configs/index.js';
+import * as Cmds from '../Commands/index.js';
 import { type IDocument, DocumentBuilder } from './Document.js';
-import * as Options from '../Printers/Configuration/PrinterOptions.js';
-import { WebZlpError } from '../WebZlpError.js';
 
 /** A series of printer commands that results in configuration changes. */
 export interface IConfigDocumentBuilder
@@ -15,11 +15,11 @@ export class ConfigDocumentBuilder
   extends DocumentBuilder<IConfigDocumentBuilder>
   implements IConfigDocumentBuilder {
   get commandReorderBehavior() {
-    return Commands.CommandReorderBehavior.afterAllForms;
+    return Cmds.CommandReorderBehavior.afterAllForms;
   }
 
-  constructor(config?: Options.PrinterOptions) {
-    super(config ?? Options.PrinterOptions.invalid);
+  constructor(config?: Cmds.PrinterConfig) {
+    super(config ?? new Cmds.PrinterConfig());
   }
 
   // The config document appends an additional command to the end of the document
@@ -27,69 +27,65 @@ export class ConfigDocumentBuilder
   // so to bring them closer to parity this is automatically implied.
   // TODO: Consider whether this should move to a ZPL extended command.
   finalize() {
-    this.andThen(new Commands.SaveCurrentConfigurationCommand());
+    this.andThen(new Cmds.SaveCurrentConfigurationCommand());
     return super.finalize();
   }
 
   ///////////////////// GENERAL LABEL HANDLING
 
   clearImageBuffer(): IConfigDocumentBuilder {
-    return this.andThen(new Commands.ClearImageBufferCommand());
+    return this.andThen(new Cmds.ClearImageBufferCommand());
   }
 
   rebootPrinter(): IDocument {
-    return this.andThen(new Commands.RebootPrinterCommand()).finalize();
+    return this.andThen(new Cmds.RebootPrinterCommand()).finalize();
   }
 
   ///////////////////// CONFIG READING
 
   queryConfiguration(): IConfigDocumentBuilder {
-    return this.andThen(new Commands.QueryConfigurationCommand());
+    return this.andThen(new Cmds.QueryConfigurationCommand());
   }
 
   printConfiguration(): IDocument {
-    return this.andThen(new Commands.PrintConfigurationCommand()).finalize();
+    return this.andThen(new Cmds.PrintConfigurationCommand()).finalize();
   }
 
   ///////////////////// ALTER PRINTER CONFIG
 
-  setDarknessConfig(darknessPercent: Options.DarknessPercent) {
+  setDarknessConfig(darknessPercent: Conf.DarknessPercent) {
     return this.andThen(
-      new Commands.SetDarknessCommand(darknessPercent, this._config.model.maxDarkness)
+      new Cmds.SetDarknessCommand(darknessPercent)
     );
   }
 
   setPrintDirection(upsideDown = false) {
-    return this.andThen(new Commands.SetPrintDirectionCommand(upsideDown));
+    return this.andThen(new Cmds.SetPrintDirectionCommand(upsideDown));
   }
 
-  setPrintSpeed(speed: Options.PrintSpeed, mediaSlewSpeed = Options.PrintSpeed.ipsAuto) {
-    if (!this._config.model.isSpeedValid(speed)) {
+  setPrintSpeed(speed: Conf.PrintSpeed, mediaSlewSpeed = Conf.PrintSpeed.ipsAuto) {
+    if (!this._config.speedTable.isValid(speed)) {
       throw new UnsupportedPrinterConfigError(
         'setPrintSpeed',
-        `Print speed ${Options.PrintSpeed[speed]} is not valid for model ${this._config.model.model}`
+        `Print speed ${Conf.PrintSpeed[speed]} is not valid for model ${this._config.model}`
       );
     }
-    const speedVal = this._config.model.getSpeedValue(speed);
 
     // If the media slew speed is auto just copy the print speed.
-    if (mediaSlewSpeed === Options.PrintSpeed.ipsAuto) {
+    if (mediaSlewSpeed === Conf.PrintSpeed.ipsAuto) {
       mediaSlewSpeed = speed;
     }
-    if (mediaSlewSpeed && !this._config.model.isSpeedValid(mediaSlewSpeed)) {
+    if (mediaSlewSpeed && !this._config.speedTable.isValid(mediaSlewSpeed)) {
       throw new UnsupportedPrinterConfigError(
         'setPrintSpeed',
-        `Media slew speed ${Options.PrintSpeed[speed]} is not valid for model ${this._config.model.model}`
+        `Media slew speed ${Conf.PrintSpeed[speed]} is not valid for model ${this._config.model}`
       );
     }
-    const mediaSpeedVal = this._config.model.getSpeedValue(mediaSlewSpeed);
 
     return this.andThen(
-      new Commands.SetPrintSpeedCommand(
+      new Cmds.SetPrintSpeedCommand(
         speed,
-        speedVal,
-        mediaSlewSpeed,
-        mediaSpeedVal,
+        mediaSlewSpeed
       )
     );
   }
@@ -97,54 +93,57 @@ export class ConfigDocumentBuilder
   ///////////////////// ALTER LABEL CONFIG
 
   autosenseLabelLength() {
-    return this.andThen(new Commands.AutosenseLabelDimensionsCommand()).finalize();
+    return this.andThen(new Cmds.AutosenseLabelDimensionsCommand()).finalize();
   }
 
-  setLabelDimensions(widthInInches: number, heightInInches?: number, gapLengthInInches?: number) {
-    const dpi = this._config.model.dpi;
+  setLabelDimensions(widthInInches: number, lengthInInches?: number, gapLengthInInches?: number) {
+    const dpi = this._config.dpi;
     return this.setLabelDimensionsDots(
       widthInInches * dpi,
-      heightInInches ? heightInInches * dpi : undefined,
+      lengthInInches ? lengthInInches * dpi : undefined,
       gapLengthInInches ? gapLengthInInches * dpi : undefined
     );
   }
 
-  setLabelDimensionsDots(widthInDots: number, heightInDots?: number, gapLengthInDots?: number) {
+  setLabelDimensionsDots(widthInDots: number, lengthInDots?: number, gapLengthInDots?: number) {
     return this.andThen(
-      new Commands.SetLabelDimensionsCommand(widthInDots, heightInDots, gapLengthInDots)
+      new Cmds.SetLabelDimensionsCommand(widthInDots, lengthInDots, gapLengthInDots)
     );
   }
 
   setLabelHomeOffsetDots(horizontalOffsetInDots: number, verticalOffsetInDots: number) {
     return this.andThen(
-      new Commands.SetLabelHomeCommand(horizontalOffsetInDots, verticalOffsetInDots)
+      new Cmds.SetLabelHomeCommand({
+        left: horizontalOffsetInDots,
+        top: verticalOffsetInDots
+      })
     );
   }
 
   setLabelPrintOriginOffsetCommand(horizontalOffsetInDots: number, verticalOffsetInDots: number) {
     return this.andThen(
-      new Commands.SetLabelPrintOriginOffsetCommand(
-        horizontalOffsetInDots,
-        verticalOffsetInDots
-      )
+      new Cmds.SetLabelPrintOriginOffsetCommand({
+        left: horizontalOffsetInDots,
+        top: verticalOffsetInDots
+      })
     );
   }
 
-  setLabelMediaToContinuous(labelHeightInInches: number): IConfigDocumentBuilder {
-    const dpi = this._config.model.dpi;
+  setLabelMediaToContinuous(labelLengthInInches: number): IConfigDocumentBuilder {
+    const dpi = this._config.dpi;
     return this.andThen(
-      new Commands.SetLabelToContinuousMediaCommand(dpi * labelHeightInInches)
+      new Cmds.SetLabelToContinuousMediaCommand(dpi * labelLengthInInches)
     );
   }
 
   setLabelMediaToWebGapSense(
-    labelHeightInInches: number,
+    labelLengthInInches: number,
     labelGapInInches: number
   ): IConfigDocumentBuilder {
-    const dpi = this._config.model.dpi;
+    const dpi = this._config.dpi;
     return this.andThen(
-      new Commands.SetLabelToWebGapMediaCommand(
-        labelHeightInInches * dpi,
+      new Cmds.SetLabelToWebGapMediaCommand(
+        labelLengthInInches * dpi,
         labelGapInInches * dpi
       )
     );
@@ -155,9 +154,9 @@ export class ConfigDocumentBuilder
     blackLineThicknessInInches: number,
     blackLineOffsetInInches: number
   ): IConfigDocumentBuilder {
-    const dpi = this._config.model.dpi;
+    const dpi = this._config.dpi;
     return this.andThen(
-      new Commands.SetLabelToMarkMediaCommand(
+      new Cmds.SetLabelToMarkMediaCommand(
         labelLengthInInches * dpi,
         blackLineThicknessInInches * dpi,
         blackLineOffsetInInches * dpi
@@ -167,7 +166,7 @@ export class ConfigDocumentBuilder
 }
 
 export interface IPrinterBasicCommandBuilder {
-  /** Clear the image buffer and prepare for a new set of commands. */
+  /** Clear the image buffer and prepare for a new set of Cmds. */
   clearImageBuffer(): IConfigDocumentBuilder;
 
   /** Simulate turning the printer off and back on. Must be the final command. */
@@ -184,18 +183,18 @@ export interface IPrinterConfigBuilder {
 
 export interface IPrinterLabelConfigBuilder {
   /** Set the darkness of the printer in the stored configuration. */
-  setDarknessConfig(darknessPercent: Options.DarknessPercent): IConfigDocumentBuilder;
+  setDarknessConfig(darknessPercent: Conf.DarknessPercent): IConfigDocumentBuilder;
 
   /** Set the direction labels print out of the printer. */
   setPrintDirection(upsideDown?: boolean): IConfigDocumentBuilder;
 
   /** Set the speed at which the labels print. */
-  setPrintSpeed(speed: Options.PrintSpeed): IConfigDocumentBuilder;
+  setPrintSpeed(speed: Conf.PrintSpeed): IConfigDocumentBuilder;
 
   /**
    * Set the size of the labels in the printer.
    *
-   * Omit height and gap if an autosense was or will be run. Both must be provided
+   * Omit length and gap if an autosense was or will be run. Both must be provided
    * to set the length and gap manually, otherwise the length will be ignored. This
    * is usually only necessary when using continuous media, see the documentation.
    *
@@ -204,14 +203,14 @@ export interface IPrinterLabelConfigBuilder {
    */
   setLabelDimensions(
     widthInInches: number,
-    heightInInches?: number,
+    lengthInInches?: number,
     gapLengthInInches?: number
   ): IConfigDocumentBuilder;
 
   /**
    * Set the size of the labels in the printer, sized in dots. Dots are printer DPI specific.
    *
-   * Omit height and gap if an autosense was or will be run. Both must be provided
+   * Omit length and gap if an autosense was or will be run. Both must be provided
    * to set the length and gap manually, otherwise the length will be ignored. This
    * is usually only necessary when using continuous media, see the documentation.
    *
@@ -220,7 +219,7 @@ export interface IPrinterLabelConfigBuilder {
    */
   setLabelDimensionsDots(
     widthInDots: number,
-    heightInDots?: number,
+    lengthInDots?: number,
     gapLengthInDots?: number
   ): IConfigDocumentBuilder;
 
@@ -271,7 +270,7 @@ export interface IPrinterLabelConfigBuilder {
 }
 
 /** Error indicating setting a config value failed. */
-export class UnsupportedPrinterConfigError extends WebZlpError {
+export class UnsupportedPrinterConfigError extends Util.WebZlpError {
   constructor(settingName: string, settingError: string) {
     super(`Error setting ${settingName}: ${settingError}`);
     this.name = this.constructor.name;

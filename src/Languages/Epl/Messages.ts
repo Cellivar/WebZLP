@@ -1,50 +1,25 @@
-import { AsciiCodeNumbers, hex } from "../../ASCII.js";
-import { asString, asUint8Array, MessageParsingError, type IMessageHandlerResult, type MessageArrayLike } from "../Messages.js";
-import * as Cmds from "../../Documents/Commands.js"
+import * as Util from '../../Util/index.js';
+import * as Conf from '../../Configs/index.js';
+import * as Cmds from '../../Commands/index.js';
 import { getErrorMessage } from "./ErrorMessage.js";
-import { parseConfiguration } from "./ConfigParser.js";
+import { parseConfigResponse } from "./CmdConfigurationInquiry.js";
 
-export type MessageHandlerDelegate = (
-  msg: Uint8Array,
-  sentCommand: Cmds.IPrinterCommand
-) => IMessageHandlerResult<Uint8Array>;
+const messageHandlerMap = new Map<symbol | Cmds.CommandType, Cmds.MessageHandlerDelegate<string>>([
+  ['GetStatus', getErrorMessage], // ^ee command
+  ['QueryConfiguration', parseConfigResponse], // UQ command
+]);
 
-/**
- * Slice an array from the start to the first LF character, returning both pieces.
- *
- * If no LF character is found sliced will have a length of 0.
- *
- * CR characters are not removed if present!
- */
-export function sliceToNewline(msg: Uint8Array): {
-  sliced: Uint8Array,
-  remainder: Uint8Array,
-} {
-  const idx = msg.indexOf(AsciiCodeNumbers.LF);
-  if (idx === -1) {
-    return {
-      sliced: new Uint8Array(),
-      remainder: msg
-    }
-  }
-
-  return {
-    sliced: msg.slice(0, idx + 1),
-    remainder: msg.slice(idx + 1),
-  };
-}
-
-export function handleMessage<TReceived extends MessageArrayLike>(
+export function handleMessage<TReceived extends Conf.MessageArrayLike>(
   message: TReceived,
   sentCommand?: Cmds.IPrinterCommand
-): IMessageHandlerResult<TReceived> {
-  const result: IMessageHandlerResult<TReceived> = {
+): Cmds.IMessageHandlerResult<TReceived> {
+  const result: Cmds.IMessageHandlerResult<TReceived> = {
     messageIncomplete: false,
     messageMatchedExpectedCommand: false,
     messages: [],
     remainder: message,
   }
-  const msg = asUint8Array(message);
+  const msg = Cmds.asString(message);
   let remainder = msg;
   if (msg === undefined || msg.length === 0) { return result; }
 
@@ -59,11 +34,11 @@ export function handleMessage<TReceived extends MessageArrayLike>(
   // Some responses are only supported by mobile printers.
 
   // Analyzing the first byte of the message can tell us more about it.
-  const firstByte = msg.at(0);
+  const firstByte = msg.at(0)
   if (firstByte === undefined) { return result; }
 
   switch (true) {
-    case (firstByte === AsciiCodeNumbers.ACK):
+    case (firstByte === Util.AsciiCodeStrings.ACK):
       // Different depending on error reporting mode:
       // Normal mode: either finished printing, or label taken when sensor enabled.
       // Alternate mode: last line of label has been rasterized
@@ -78,17 +53,17 @@ export function handleMessage<TReceived extends MessageArrayLike>(
       remainder = msg.slice(1);
       break;
 
-    case (firstByte === AsciiCodeNumbers.DLE):
+    case (firstByte === Util.AsciiCodeStrings.DLE):
       // Sent when alternate error reporting is enabled w/peeler taken sensor.
       result.messages.push({
         messageType: 'StatusMessage',
-        LabelWasTaken: true,
+        labelWasTaken: true,
       });
       // TODO: Does the ack include a CR LF?
       remainder = msg.slice(1);
       break;
 
-    case (firstByte === AsciiCodeNumbers.NAK): {
+    case (firstByte === Util.AsciiCodeStrings.NAK): {
       // Sent when there's an error. After removing the first value the rest
       // is the same as the error query command.
       const errorResult = getErrorMessage(msg.slice(1));
@@ -101,47 +76,23 @@ export function handleMessage<TReceived extends MessageArrayLike>(
       // Everything else needs to be fully interpreted as an ASCII message.
       // Command responses may be fixed or variable length, usually with an
       // indicator of how many to expect.
-      if (sentCommand === undefined) {
-        throw new MessageParsingError(
-          `Received a command reply message without 'sentCommand' being provided, can't handle this message.`,
-          msg
-        );
-      }
-
-      const messageHandlerMap = new Map<symbol | Cmds.CommandType, MessageHandlerDelegate>([
-        ['GetStatus', getErrorMessage], // ^ee command
-        ['QueryConfiguration', parseConfiguration], // UQ command
-      ]);
-
-      // Since we know this is a command response and we have a command to check
-      // we can kick this out to a lookup function. That function will need to
-      // do the slicing for us as we don't know how long the message might be.
-      const cmdRef = sentCommand.type === 'CustomCommand'
-        ? (sentCommand as Cmds.IPrinterExtendedCommand).typeExtended
-        : sentCommand.type;
-      const handler = messageHandlerMap.get(cmdRef);
-      if (handler === undefined) {
-        throw new MessageParsingError(
-          `Command '${sentCommand.name}' has no message handler and should not have been awaited for message ${hex(firstByte)}. This is a bug in the library.`,
-          msg
-        )
-      }
-
-      const handled = handler(msg, sentCommand);
+      const handled = Cmds.getMessageHandler(messageHandlerMap, msg, sentCommand);
       result.messages.push(...handled.messages);
       result.messageIncomplete = handled.messageIncomplete;
       result.messageMatchedExpectedCommand = handled.messageMatchedExpectedCommand;
+      remainder = handled.remainder;
 
-      if (typeof result.remainder === "string") {
-        result.remainder = asString(remainder) as TReceived;
-      } else if (result.remainder instanceof Uint8Array) {
-        result.remainder = remainder as TReceived;
-      } else {
-        throw new Error("Unknown message type not implemented!");
-      }
       break;
     }
   }
 
+  // Put the remainder message back into its native format.
+  if (typeof result.remainder === "string") {
+    result.remainder = Cmds.asString(remainder) as TReceived;
+  } else if (result.remainder instanceof Uint8Array) {
+    result.remainder = remainder as TReceived;
+  } else {
+    throw new Error("Unknown message type not implemented!");
+  }
   return result;
 }

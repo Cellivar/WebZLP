@@ -1,22 +1,22 @@
-import * as Commands from '../../Documents/index.js';
-import * as Messages from '../index.js';
-import { clampToRange } from '../../NumericRange.js';
-import { exhaustiveMatchGuard } from '../../EnumUtils.js';
+import * as Util from '../../Util/index.js';
+import * as Conf from '../../Configs/index.js';
+import * as Cmds from '../../Commands/index.js';
 import { handleMessage } from './Messages.js';
+import { CmdXmlQuery, handleCmdXmlQuery } from './CmdXmlQuery.js';
 
 /** Command set for communicating with a ZPL II printer. */
-export class ZplPrinterCommandSet extends Messages.StringCommandSet implements Commands.CommandSet<string> {
-  get documentStartCommands(): Commands.IPrinterCommand[] {
+export class ZplPrinterCommandSet extends Cmds.StringCommandSet {
+  get documentStartCommands(): Cmds.IPrinterCommand[] {
     // All ZPL documents start with the start-of-document command.
-    return [new Commands.StartLabel()]
+    return [new Cmds.StartLabel()]
   }
 
-  get documentEndCommands(): Commands.IPrinterCommand[] {
+  get documentEndCommands(): Cmds.IPrinterCommand[] {
     // All ZPL documents end with the end-of-document command.
-    return [new Commands.EndLabel()]
+    return [new Cmds.EndLabel()]
   }
 
-  protected nonFormCommands: (symbol | Commands.CommandType)[] = [
+  protected nonFormCommands: (symbol | Cmds.CommandType)[] = [
     'AutosenseLabelDimensions',
     'PrintConfiguration',
     'RebootPrinter',
@@ -24,25 +24,39 @@ export class ZplPrinterCommandSet extends Messages.StringCommandSet implements C
   ];
 
   constructor(
-    extendedCommands: Array<Commands.IPrinterExtendedCommandMapping<string>> = []
+    extendedCommands: Array<Cmds.IPrinterExtendedCommandMapping<string>> = []
   ) {
-    super(Messages.PrinterCommandLanguage.zpl, extendedCommands);
+    super(Conf.PrinterCommandLanguage.zpl, extendedCommands);
+
+    this.extendedCommandMap.set(CmdXmlQuery.typeE, handleCmdXmlQuery);
   }
 
-  public parseMessage<TReceived extends Messages.MessageArrayLike>(
+  public override expandCommand(cmd: Cmds.IPrinterCommand): Cmds.IPrinterCommand[] {
+    switch (cmd.type) {
+      default:
+        return [];
+      case 'QueryConfiguration':
+        // Getting the complete config from ZPL requires two steps.
+        return [
+          new CmdXmlQuery('All'),
+        ];
+    }
+  }
+
+  public parseMessage<TReceived extends Conf.MessageArrayLike>(
     msg: TReceived,
-    sentCommand?: Commands.IPrinterCommand
-  ): Messages.IMessageHandlerResult<TReceived> {
+    sentCommand?: Cmds.IPrinterCommand
+  ): Cmds.IMessageHandlerResult<TReceived> {
     return handleMessage(msg, sentCommand);
   }
 
   public transpileCommand(
-    cmd: Commands.IPrinterCommand,
-    docState: Commands.TranspiledDocumentState
+    cmd: Cmds.IPrinterCommand,
+    docState: Cmds.TranspiledDocumentState
   ): string {
     switch (cmd.type) {
       default:
-        exhaustiveMatchGuard(cmd.type);
+        Util.exhaustiveMatchGuard(cmd.type);
         break;
       case 'CustomCommand':
         return this.getExtendedCommand(cmd)(cmd, docState, this);
@@ -57,7 +71,8 @@ export class ZplPrinterCommandSet extends Messages.StringCommandSet implements C
       case 'RebootPrinter':
         return '~JR';
       case 'QueryConfiguration':
-        return '^HZA' + '\n' + '^HH';
+        // Should be split into a composite command prior to running.
+        return this.noop;
       case 'PrintConfiguration':
         return '~WC';
       case 'SaveCurrentConfiguration':
@@ -68,25 +83,25 @@ export class ZplPrinterCommandSet extends Messages.StringCommandSet implements C
         return '~HQES'
 
       case 'SetPrintDirection':
-        return this.setPrintDirectionCommand((cmd as Commands.SetPrintDirectionCommand).upsideDown);
+        return this.setPrintDirectionCommand((cmd as Cmds.SetPrintDirectionCommand).upsideDown);
       case 'SetDarkness':
-        return this.setDarknessCommand((cmd as Commands.SetDarknessCommand).darknessSetting);
+        return this.setDarknessCommand(cmd as Cmds.SetDarknessCommand, docState);
       case 'AutosenseLabelDimensions':
         return '~JC';
       case 'SetPrintSpeed':
-        return this.setPrintSpeedCommand(cmd as Commands.SetPrintSpeedCommand);
+        return this.setPrintSpeedCommand(cmd as Cmds.SetPrintSpeedCommand, docState);
       case 'SetLabelDimensions':
-        return this.setLabelDimensionsCommand(cmd as Commands.SetLabelDimensionsCommand);
+        return this.setLabelDimensionsCommand(cmd as Cmds.SetLabelDimensionsCommand);
       case 'SetLabelHome':
-        return this.setLabelHomeCommand(cmd as Commands.SetLabelHomeCommand);
+        return this.setLabelHomeCommand(cmd as Cmds.SetLabelHomeCommand);
       case 'SetLabelPrintOriginOffset':
-        return this.setLabelPrintOriginOffsetCommand(cmd as Commands.SetLabelPrintOriginOffsetCommand);
+        return this.setLabelPrintOriginOffsetCommand(cmd as Cmds.SetLabelPrintOriginOffsetCommand);
       case 'SetLabelToContinuousMedia':
-        return this.setLabelToContinuousMediaCommand(cmd as Commands.SetLabelToContinuousMediaCommand);
+        return this.setLabelToContinuousMediaCommand(cmd as Cmds.SetLabelToContinuousMediaCommand);
       case 'SetLabelToMarkMedia':
-        return this.setLabelToMarkMediaCommand(cmd as Commands.SetLabelToMarkMediaCommand);
+        return this.setLabelToMarkMediaCommand(cmd as Cmds.SetLabelToMarkMediaCommand);
       case 'SetLabelToWebGapMedia':
-        return this.setLabelToWebGapMediaCommand(cmd as Commands.SetLabelToWebGapMediaCommand);
+        return this.setLabelToWebGapMediaCommand(cmd as Cmds.SetLabelToWebGapMediaCommand);
 
       case 'ClearImageBuffer':
         // Clear image buffer isn't a relevant command on ZPL printers.
@@ -103,27 +118,27 @@ export class ZplPrinterCommandSet extends Messages.StringCommandSet implements C
         return this.noop;
 
       case 'Offset':
-        return this.applyOffset(cmd as Commands.OffsetCommand, docState);
+        return this.applyOffset(cmd as Cmds.OffsetCommand, docState);
       case 'Raw':
-        return (cmd as Commands.Raw).rawDocument;
+        return (cmd as Cmds.Raw).rawDocument;
       case 'AddBox':
-        return this.addBoxCommand(cmd as Commands.AddBoxCommand, docState);
+        return this.addBoxCommand(cmd as Cmds.AddBoxCommand, docState);
       case 'AddImage':
-        return this.addImageCommand(cmd as Commands.AddImageCommand, docState);
+        return this.addImageCommand(cmd as Cmds.AddImageCommand, docState);
       case 'AddLine':
-        return this.addLineCommand(cmd as Commands.AddLineCommand, docState);
+        return this.addLineCommand(cmd as Cmds.AddLineCommand, docState);
       case 'CutNow':
         // ZPL doesn't have an OOTB cut command except for one printer.
         // Cutter behavior should be managed by the ^MM command instead.
         return this.noop;
 
       case 'Print':
-        return this.printCommand(cmd as Commands.PrintCommand);
+        return this.printCommand(cmd as Cmds.PrintCommand);
     }
   }
 
   private getFieldOffsetCommand(
-    formMetadata: Commands.TranspiledDocumentState,
+    formMetadata: Cmds.TranspiledDocumentState,
     additionalHorizontal = 0,
     additionalVertical = 0
   ) {
@@ -133,8 +148,8 @@ export class ZplPrinterCommandSet extends Messages.StringCommandSet implements C
   }
 
   private addImageCommand(
-    cmd: Commands.AddImageCommand,
-    outDoc: Commands.TranspiledDocumentState
+    cmd: Cmds.AddImageCommand,
+    outDoc: Cmds.TranspiledDocumentState
   ): string {
     // ZPL treats colors as print element enable. 1 means black, 0 means white.
     const bitmap = cmd.bitmap.toInvertedGRF();
@@ -170,48 +185,59 @@ export class ZplPrinterCommandSet extends Messages.StringCommandSet implements C
     return `^PO${dir}`;
   }
 
-  private setDarknessCommand(darkness: number) {
-    const dark = Math.trunc(darkness);
+  private setDarknessCommand(
+    cmd: Cmds.SetDarknessCommand,
+    docState: Cmds.TranspiledDocumentState
+  ) {
+    const percent = cmd.darknessPercent / 100.0;
+    const dark = Math.ceil(percent * docState.initialConfig.maxMediaDarkness);
     return `~SD${dark}`;
   }
 
-  private setPrintSpeedCommand(cmd: Commands.SetPrintSpeedCommand) {
-    // ZPL uses separate print, slew, and backfeed speeds. Re-use print for backfeed.
-    return `^PR${cmd.speedVal},${cmd.mediaSpeedVal},${cmd.speedVal}`;
+  private setPrintSpeedCommand(
+    cmd: Cmds.SetPrintSpeedCommand,
+    docState: Cmds.TranspiledDocumentState
+  ) {
+    const table = docState.initialConfig.speedTable;
+    const printSpeed = table.toRawSpeed(cmd.speed);
+    const slewSpeed  = table.toRawSpeed(cmd.mediaSlewSpeed);
+    // ZPL uses separate print, slew, and backfeed speeds.
+    // Not all printers can have a separate backfeed, so re-use print speed.
+    return `^PR${printSpeed},${slewSpeed},${printSpeed}`;
   }
 
-  private setLabelDimensionsCommand(cmd: Commands.SetLabelDimensionsCommand) {
+  private setLabelDimensionsCommand(cmd: Cmds.SetLabelDimensionsCommand) {
     const width = Math.trunc(cmd.widthInDots);
     let outCmd = `^PW${width}`;
 
-    if (cmd.setsHeight && cmd.heightInDots !== undefined && cmd.gapLengthInDots !== undefined) {
-      const height = Math.trunc(cmd.heightInDots);
-      const heightCmd = `^LL${height},N`; // TODO: this probably isn't right
-      outCmd += heightCmd;
+    if (cmd.setsLength && cmd.lengthInDots !== undefined && cmd.gapLengthInDots !== undefined) {
+      const length = Math.trunc(cmd.lengthInDots);
+      const lengthCmd = `^LL${length},N`; // TODO: this probably isn't right
+      outCmd += lengthCmd;
     }
 
     return outCmd;
   }
 
-  private setLabelHomeCommand(cmd: Commands.SetLabelHomeCommand) {
+  private setLabelHomeCommand(cmd: Cmds.SetLabelHomeCommand) {
     const xOffset = Math.trunc(cmd.offset.left);
     const yOffset = Math.trunc(cmd.offset.top);
     return `^LH${xOffset},${yOffset}`;
   }
 
   private setLabelPrintOriginOffsetCommand(
-    cmd: Commands.SetLabelPrintOriginOffsetCommand
+    cmd: Cmds.SetLabelPrintOriginOffsetCommand
   ): string {
     // This ends up being two commands, one to set the top and one to set the
     // horizontal shift. LS moves the horizontal, LT moves the top. LT is
     // clamped to +/- 120 dots, horizontal is 9999.
-    const xOffset = clampToRange(Math.trunc(cmd.offset.left), -9999, 9999);
-    const yOffset = clampToRange(Math.trunc(cmd.offset.top), -120, 120);
+    const xOffset = Util.clampToRange(Math.trunc(cmd.offset.left), -9999, 9999);
+    const yOffset = Util.clampToRange(Math.trunc(cmd.offset.top), -120, 120);
     return `^LS${xOffset}^LT${yOffset}`;
   }
 
   private setLabelToContinuousMediaCommand(
-    cmd: Commands.SetLabelToContinuousMediaCommand
+    cmd: Cmds.SetLabelToContinuousMediaCommand
   ): string {
     const length = Math.trunc(cmd.labelLengthInDots);
     const gap = Math.trunc(cmd.labelGapInDots);
@@ -219,14 +245,14 @@ export class ZplPrinterCommandSet extends Messages.StringCommandSet implements C
   }
 
   private setLabelToWebGapMediaCommand(
-    cmd: Commands.SetLabelToWebGapMediaCommand
+    cmd: Cmds.SetLabelToWebGapMediaCommand
   ): string {
     const length = Math.trunc(cmd.labelLengthInDots);
     return `^MNY^LL${length},Y`;
   }
 
   private setLabelToMarkMediaCommand(
-    cmd: Commands.SetLabelToMarkMediaCommand
+    cmd: Cmds.SetLabelToMarkMediaCommand
   ): string {
     const length = Math.trunc(cmd.labelLengthInDots);
     const lineOffset = Math.trunc(cmd.blackLineOffset);
@@ -234,7 +260,7 @@ export class ZplPrinterCommandSet extends Messages.StringCommandSet implements C
   }
 
   private printCommand(
-    cmd: Commands.PrintCommand
+    cmd: Cmds.PrintCommand
   ): string {
     // TODO: Make sure this actually works this way..
     // According to the docs the first parameter is "total" labels,
@@ -245,37 +271,37 @@ export class ZplPrinterCommandSet extends Messages.StringCommandSet implements C
   }
 
   private addLineCommand(
-    cmd: Commands.AddLineCommand,
-    outDoc: Commands.TranspiledDocumentState
+    cmd: Cmds.AddLineCommand,
+    outDoc: Cmds.TranspiledDocumentState
   ): string {
     return this.lineOrBoxToCmd(
       outDoc,
       cmd.heightInDots,
-      cmd.lengthInDots,
+      cmd.widthInDots,
       cmd.color,
       // A line is just a box filled in!
-      Math.min(cmd.heightInDots, cmd.lengthInDots)
+      Math.min(cmd.heightInDots, cmd.widthInDots)
     );
   }
 
   private addBoxCommand(
-    cmd: Commands.AddBoxCommand,
-    outDoc: Commands.TranspiledDocumentState,
+    cmd: Cmds.AddBoxCommand,
+    outDoc: Cmds.TranspiledDocumentState,
   ): string {
     return this.lineOrBoxToCmd(
       outDoc,
       cmd.heightInDots,
-      cmd.lengthInDots,
-      Commands.DrawColor.black,
+      cmd.widthInDots,
+      Cmds.DrawColor.black,
       cmd.thickness
     );
   }
 
   private lineOrBoxToCmd(
-    outDoc: Commands.TranspiledDocumentState,
+    outDoc: Cmds.TranspiledDocumentState,
     height: number,
     length: number,
-    color: Commands.DrawColor,
+    color: Cmds.DrawColor,
     thickness?: number
   ): string {
     height = Math.trunc(height) || 0;
@@ -283,10 +309,10 @@ export class ZplPrinterCommandSet extends Messages.StringCommandSet implements C
     thickness = Math.trunc(thickness ?? 1) || 1;
     let drawMode: string;
     switch (color) {
-      case Commands.DrawColor.black:
+      case Cmds.DrawColor.black:
         drawMode = 'B';
         break;
-      case Commands.DrawColor.white:
+      case Cmds.DrawColor.white:
         drawMode = 'W';
         break;
     }

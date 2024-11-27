@@ -1,0 +1,114 @@
+{
+  "models": [
+    {
+      "modelName": "Unknown_EPL",
+      "modelHints": [],
+      "dpi": 203,
+      "speedMap": "28X4",
+      "printArea": {
+        "width": 832,
+        "length": 2223
+      }
+    },
+    {
+      "modelName": "LP2844",
+      "modelHints": [
+        "UKQ1935HLU",
+        "UKQ1935HMU",
+        ".*\\sFDX\\s.*",
+        ".*\\sUPS\\s.*"
+      ],
+      "dpi": 203,
+      "speedMap": "28X4",
+      "printArea": {
+        "width": 832,
+        "length": 2223
+      }
+    },
+    {
+      "modelName": "TLP2844",
+      "modelHints": [
+        "UKQ1935 U"
+      ],
+      "dpi": 203,
+      "speedMap": "28X4",
+      "printArea": {
+        "width": 832,
+        "length": 2223
+      }
+    },
+    {
+      "modelName": "LP2824",
+      "modelHints": [
+        "UKQ1935HLU"
+      ],
+      "dpi": 203,
+      "speedMap": "28X4",
+      "printArea": {
+        "width": 448,
+        "length": 2223
+      }
+    },
+    {
+      "modelName": "TLP2824",
+      "modelHints": [
+        "UKQ1915 U"
+      ],
+      "dpi": 203,
+      "speedMap": "28X4",
+      "printArea": {
+        "width": 448,
+        "length": 2223
+      }
+    }
+  ],
+  "speedMaps": {
+    "28X4": {
+      "1.5": 1,
+      "2.0": 2,
+      "2.5": 3,
+      "3.5": 4
+    },
+    "GK420": {
+      "2.0": 2,
+      "3.0": 3,
+      "4.0": 4,
+      "5.0": 5
+    },
+    "GX420": {
+      "2.0": 2,
+      "3.0": 3,
+      "4.0": 4,
+      "5.0": 5,
+      "6.0": 6
+    },
+    "GK430": {
+      "2.0": 2,
+      "3.0": 3,
+      "4.0": 4
+    },
+    "3842": {
+      "1.0": 0,
+      "1.5": 1,
+      "2.0": 2
+    },
+    "2443": {
+      "1.5": 1,
+      "2.0": 2,
+      "2.5": 3
+    },
+    "2348": {
+      "2.0": 2,
+      "3.0": 3,
+      "4.0": 4,
+      "5.0": 5,
+      "6.0": 6
+    },
+    "2684": {
+      "1.0": 1,
+      "2.0": 2,
+      "3.0": 3,
+      "4.0": 4
+    }
+  }
+}

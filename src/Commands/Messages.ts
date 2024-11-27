@@ -1,5 +1,8 @@
-import { WebZlpError, type CommandSet, type IPrinterCommand } from "../index.js";
+import * as Util from '../Util/index.js';
+import * as Conf from '../Configs/index.js';
 import type { IDeviceInformation } from "web-device-mux";
+import type { CommandType, IPrinterCommand, IPrinterExtendedCommand } from "./Commands.js";
+import type { CommandSet } from './CommandSet.js';
 
 export type PrinterMessage
   = ISettingUpdateMessage
@@ -8,15 +11,13 @@ export type PrinterMessage
 
 export type MessageType = 'SettingUpdateMessage' | 'StatusMessage' | 'ErrorMessage'
 
-export type MessageArrayLike = string | Uint8Array
-export type MessageArrayLikeType = "string" | "Uint8Array"
-export interface MessageArrayLikeMap {
-  "string": string;
-  "Uint8Array": Uint8Array;
-}
+export type MessageHandlerDelegate<TMessage> = (
+  msg: TMessage,
+  sentCommand: IPrinterCommand
+) => IMessageHandlerResult<TMessage>;
 
-export interface MessageTransformer<TMessage extends MessageArrayLike> {
-  transformerType: MessageArrayLikeType;
+export interface MessageTransformer<TMessage extends Conf.MessageArrayLike> {
+  transformerType: Conf.MessageArrayLikeType;
   combineMessages(...messages: TMessage[]): TMessage;
 
   messageToString(message: TMessage): string;
@@ -24,7 +25,7 @@ export interface MessageTransformer<TMessage extends MessageArrayLike> {
 }
 
 export class RawMessageTransformer implements MessageTransformer<Uint8Array> {
-  transformerType: MessageArrayLikeType = "Uint8Array";
+  transformerType: Conf.MessageArrayLikeType = "Uint8Array";
 
   combineMessages(...messages: Uint8Array[]): Uint8Array {
     const bufferLen = messages.reduce((sum, arr) => sum + arr.byteLength, 0);
@@ -38,7 +39,7 @@ export class RawMessageTransformer implements MessageTransformer<Uint8Array> {
   }
 
   messageToString(message: Uint8Array): string {
-    return new TextDecoder().decode(message);
+    return Util.DecodeAscii(message);
   }
 
   messageToUint8Array(message: Uint8Array): Uint8Array {
@@ -49,7 +50,7 @@ export class RawMessageTransformer implements MessageTransformer<Uint8Array> {
 export class StringMessageTransformer implements MessageTransformer<string> {
   private encoder = new TextEncoder();
 
-  transformerType: MessageArrayLikeType = "string";
+  transformerType: Conf.MessageArrayLikeType = "string";
   combineMessages(...messages: string[]): string {
     return messages.join();
   }
@@ -61,7 +62,7 @@ export class StringMessageTransformer implements MessageTransformer<string> {
   }
 }
 
-export function asUint8Array(commands: MessageArrayLike): Uint8Array {
+export function asUint8Array(commands: Conf.MessageArrayLike): Uint8Array {
   if (typeof commands === "string") {
     return new TextEncoder().encode(commands);
   } else if (commands instanceof Uint8Array) {
@@ -71,11 +72,11 @@ export function asUint8Array(commands: MessageArrayLike): Uint8Array {
   }
 }
 
-export function asString(commands: MessageArrayLike): string {
+export function asString(commands: Conf.MessageArrayLike): string {
   if (typeof commands === "string") {
     return commands;
   } else if (commands instanceof Uint8Array) {
-    return new TextDecoder().decode(commands);
+    return Util.DecodeAscii(commands);
   } else {
     throw new Error("Unknown message type not implemented!");
   }
@@ -90,22 +91,22 @@ export type AwaitedCommand = {
 
 /** A printer settings message, describing printer configuration status. */
 export interface ISettingUpdateMessage {
-  printerDistanceIn?: number;
-  headDistanceIn?: number;
   messageType: 'SettingUpdateMessage';
 
-  manufacturerName?: string;
-  modelName?: string;
-  serialNumber?: string;
+  printerHardware: Conf.IPrinterHardwareUpdate;
+  printerMedia: Conf.IPrinterMediaUpdate;
 
-  firmware?: string;
+  printerDistanceIn?: number;
+  headDistanceIn?: number;
 }
 
 /** A status message sent by the printer. */
 export interface IStatusMessage {
   messageType: 'StatusMessage'
 
-  LabelWasTaken?: boolean;
+  labelWasTaken?: boolean;
+
+  rfid?: IStatusMessageRfid;
 }
 
 /** An error message sent by the printer. */
@@ -146,6 +147,12 @@ export interface IErrorMessage {
   UnknownError?: boolean;
 }
 
+/** RFID-specific status message results. */
+export interface IStatusMessageRfid {
+  encodeSuccessful?: boolean;
+  voidedCount?: number;
+}
+
 /** The output of a function for parsing a message. */
 export interface IMessageHandlerResult<TInput> {
   messageIncomplete: boolean,
@@ -155,26 +162,58 @@ export interface IMessageHandlerResult<TInput> {
 }
 
 /** An error indicating a problem parsing a received message. */
-export class MessageParsingError extends WebZlpError {
-  public readonly receivedMessage: Uint8Array;
-  constructor(message: string, receivedMessage: Uint8Array) {
+export class MessageParsingError extends Util.WebZlpError {
+  public readonly receivedMessage: Conf.MessageArrayLike;
+  constructor(message: string, receivedMessage: Conf.MessageArrayLike) {
     super(message);
     this.receivedMessage = receivedMessage;
   }
 }
 
+export function getMessageHandler<TMessageType extends Conf.MessageArrayLike>(
+  handlerMap: Map<symbol | CommandType, MessageHandlerDelegate<TMessageType>>,
+  message: TMessageType,
+  sentCommand?: IPrinterCommand
+): IMessageHandlerResult<TMessageType> {
+  if (sentCommand === undefined) {
+    throw new MessageParsingError(
+      `Received a command reply message without 'sentCommand' being provided, can't handle this message.`,
+      message
+    );
+  }
+
+  // Since we know this is a command response and we have a command to check
+  // we can kick this out to a lookup function. That function will need to
+  // do the slicing for us as we don't know how long the message might be.
+  const cmdRef = sentCommand.type === 'CustomCommand'
+    ? (sentCommand as IPrinterExtendedCommand).typeExtended
+    : sentCommand.type;
+  const handler = handlerMap.get(cmdRef);
+  if (handler === undefined) {
+    throw new MessageParsingError(
+      `Command '${sentCommand.name}' has no message handler and should not have been awaited for this message. This is a bug in the library.`,
+      message
+    )
+  }
+
+  return handler(message, sentCommand);
+}
+
 export function deviceInfoToOptionsUpdate(deviceInfo: IDeviceInformation): ISettingUpdateMessage {
   return {
     messageType: 'SettingUpdateMessage',
-    modelName: deviceInfo.productName,
-    serialNumber: deviceInfo.serialNumber,
-    manufacturerName: deviceInfo.manufacturerName,
+    printerHardware: {
+      serialNumber: deviceInfo.serialNumber,
+      model: deviceInfo.productName,
+      manufacturer: deviceInfo.manufacturerName
+    },
+    printerMedia: {}
   }
 }
 
-export async function parseRaw<TInput extends MessageArrayLike>(
+export async function parseRaw<TInput extends Conf.MessageArrayLike>(
   input: TInput,
-  commandSet: CommandSet<MessageArrayLike>,
+  commandSet: CommandSet<Conf.MessageArrayLike>,
   awaitedCommand?: AwaitedCommand
 ): Promise<{ remainderData: TInput; messages: PrinterMessage[]; }> {
   let msg = input;
@@ -200,4 +239,29 @@ export async function parseRaw<TInput extends MessageArrayLike>(
   } while (incomplete === false && msg.length > 0)
 
   return { remainderData: msg, messages }
+}
+
+/**
+ * Slice an array from the start to the first LF character, returning both pieces.
+ *
+ * If no LF character is found sliced will have a length of 0.
+ *
+ * CR characters are not removed if present!
+ */
+export function sliceToNewline(msg: Uint8Array): {
+  sliced: Uint8Array,
+  remainder: Uint8Array,
+} {
+  const idx = msg.indexOf(Util.AsciiCodeNumbers.LF);
+  if (idx === -1) {
+    return {
+      sliced: new Uint8Array(),
+      remainder: msg
+    }
+  }
+
+  return {
+    sliced: msg.slice(0, idx + 1),
+    remainder: msg.slice(idx + 1),
+  };
 }

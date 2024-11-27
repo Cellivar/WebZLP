@@ -1,7 +1,5 @@
-import { clampToRange } from '../NumericRange.js';
-import * as Options from '../Printers/Configuration/PrinterOptions.js';
-import type { PrinterCommandLanguage } from '../Languages/index.js';
-import type { BitmapGRF, ImageConversionOptions } from './BitmapGRF.js';
+import * as Util from '../Util/index.js';
+import * as Conf from '../Configs/index.js';
 
 export type PrinterCommandEffectTypes
   = "unknown"
@@ -21,6 +19,7 @@ export type PrinterCommandEffectTypes
 /** Flags to indicate special operations a command might cause. */
 export class CommandEffectFlags extends Set<PrinterCommandEffectTypes> { }
 export const NoEffect = new CommandEffectFlags();
+export const AwaitsEffect = new CommandEffectFlags(['waitsForResponse']);
 
 /** A command that can be sent to a printer. */
 export interface IPrinterCommand {
@@ -41,7 +40,7 @@ export interface IPrinterExtendedCommand extends IPrinterCommand {
   get typeExtended(): symbol;
 
   /** Gets the command languages this extended command can apply to. */
-  get commandLanguageApplicability(): PrinterCommandLanguage;
+  get commandLanguageApplicability(): Conf.PrinterCommandLanguage;
 }
 
 /** List of colors to draw elements with */
@@ -74,8 +73,8 @@ export type CommandType
   // General printer commands
   | "RebootPrinter"
   | "Raw"
-  | "GetStatus"
   // Status commands
+  | "GetStatus"
   | "PrintConfiguration"
   | "QueryConfiguration"
   // Configuration commands
@@ -141,8 +140,8 @@ export class PrintCommand implements IPrinterCommand {
     // TODO: If someone complains that this is lower than what ZPL allows
     // figure out a way to support the 99,999,999 supported.
     // Who needs to print > 65 thousand labels at once??? I want to know.
-    this.labelCount = clampToRange(labelCount, 0, 65534);
-    this.additionalDuplicateOfEach = clampToRange(additionalDuplicateOfEach, 0, 65534);
+    this.labelCount = Util.clampToRange(labelCount, 0, 65534);
+    this.additionalDuplicateOfEach = Util.clampToRange(additionalDuplicateOfEach, 0, 65534);
   }
 
   effectFlags = new CommandEffectFlags(['feedsPaper']);
@@ -209,13 +208,8 @@ export class SetDarknessCommand implements IPrinterCommand {
   }
 
   constructor(
-    public readonly darknessPercent: Options.DarknessPercent,
-    public readonly darknessMax: number
+    public readonly darknessPercent: Conf.DarknessPercent
   ) {}
-
-  get darknessSetting() {
-    return Math.ceil((this.darknessPercent * this.darknessMax) / 100);
-  }
 
   effectFlags = new CommandEffectFlags(['altersConfig']);
 }
@@ -237,15 +231,13 @@ export class SetPrintSpeedCommand implements IPrinterCommand {
   name = 'Set print speed';
   type: CommandType = 'SetPrintSpeed';
   toDisplay(): string {
-    return `Set print speed to ${Options.PrintSpeed[this.speed]} (inches per second).`;
+    return `Set print speed to ${Conf.PrintSpeed[this.speed]} (inches per second).`;
   }
   effectFlags = new CommandEffectFlags(['altersConfig']);
 
   constructor(
-    public readonly speed: Options.PrintSpeed,
-    public readonly speedVal: number,
-    public readonly mediaSlewSpeed: Options.PrintSpeed,
-    public readonly mediaSpeedVal: number
+    public readonly speed: Conf.PrintSpeed,
+    public readonly mediaSlewSpeed: Conf.PrintSpeed,
   ) { }
 }
 
@@ -255,8 +247,8 @@ export class SetLabelDimensionsCommand implements IPrinterCommand {
   type: CommandType = 'SetLabelDimensions';
   toDisplay(): string {
     let str = `Set label size to ${this.widthInDots} wide`;
-    if (this.heightInDots) {
-      str += ` x ${this.heightInDots} high`;
+    if (this.lengthInDots) {
+      str += ` x ${this.lengthInDots} high`;
     }
     if (this.gapLengthInDots) {
       str += ` with a gap length of ${this.gapLengthInDots}`;
@@ -265,14 +257,14 @@ export class SetLabelDimensionsCommand implements IPrinterCommand {
     return str;
   }
 
-  get setsHeight() {
-    return this.heightInDots !== undefined && this.gapLengthInDots !== undefined;
+  get setsLength() {
+    return this.lengthInDots !== undefined && this.gapLengthInDots !== undefined;
   }
 
   // TODO: Black line mode for EPL?
   constructor(
     public readonly widthInDots: number,
-    public readonly heightInDots?: number,
+    public readonly lengthInDots?: number,
     public readonly gapLengthInDots?: number) { }
 
   effectFlags = new CommandEffectFlags(['altersConfig']);
@@ -286,7 +278,7 @@ export class SetLabelHomeCommand implements IPrinterCommand {
   }
   effectFlags = new CommandEffectFlags(['altersConfig']);
 
-  constructor(public offset: Options.Coordinate) { }
+  constructor(public offset: Conf.Coordinate) { }
 }
 
 /** Command class to set the print offset from the top-left of the label. */
@@ -298,7 +290,7 @@ export class SetLabelPrintOriginOffsetCommand implements IPrinterCommand {
   }
   effectFlags = new CommandEffectFlags(['altersConfig']);
 
-  constructor(public offset: Options.Coordinate) { }
+  constructor(public offset: Conf.Coordinate) { }
 }
 
 /** A command class to set the media handling mode to continuous media. */
@@ -393,8 +385,8 @@ export class AddImageCommand implements IPrinterCommand {
   effectFlags = NoEffect;
 
   constructor(
-    public bitmap: BitmapGRF,
-    public imageConversionOptions: ImageConversionOptions
+    public bitmap: Util.BitmapGRF,
+    public imageConversionOptions: Util.ImageConversionOptions
   ) { }
 }
 
@@ -403,12 +395,12 @@ export class AddLineCommand implements IPrinterCommand {
   name = 'Add perpendicular line to label';
   type: CommandType = 'AddLine';
   toDisplay(): string {
-    return `Add a ${DrawColor[this.color]} line ${this.lengthInDots} wide by ${this.heightInDots} high.`;
+    return `Add a ${DrawColor[this.color]} line ${this.widthInDots} wide by ${this.heightInDots} high.`;
   }
   effectFlags = NoEffect;
 
   constructor(
-    public readonly lengthInDots: number,
+    public readonly widthInDots: number,
     public readonly heightInDots: number,
     public readonly color: DrawColor
   ) { }
@@ -419,12 +411,12 @@ export class AddBoxCommand implements IPrinterCommand {
   name = 'Add a box to label';
   type: CommandType = 'AddBox';
   toDisplay(): string {
-    return `Add a box ${this.lengthInDots} wide by ${this.heightInDots} high.`;
+    return `Add a box ${this.widthInDots} wide by ${this.heightInDots} high.`;
   }
   effectFlags = NoEffect;
 
   constructor(
-    public readonly lengthInDots: number,
+    public readonly widthInDots: number,
     public readonly heightInDots: number,
     public readonly thickness: number
   ) { }

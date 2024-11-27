@@ -1,36 +1,34 @@
-import { DecodeAscii } from "../../ASCII.js";
-import * as Cmds from "../../Documents/Commands.js"
-import type { IErrorMessage, IMessageHandlerResult } from "../../Printers/index.js";
+import * as Cmds from "../../Commands/index.js"
 
 export function getErrorMessage(
-  msg: Uint8Array,
+  msg: string,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _?: Cmds.IPrinterCommand
-): IMessageHandlerResult<Uint8Array> {
-  const result: IMessageHandlerResult<Uint8Array> = {
+): Cmds.IMessageHandlerResult<string> {
+  const result: Cmds.IMessageHandlerResult<string> = {
     messageIncomplete: false,
     messageMatchedExpectedCommand: false,
     messages: [],
     remainder: msg,
   }
-  const errorMsg: IErrorMessage = {
+  const errorMsg: Cmds.IErrorMessage = {
     messageType: 'ErrorMessage'
   }
   let remainderSlice = 3;
 
-  const errorCode = Number(DecodeAscii(msg.slice(0, 2)));
+  const errorCode = Number(msg.slice(0, 2));
   const eplError = getErrorFromCode(errorCode, errorMsg);
   if (eplError === EplErrorCode.PaperOrRibbonEmpty) {
     // This error may include additional data.
     // If `US` error reporting is enabled it will include Pnnn, where nnn is
     // the number of labels waiting to print.
-    if (msg.at(3) === 0x50 /* P */) {
-      errorMsg.UnprintedLabels = Number(DecodeAscii(msg.slice(4, 7)));
+    if (msg.at(3) === 'P') {
+      errorMsg.UnprintedLabels = Number(msg.slice(4, 7));
       remainderSlice = 7;
       // If `UT` alternate error reporting is enabled it also adds Lyyyyy,
       // where the yyyyy is the number of unprinted raster lines.
-      if (msg.at(7) === 0x4C /* L */) {
-        errorMsg.UnprintedRasterLines = Number(DecodeAscii(msg.slice(8, 13)));
+      if (msg.at(7) === 'L') {
+        errorMsg.UnprintedRasterLines = Number(msg.slice(8, 13));
         remainderSlice = 13;
       }
     }
@@ -40,7 +38,7 @@ export function getErrorMessage(
   return result;
 }
 
-function getErrorFromCode(errCode: number, errMsg: IErrorMessage): EplErrorCode {
+function getErrorFromCode(errCode: number, errMsg: Cmds.IErrorMessage): EplErrorCode {
   // TODO: Better way to do this.
   switch (errCode) {
     case EplErrorCode.NoError:

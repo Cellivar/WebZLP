@@ -1,12 +1,11 @@
-import { ConfigDocumentBuilder } from '../Documents/ConfigDocument.js';
-import { LabelDocumentBuilder } from '../Documents/LabelDocument.js';
-import { LabelPrinter } from '../Printers/Printer.js';
-import { type DarknessPercent, PrintSpeed } from '../Printers/Configuration/PrinterOptions.js';
-import type { MessageArrayLike } from '../Languages/Messages.js';
+import * as Conf from './Configs/index.js';
+import * as Docs from './Documents/index.js';
+
+import { LabelPrinter } from './Printer.js';
 
 /** Collection of handy documents ready to go. */
 export class ReadyToPrintDocuments {
-  private static readonly printerGetConfigDoc = new ConfigDocumentBuilder()
+  private static readonly printerGetConfigDoc = new Docs.ConfigDocumentBuilder()
     .queryConfiguration()
     .finalize();
   /** A command document to query the printer for configuration. */
@@ -14,14 +13,14 @@ export class ReadyToPrintDocuments {
     return this.printerGetConfigDoc;
   }
 
-  private static readonly printerPrintConfigDoc = new ConfigDocumentBuilder()
+  private static readonly printerPrintConfigDoc = new Docs.ConfigDocumentBuilder()
     .printConfiguration();
   /** A command document to make the printer print its configuration. */
   static get printConfigDocument() {
     return this.printerPrintConfigDoc;
   }
 
-  private static readonly feedLabelDoc = new LabelDocumentBuilder().addPrintCmd(1).finalize();
+  private static readonly feedLabelDoc = new Docs.LabelDocumentBuilder().addPrintCmd(1).finalize();
   /** A label document to feed a single label. */
   static get feedLabelDocument() {
     return this.feedLabelDoc;
@@ -42,7 +41,7 @@ export class ReadyToPrintDocuments {
    * Needs to know the width to adjust the pattern.
    */
   static printTestLabelDocument(labelWidthInDots: number) {
-    const label = new LabelDocumentBuilder();
+    const label = new Docs.LabelDocumentBuilder();
     const labelWidth = labelWidthInDots;
     const quarter = labelWidth / 4;
     const lineHeight = 20;
@@ -79,15 +78,15 @@ export class ReadyToPrintDocuments {
   }
 
   /** Combine the common label settings into one config document. */
-  static configLabelSettings<TMessageType extends MessageArrayLike>(
+  static configLabelSettings<TMessageType extends Conf.MessageArrayLike>(
     printer: LabelPrinter<TMessageType>,
     labelWidthInches: number,
-    darknessPercent: DarknessPercent
+    darknessPercent: Conf.DarknessPercent
   ) {
     return printer
       .getConfigDocument()
       .setPrintDirection()
-      .setPrintSpeed(PrintSpeed.ipsAuto)
+      .setPrintSpeed(Conf.PrintSpeed.ipsAuto)
       .setDarknessConfig(darknessPercent)
       .setLabelDimensions(labelWidthInches)
       .autosenseLabelLength();

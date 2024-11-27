@@ -39,7 +39,7 @@ export function repeat<T>(val: T, count: number) {
 }
 
 /** Round a raw value to the nearest step. */
-export function  roundToNearestStep(value: number, step: number): number {
+export function roundToNearestStep(value: number, step: number): number {
   const inverse = 1.0 / step;
   return Math.round(value * inverse) / inverse;
 }

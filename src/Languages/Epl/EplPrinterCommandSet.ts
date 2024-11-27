@@ -1,21 +1,21 @@
-import * as Commands from '../../Documents/index.js';
-import * as Messages from '../index.js';
-import { exhaustiveMatchGuard } from '../../EnumUtils.js';
+import * as Util from '../../Util/index.js';
+import * as Conf from '../../Configs/index.js';
+import * as Cmds from '../../Commands/index.js';
 import { handleMessage } from './Messages.js';
 
 /** Command set for communicating with an EPL II printer. */
-export class EplPrinterCommandSet extends Messages.StringCommandSet {
-  get documentStartCommands(): Commands.IPrinterCommand[] {
+export class EplPrinterCommandSet extends Cmds.StringCommandSet {
+  get documentStartCommands(): Cmds.IPrinterCommand[] {
     // All ZPL documents start with the start-of-document command.
-    return [new Commands.ClearImageBufferCommand()]
+    return [new Cmds.ClearImageBufferCommand()]
   }
 
-  get documentEndCommands(): Commands.IPrinterCommand[] {
+  get documentEndCommands(): Cmds.IPrinterCommand[] {
     // There's no formal command for the end of an EPL doc
     return []
   }
 
-  protected nonFormCommands: (symbol | Commands.CommandType)[] = [
+  protected nonFormCommands: (symbol | Cmds.CommandType)[] = [
     'AutosenseLabelDimensions',
     'PrintConfiguration',
     'QueryConfiguration',
@@ -23,25 +23,25 @@ export class EplPrinterCommandSet extends Messages.StringCommandSet {
   ];
 
   constructor(
-    extendedCommands: Array<Commands.IPrinterExtendedCommandMapping<string>> = []
+    extendedCommands: Array<Cmds.IPrinterExtendedCommandMapping<string>> = []
   ) {
-    super(Messages.PrinterCommandLanguage.epl, extendedCommands);
+    super(Conf.PrinterCommandLanguage.epl, extendedCommands);
   }
 
-  public parseMessage<TReceived extends Messages.MessageArrayLike>(
+  public parseMessage<TReceived extends Conf.MessageArrayLike>(
     msg: TReceived,
-    sentCommand?: Commands.IPrinterCommand
-  ): Messages.IMessageHandlerResult<TReceived> {
+    sentCommand?: Cmds.IPrinterCommand
+  ): Cmds.IMessageHandlerResult<TReceived> {
     return handleMessage(msg, sentCommand);
   }
 
   public transpileCommand(
-    cmd: Commands.IPrinterCommand,
-    docState: Commands.TranspiledDocumentState
+    cmd: Cmds.IPrinterCommand,
+    docState: Cmds.TranspiledDocumentState
   ): string {
     switch (cmd.type) {
       default:
-        exhaustiveMatchGuard(cmd.type);
+        Util.exhaustiveMatchGuard(cmd.type);
         break;
       case 'CustomCommand':
         return this.getExtendedCommand(cmd)(cmd, docState, this);
@@ -66,26 +66,26 @@ export class EplPrinterCommandSet extends Messages.StringCommandSet {
         return '^ee' + '\r\n';
 
       case 'SetPrintDirection':
-        return this.setPrintDirectionCommand((cmd as Commands.SetPrintDirectionCommand).upsideDown);
+        return this.setPrintDirectionCommand((cmd as Cmds.SetPrintDirectionCommand).upsideDown);
       case 'SetDarkness':
-        return this.setDarknessCommand((cmd as Commands.SetDarknessCommand).darknessSetting);
+        return this.setDarknessCommand(cmd as Cmds.SetDarknessCommand, docState);
       case 'AutosenseLabelDimensions':
         return 'xa' + '\r\n';
       case 'SetPrintSpeed':
         // EPL has no separate media slew speed setting.
-        return this.setPrintSpeedCommand((cmd as Commands.SetPrintSpeedCommand).speedVal);
+        return this.setPrintSpeedCommand(cmd as Cmds.SetPrintSpeedCommand, docState);
       case 'SetLabelDimensions':
-        return this.setLabelDimensionsCommand(cmd as Commands.SetLabelDimensionsCommand);
+        return this.setLabelDimensionsCommand(cmd as Cmds.SetLabelDimensionsCommand);
       case 'SetLabelHome':
-        return this.setLabelHomeCommand(cmd as Commands.SetLabelHomeCommand, docState);
+        return this.setLabelHomeCommand(cmd as Cmds.SetLabelHomeCommand, docState);
       case 'SetLabelPrintOriginOffset':
-        return this.setLabelPrintOriginOffsetCommand(cmd as Commands.SetLabelPrintOriginOffsetCommand);
+        return this.setLabelPrintOriginOffsetCommand(cmd as Cmds.SetLabelPrintOriginOffsetCommand);
       case 'SetLabelToContinuousMedia':
-        return this.setLabelToContinuousMediaCommand(cmd as Commands.SetLabelToContinuousMediaCommand);
+        return this.setLabelToContinuousMediaCommand(cmd as Cmds.SetLabelToContinuousMediaCommand);
       case 'SetLabelToMarkMedia':
-        return this.setLabelToMarkMediaCommand(cmd as Commands.SetLabelToMarkMediaCommand);
+        return this.setLabelToMarkMediaCommand(cmd as Cmds.SetLabelToMarkMediaCommand);
       case 'SetLabelToWebGapMedia':
-        return this.setLabelToWebGapMediaCommand(cmd as Commands.SetLabelToWebGapMediaCommand);
+        return this.setLabelToWebGapMediaCommand(cmd as Cmds.SetLabelToWebGapMediaCommand);
 
       case 'ClearImageBuffer':
         return '\r\nN';
@@ -97,20 +97,20 @@ export class EplPrinterCommandSet extends Messages.StringCommandSet {
         return 'JF' + '\r\n';
 
       case 'Offset':
-        return this.applyOffset(cmd as Commands.OffsetCommand, docState);
+        return this.applyOffset(cmd as Cmds.OffsetCommand, docState);
       case 'Raw':
-        return (cmd as Commands.Raw).rawDocument;
+        return (cmd as Cmds.Raw).rawDocument;
       case 'AddBox':
-        return this.addBoxCommand(cmd as Commands.AddBoxCommand, docState);
+        return this.addBoxCommand(cmd as Cmds.AddBoxCommand, docState);
       case 'AddImage':
-        return this.addImageCommand(cmd as Commands.AddImageCommand, docState);
+        return this.addImageCommand(cmd as Cmds.AddImageCommand, docState);
       case 'AddLine':
-        return this.addLineCommand(cmd as Commands.AddLineCommand, docState);
+        return this.addLineCommand(cmd as Cmds.AddLineCommand, docState);
       case 'CutNow':
         return 'C' + '\r\n';
 
       case 'Print':
-        return this.printCommand(cmd as Commands.PrintCommand);
+        return this.printCommand(cmd as Cmds.PrintCommand);
     }
   }
 
@@ -122,47 +122,52 @@ export class EplPrinterCommandSet extends Messages.StringCommandSet {
   }
 
   private setDarknessCommand(
-    darkness: number
+    cmd: Cmds.SetDarknessCommand,
+    docState: Cmds.TranspiledDocumentState
   ): string {
-    const dark = Math.trunc(darkness);
+    const percent = cmd.darknessPercent / 100.0;
+    const dark = Math.ceil(percent * docState.initialConfig.maxMediaDarkness);
     return `D${dark}` + '\r\n';
   }
 
   private setPrintSpeedCommand(
-    speed: number
+    cmd: Cmds.SetPrintSpeedCommand,
+    docState: Cmds.TranspiledDocumentState
   ): string {
+    const table = docState.initialConfig.speedTable;
+    const printSpeed = table.toRawSpeed(cmd.speed);
     // Validation should have happened on setup, printer will just reject
     // invalid speeds.
-    return `S${speed}` + '\r\n';
+    return `S${printSpeed}` + '\r\n';
   }
 
   private setLabelDimensionsCommand(
-    cmd: Commands.SetLabelDimensionsCommand,
+    cmd: Cmds.SetLabelDimensionsCommand,
   ): string {
     const width = Math.trunc(cmd.widthInDots);
     let outCmd = `q${width}` + '\r\n';
 
-    if (cmd.setsHeight && cmd.heightInDots !== undefined && cmd.gapLengthInDots !== undefined) {
-      const height = Math.trunc(cmd.heightInDots);
+    if (cmd.setsLength && cmd.lengthInDots !== undefined && cmd.gapLengthInDots !== undefined) {
+      const length = Math.trunc(cmd.lengthInDots);
       const gap = Math.trunc(cmd.gapLengthInDots);
-      outCmd += `Q${height},${gap}` + '\r\n';
+      outCmd += `Q${length},${gap}` + '\r\n';
     }
 
     return outCmd;
   }
 
   private setLabelHomeCommand(
-    cmd: Commands.SetLabelHomeCommand,
-    outDoc: Commands.TranspiledDocumentState
+    cmd: Cmds.SetLabelHomeCommand,
+    outDoc: Cmds.TranspiledDocumentState
   ): string {
     return this.applyOffset(
-      new Commands.OffsetCommand(cmd.offset.left, cmd.offset.top, true),
+      new Cmds.OffsetCommand(cmd.offset.left, cmd.offset.top, true),
       outDoc
     );
   }
 
   private setLabelPrintOriginOffsetCommand(
-    cmd: Commands.SetLabelPrintOriginOffsetCommand,
+    cmd: Cmds.SetLabelPrintOriginOffsetCommand,
   ): string {
     const xOffset = Math.trunc(cmd.offset.left);
     const yOffset = Math.trunc(cmd.offset.top);
@@ -170,7 +175,7 @@ export class EplPrinterCommandSet extends Messages.StringCommandSet {
   }
 
   private setLabelToContinuousMediaCommand(
-    cmd: Commands.SetLabelToContinuousMediaCommand,
+    cmd: Cmds.SetLabelToContinuousMediaCommand,
   ): string {
     // EPL seems to not have a static label length? All labels are variable?
     // Needs testing.
@@ -179,7 +184,7 @@ export class EplPrinterCommandSet extends Messages.StringCommandSet {
   }
 
   private setLabelToWebGapMediaCommand(
-    cmd: Commands.SetLabelToWebGapMediaCommand,
+    cmd: Cmds.SetLabelToWebGapMediaCommand,
   ): string {
     const length = Math.trunc(cmd.labelLengthInDots);
     const gap = Math.trunc(cmd.labelGapInDots);
@@ -187,7 +192,7 @@ export class EplPrinterCommandSet extends Messages.StringCommandSet {
   }
 
   private setLabelToMarkMediaCommand(
-    cmd: Commands.SetLabelToMarkMediaCommand,
+    cmd: Cmds.SetLabelToMarkMediaCommand,
   ): string {
     const length = Math.trunc(cmd.labelLengthInDots);
     const lineLength = Math.trunc(cmd.blackLineThicknessInDots);
@@ -196,7 +201,7 @@ export class EplPrinterCommandSet extends Messages.StringCommandSet {
   }
 
   private printCommand(
-    cmd: Commands.PrintCommand,
+    cmd: Cmds.PrintCommand,
   ): string {
     const total = Math.trunc(cmd.labelCount);
     const dup = Math.trunc(cmd.additionalDuplicateOfEach);
@@ -204,8 +209,8 @@ export class EplPrinterCommandSet extends Messages.StringCommandSet {
   }
 
   private addImageCommand(
-    cmd: Commands.AddImageCommand,
-    outDoc: Commands.TranspiledDocumentState,
+    cmd: Cmds.AddImageCommand,
+    outDoc: Cmds.TranspiledDocumentState,
   ): string {
     // EPL only supports raw binary, get that.
     const bitmap = cmd.bitmap;
@@ -226,17 +231,17 @@ export class EplPrinterCommandSet extends Messages.StringCommandSet {
   }
 
   private addLineCommand(
-    cmd: Commands.AddLineCommand,
-    outDoc: Commands.TranspiledDocumentState,
+    cmd: Cmds.AddLineCommand,
+    outDoc: Cmds.TranspiledDocumentState,
   ): string {
-    const length = Math.trunc(cmd.lengthInDots) || 0;
+    const length = Math.trunc(cmd.widthInDots) || 0;
     const height = Math.trunc(cmd.heightInDots) || 0;
     let drawMode = 'LO';
     switch (cmd.color) {
-      case Commands.DrawColor.black:
+      case Cmds.DrawColor.black:
         drawMode = 'LO';
         break;
-      case Commands.DrawColor.white:
+      case Cmds.DrawColor.white:
         drawMode = 'LW';
         break;
     }
@@ -246,10 +251,10 @@ export class EplPrinterCommandSet extends Messages.StringCommandSet {
   }
 
   private addBoxCommand(
-    cmd: Commands.AddBoxCommand,
-    outDoc: Commands.TranspiledDocumentState,
+    cmd: Cmds.AddBoxCommand,
+    outDoc: Cmds.TranspiledDocumentState,
   ): string {
-    const length = Math.trunc(cmd.lengthInDots) || 0;
+    const length = Math.trunc(cmd.widthInDots) || 0;
     const height = Math.trunc(cmd.heightInDots) || 0;
     const thickness = Math.trunc(cmd.thickness) || 0;
 

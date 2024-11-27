@@ -1,7 +1,7 @@
 import { expect, describe, it } from 'vitest';
-import { BitmapGRF } from '../../Documents/BitmapGRF.js';
+import * as Util from '../../Util/index.js';
+import * as Cmds from '../../Commands/index.js';
 import { EplPrinterCommandSet } from './index.js';
-import { AddImageCommand } from '../../Documents/index.js';
 
 // Class pulled from jest-mock-canvas which I can't seem to actually import.
 class ImageData {
@@ -83,40 +83,33 @@ function getImageDataInput(width: number, height: number, fill: number, alpha?: 
   return arr;
 }
 
-const cmdSet = new EplPrinterCommandSet();
 
 describe('EPL Image Conversion', () => {
   it('Should convert blank images to valid command', () => {
+    const cmdSet = new EplPrinterCommandSet();
     const imageData = new ImageData(getImageDataInput(8, 1, 0), 8, 1);
-    const bitmap = BitmapGRF.fromCanvasImageData(imageData, { trimWhitespace: false });
-    const cmd = new AddImageCommand(bitmap, {});
-    const doc = new TranspiledDocumentState();
+    const bitmap = Util.BitmapGRF.fromCanvasImageData(imageData, { trimWhitespace: false });
+    const cmd = new Cmds.AddImageCommand(bitmap, {});
+    const doc = Cmds.getNewTranspileState(new Cmds.PrinterConfig());
     const resultCmd = cmdSet['addImageCommand'](cmd, doc);
 
-    const expectedCmd = Uint8Array.from([
-      ...new TextEncoder().encode('GW0,0,1,1,'),
-      255,
-      ...new TextEncoder().encode('\r\n')
-    ]);
+    const expectedCmd = 'GW0,0,1,1,ÿ\r\n';
 
     expect(resultCmd).toEqual(expectedCmd);
   });
 
   it('Should apply offsets in command', () => {
+    const cmdSet = new EplPrinterCommandSet();
     const imageData = new ImageData(getImageDataInput(8, 1, 0), 8, 1);
-    const bitmap = BitmapGRF.fromCanvasImageData(imageData, { trimWhitespace: false });
-    const cmd = new AddImageCommand(bitmap, {});
+    const bitmap = Util.BitmapGRF.fromCanvasImageData(imageData, { trimWhitespace: false });
+    const cmd = new Cmds.AddImageCommand(bitmap, {});
     const appliedOffset = 10;
-    const doc = new TranspiledDocumentState();
+    const doc = Cmds.getNewTranspileState(new Cmds.PrinterConfig());
     doc.horizontalOffset = appliedOffset;
     doc.verticalOffset = appliedOffset * 2;
     const resultCmd = cmdSet['addImageCommand'](cmd, doc);
 
-    const expectedCmd = Uint8Array.from([
-      ...new TextEncoder().encode(`GW${appliedOffset},${appliedOffset * 2},1,1,`),
-      255,
-      ...new TextEncoder().encode('\r\n')
-    ]);
+    const expectedCmd = `GW${appliedOffset},${appliedOffset * 2},1,1,ÿ\r\n`;
 
     expect(resultCmd).toEqual(expectedCmd);
   });
