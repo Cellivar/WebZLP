@@ -38,7 +38,7 @@ Some of the config lines are densely packed, broken out here for ease of reading
 `q600 Q208,25`
 
 * q - Form width (q command)
-* Q - Form height and gap length (Q command)
+* Q - Form length and gap length (Q command)
 
 ### Config settings M1 (Hardware options)
 
