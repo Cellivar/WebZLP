@@ -22,13 +22,15 @@ export function getErrorMessage(
     // This error may include additional data.
     // If `US` error reporting is enabled it will include Pnnn, where nnn is
     // the number of labels waiting to print.
-    if (msg.at(3) === 'P') {
-      errorMsg.UnprintedLabels = Number(msg.slice(4, 7));
+    if (msg.at(2) === 'P') {
+      // 07P123
+      errorMsg.UnprintedLabels = Number(msg.slice(3, 6));
       remainderSlice = 7;
       // If `UT` alternate error reporting is enabled it also adds Lyyyyy,
       // where the yyyyy is the number of unprinted raster lines.
-      if (msg.at(7) === 'L') {
-        errorMsg.UnprintedRasterLines = Number(msg.slice(8, 13));
+      if (msg.at(6) === 'L') {
+        // 07P123L12345
+        errorMsg.UnprintedRasterLines = Number(msg.slice(7, 12));
         remainderSlice = 13;
       }
     }

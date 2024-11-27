@@ -11,7 +11,8 @@ const messageHandlerMap = new Map<symbol | Cmds.CommandType, Cmds.MessageHandler
 
 export function handleMessage<TReceived extends Conf.MessageArrayLike>(
   message: TReceived,
-  sentCommand?: Cmds.IPrinterCommand
+  sentCommand?: Cmds.IPrinterCommand,
+  handlerMap = messageHandlerMap
 ): Cmds.IMessageHandlerResult<TReceived> {
   const result: Cmds.IMessageHandlerResult<TReceived> = {
     messageIncomplete: false,
@@ -50,7 +51,7 @@ export function handleMessage<TReceived extends Conf.MessageArrayLike>(
         // for certain we omit that detail here.
       });
       // TODO: Does the ack include a CR LF?
-      remainder = msg.slice(1);
+      remainder = msg.slice(3);
       break;
 
     case (firstByte === Util.AsciiCodeStrings.DLE):
@@ -60,7 +61,7 @@ export function handleMessage<TReceived extends Conf.MessageArrayLike>(
         labelWasTaken: true,
       });
       // TODO: Does the ack include a CR LF?
-      remainder = msg.slice(1);
+      remainder = msg.slice(3);
       break;
 
     case (firstByte === Util.AsciiCodeStrings.NAK): {
@@ -76,7 +77,7 @@ export function handleMessage<TReceived extends Conf.MessageArrayLike>(
       // Everything else needs to be fully interpreted as an ASCII message.
       // Command responses may be fixed or variable length, usually with an
       // indicator of how many to expect.
-      const handled = Cmds.getMessageHandler(messageHandlerMap, msg, sentCommand);
+      const handled = Cmds.getMessageHandler(handlerMap, msg, sentCommand);
       result.messages.push(...handled.messages);
       result.messageIncomplete = handled.messageIncomplete;
       result.messageMatchedExpectedCommand = handled.messageMatchedExpectedCommand;
