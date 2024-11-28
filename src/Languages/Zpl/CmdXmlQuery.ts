@@ -25,12 +25,12 @@ export class CmdXmlQuery implements Cmds.IPrinterExtendedCommand {
   public static typeE = Symbol("CmdXmlQuery");
   typeExtended                 = CmdXmlQuery.typeE;
   commandLanguageApplicability = Conf.PrinterCommandLanguage.zpl;
-  name                         = 'Query '
+  name                         = 'XML Super Host Status'
   type                         = "CustomCommand" as const;
   effectFlags                  = Cmds.AwaitsEffect;
   toDisplay() { return `${this.name} for ${this.queryType}`}
 
-  constructor(public readonly queryType: CmdXmlQueryType) {}
+  constructor(public readonly queryType: CmdXmlQueryType = 'All') {}
 }
 
 export function handleCmdXmlQuery(

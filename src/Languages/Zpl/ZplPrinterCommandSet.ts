@@ -3,6 +3,7 @@ import * as Conf from '../../Configs/index.js';
 import * as Cmds from '../../Commands/index.js';
 import { handleMessage } from './Messages.js';
 import { CmdXmlQuery, handleCmdXmlQuery } from './CmdXmlQuery.js';
+import { CmdHostIdentification, handleCmdHostIdentification } from './CmdHostIdentification.js';
 
 /** Command set for communicating with a ZPL II printer. */
 export class ZplPrinterCommandSet extends Cmds.StringCommandSet {
@@ -16,6 +17,7 @@ export class ZplPrinterCommandSet extends Cmds.StringCommandSet {
     return [new Cmds.EndLabel()]
   }
 
+  // TODO: Method to add extended commands to the non-form list.
   protected nonFormCommands: (symbol | Cmds.CommandType)[] = [
     'AutosenseLabelDimensions',
     'PrintConfiguration',
@@ -29,6 +31,7 @@ export class ZplPrinterCommandSet extends Cmds.StringCommandSet {
     super(Conf.PrinterCommandLanguage.zpl, extendedCommands);
 
     this.extendedCommandMap.set(CmdXmlQuery.typeE, handleCmdXmlQuery);
+    this.extendedCommandMap.set(CmdHostIdentification.typeE, handleCmdHostIdentification);
   }
 
   public override expandCommand(cmd: Cmds.IPrinterCommand): Cmds.IPrinterCommand[] {
