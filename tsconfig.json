@@ -24,6 +24,7 @@
     "noUnusedParameters": true,
     "forceConsistentCasingInFileNames": true,
     "verbatimModuleSyntax": true,
+    "noImplicitOverride": true,
     "incremental": true,
     "resolveJsonModule": true
   },

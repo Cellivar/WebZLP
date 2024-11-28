@@ -338,7 +338,7 @@ export class AutosenseLabelDimensionsCommand extends BasicCommand {
   get name() { return 'Auto-sense the label length by feeding several labels.'; }
   type: CommandType = 'AutosenseLabelDimensions';
   constructor() { super (['altersConfig', 'feedsPaperIgnoringPeeler', 'feedsPaper'])}
-  toDisplay(): string {
+  override toDisplay(): string {
     return this.name;
   }
 }

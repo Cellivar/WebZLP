@@ -190,7 +190,9 @@ export class ZplPrinterCommandSet extends Cmds.StringCommandSet {
     docState: Cmds.TranspiledDocumentState
   ) {
     const percent = cmd.darknessPercent / 100.0;
-    const dark = Math.ceil(percent * docState.initialConfig.maxMediaDarkness);
+    const dark = Math.trunc(Math.ceil(
+      percent * docState.initialConfig.maxMediaDarkness
+    ));
     return `~SD${dark}`;
   }
 

@@ -120,12 +120,12 @@ export class LabelPrinter<TChannelType extends Conf.MessageArrayLike> extends Ev
     this._printerOptions = printerOptions ?? new Cmds.PrinterConfig();
   }
 
-  public addEventListener<T extends keyof LabelPrinterEventMap>(
+  public override addEventListener<T extends keyof LabelPrinterEventMap>(
     type: T,
     listener: EventListenerObject | null | ((this: LabelPrinter<TChannelType>, ev: LabelPrinterEventMap[T]) => void),
     options?: boolean | AddEventListenerOptions
   ): void;
-  public addEventListener(
+  public override addEventListener(
     type: string,
     callback: EventListenerOrEventListenerObject | null,
     options?: boolean | AddEventListenerOptions
@@ -133,12 +133,12 @@ export class LabelPrinter<TChannelType extends Conf.MessageArrayLike> extends Ev
     super.addEventListener(type, callback, options);
   }
 
-  public removeEventListener<T extends keyof LabelPrinterEventMap>(
+  public override removeEventListener<T extends keyof LabelPrinterEventMap>(
     type: T,
     listener: EventListenerObject | null | ((this: LabelPrinter<TChannelType>, ev: LabelPrinterEventMap[T]) => void),
     options?: boolean | AddEventListenerOptions
   ): void;
-  public removeEventListener(
+  public override removeEventListener(
     type: string,
     callback: EventListenerOrEventListenerObject | null,
     options?: boolean | EventListenerOptions | undefined

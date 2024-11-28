@@ -39,8 +39,7 @@ export function handleCmdXmlQuery(
   _commandSet: Cmds.CommandSet<string>
 ): string {
   const command = cmd as CmdXmlQuery;
-  const argStr = cmdXmlQueryParamMap[command.queryType];
-  return `^HZ${argStr}\n`;
+  return `^HZ${cmdXmlQueryParamMap[command.queryType]}\n`;
 }
 
 export function parseCmdXmlQueryResponse(

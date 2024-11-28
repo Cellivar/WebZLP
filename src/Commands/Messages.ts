@@ -265,3 +265,30 @@ export function sliceToNewline(msg: Uint8Array): {
     remainder: msg.slice(idx + 1),
   };
 }
+
+/** Slice a string from the start to the first CRLF or LF, returning both pieces. */
+export function sliceToCRLF(msg: string): {
+  sliced: string,
+  remainder: string,
+} {
+  const cr = msg.indexOf('\r\n');
+  if (cr !== -1) {
+    return {
+      sliced: msg.substring(0, cr),
+      remainder: msg.substring(cr + 2)
+    }
+  }
+
+  const lf = msg.indexOf('\n');
+  if (lf !== -1) {
+    return {
+      sliced: msg.substring(0, lf),
+      remainder: msg.substring(lf + 1)
+    }
+  }
+
+  return {
+    sliced: "",
+    remainder: msg
+  }
+}

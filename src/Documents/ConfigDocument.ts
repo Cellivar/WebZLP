@@ -26,7 +26,7 @@ export class ConfigDocumentBuilder
   // to commit the changes to stored memory. EPL does this automatically, ZPL does not
   // so to bring them closer to parity this is automatically implied.
   // TODO: Consider whether this should move to a ZPL extended command.
-  finalize() {
+  override finalize() {
     this.andThen(new Cmds.SaveCurrentConfigurationCommand());
     return super.finalize();
   }
