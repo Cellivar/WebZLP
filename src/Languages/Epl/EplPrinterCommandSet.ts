@@ -2,6 +2,7 @@ import * as Util from '../../Util/index.js';
 import * as Conf from '../../Configs/index.js';
 import * as Cmds from '../../Commands/index.js';
 import { handleMessage } from './Messages.js';
+import { CmdErrorReporting, handleCmdErrorReporting } from './CmdErrorReporting.js';
 
 /** Command set for communicating with an EPL II printer. */
 export class EplPrinterCommandSet extends Cmds.StringCommandSet {
@@ -15,17 +16,21 @@ export class EplPrinterCommandSet extends Cmds.StringCommandSet {
     return []
   }
 
+  // TODO: Method to add extended commands to the non-form list.
   protected nonFormCommands: (symbol | Cmds.CommandType)[] = [
     'AutosenseLabelDimensions',
     'PrintConfiguration',
     'QueryConfiguration',
-    'RebootPrinter'
+    'RebootPrinter',
+    'CutNow'
   ];
 
   constructor(
     extendedCommands: Array<Cmds.IPrinterExtendedCommandMapping<string>> = []
   ) {
     super(Conf.PrinterCommandLanguage.epl, extendedCommands);
+
+    this.extendedCommandMap.set(CmdErrorReporting.typeE, handleCmdErrorReporting);
   }
 
   public parseMessage<TReceived extends Conf.MessageArrayLike>(
