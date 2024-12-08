@@ -69,7 +69,7 @@ export function parseCmdHostIdentification(
 
   // "recognizable options"
   // "only options specific to printer are shown (cutter, options, et cetera.)"
-  // There is no further details on what this could be. Thank you Zebra.
+  // There are no further details on what this could be. Thank you Zebra.
   // TODO: figure out what these could possibly be.
 
   return result;

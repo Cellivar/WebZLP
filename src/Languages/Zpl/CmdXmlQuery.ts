@@ -13,7 +13,7 @@ export type CmdXmlQueryType
 
 // The ^HZ command is used for returning printer description information in XML format. The printer returns
 // information on format parameters, object directories, individual object data, and print status information.
-export const cmdXmlQueryParamMap: Record<CmdXmlQueryType, string> = {
+const queryToCmdArg: Record<CmdXmlQueryType, string> = {
   All          : "a",
   Format       : "f",
   ObjectListing: "l",
@@ -28,9 +28,9 @@ export class CmdXmlQuery implements Cmds.IPrinterExtendedCommand {
   name                         = 'XML Super Host Status'
   type                         = "CustomCommand" as const;
   effectFlags                  = Cmds.AwaitsEffect;
-  toDisplay() { return `${this.name} for ${this.queryType}`}
+  toDisplay() { return `${this.name} for ${this.query}`}
 
-  constructor(public readonly queryType: CmdXmlQueryType = 'All') {}
+  constructor(public readonly query: CmdXmlQueryType = 'All') {}
 }
 
 export function handleCmdXmlQuery(
@@ -39,7 +39,7 @@ export function handleCmdXmlQuery(
   _commandSet: Cmds.CommandSet<string>
 ): string {
   const command = cmd as CmdXmlQuery;
-  return `^HZ${cmdXmlQueryParamMap[command.queryType]}\n`;
+  return `^HZ${queryToCmdArg[command.query]}\n`;
 }
 
 export function parseCmdXmlQueryResponse(
