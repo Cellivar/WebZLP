@@ -215,31 +215,55 @@ export function deviceInfoToOptionsUpdate(deviceInfo: IDeviceInformation): ISett
 export async function parseRaw<TInput extends Conf.MessageArrayLike>(
   input: TInput,
   commandSet: CommandSet<Conf.MessageArrayLike>,
-  awaitedCommand?: AwaitedCommand
-): Promise<{ remainderData: TInput; messages: PrinterMessage[]; }> {
-  let msg = input;
-  if (msg.length === 0) { return { messages: [], remainderData: msg}; }
+  awaitedCommands: AwaitedCommand[]
+): Promise<{ remainderMsg: TInput; remainderCommands: AwaitedCommand[], messages: PrinterMessage[]; }> {
+  let remainderMsg = input;
+  if (remainderMsg.length === 0) { return { messages: [], remainderCommands: awaitedCommands, remainderMsg}; }
   let incomplete = false;
   const messages: PrinterMessage[] = [];
 
+  let remainderCommands = awaitedCommands.slice();
+
   do {
-    const parseResult = commandSet.parseMessage(msg, awaitedCommand?.cmd);
+    if (remainderCommands.length === 0) {
+      // No candidate commands, treat as raw!
+      const parseResult = commandSet.parseMessage(remainderMsg);
+      remainderMsg = parseResult.remainder;
+      incomplete = parseResult.messageIncomplete;
+      parseResult.messages.forEach(m => messages.push(m));
 
-    msg = parseResult.remainder;
-    incomplete = parseResult.messageIncomplete;
+    } else {
+      remainderCommands = remainderCommands.filter(c => {
+        if (incomplete) {
+          // Something else indicated it's incomplete, keep this candidate too.
+          return true;
+        }
 
-    if (parseResult.messageMatchedExpectedCommand) {
-      if (awaitedCommand?.resolve === undefined) {
-        console.error('Resolve callback was undefined for awaited command, this may cause a deadlock! This is a bug in the library.');
-      } else {
-        awaitedCommand.resolve(true);
-      }
+        const parseResult = commandSet.parseMessage(remainderMsg, c.cmd);
+        if (parseResult.messageMatchedExpectedCommand) {
+          // The command found its response! Mark it accordingly.
+          if (parseResult.messageIncomplete) {
+            // But the command expects a longer response. Bail IMMEDIATELY.
+            incomplete = true;
+            return true;
+          }
+
+          // Otherwise it's safe to remove that message chunk and remove the candidate.
+          remainderMsg = parseResult.remainder;
+          parseResult.messages.forEach(m => messages.push(m));
+
+          if (c?.resolve === undefined) {
+            console.error('Resolve callback was undefined for awaited command, this may cause a deadlock! This is a bug in the library.');
+          } else {
+            c.resolve(true);
+          }
+          return false;
+        }
+      });
     }
+  } while (incomplete === false && remainderMsg.length > 0 && remainderCommands.length > 0)
 
-    parseResult.messages.forEach(m => messages.push(m));
-  } while (incomplete === false && msg.length > 0)
-
-  return { remainderData: msg, messages }
+  return { remainderMsg, remainderCommands, messages }
 }
 
 /**

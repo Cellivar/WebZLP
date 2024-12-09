@@ -7,11 +7,11 @@ export interface IDocument {
   commands: ReadonlyArray<Cmds.IPrinterCommand>;
 }
 
-/** Stream of commands, optionally ended by an awaited command. */
+/** Stream of commands, with zero or more commands expected to return messages. */
 export class Transaction{
   constructor(
     public readonly commands: Conf.MessageArrayLike,
-    public readonly awaitedCommand: Cmds.IPrinterCommand | undefined,
+    public readonly awaitedCommands: Cmds.IPrinterCommand[],
   ) {}
 }
 

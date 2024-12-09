@@ -5,7 +5,7 @@ import { CompiledDocument, Transaction, type IDocument } from './Document.js';
 
 type PrecompiledTransaction = {
   commands: Cmds.IPrinterCommand[];
-  waitCommand?: Cmds.IPrinterCommand;
+  waitCommands: Cmds.IPrinterCommand[];
 };
 
 interface RawCommandForm {
@@ -21,12 +21,7 @@ export function transpileDocument(
   commandReorderBehavior: Cmds.CommandReorderBehavior = Cmds.CommandReorderBehavior.afterAllForms
 ): Readonly<CompiledDocument> {
 
-  const cmdsWithinDoc = [
-    ...commandSet.documentStartCommands,
-    ...doc.commands,
-    ...commandSet.documentEndCommands,
-  ];
-  const forms = splitTransactionsAndForms(cmdsWithinDoc, commandSet, commandReorderBehavior);
+  const forms = splitTransactionsAndForms(doc.commands, commandSet, commandReorderBehavior);
 
   // Wait why do we throw away the form data here?
   // ZPL has some advanced form processing concepts that aren't implemented in
@@ -63,7 +58,10 @@ function splitTransactionsAndForms(
   const forms: Array<RawCommandForm> = [];
   const reorderedCommands: Array<Cmds.IPrinterCommand> = [];
 
-  let currentTrans: Cmds.IPrinterCommand[] = [];
+  let currentTrans: PrecompiledTransaction = {
+    commands: [],
+    waitCommands: []
+  };
   let currentForm: RawCommandForm = {
     transactions: [],
     withinForm: false,
@@ -86,62 +84,89 @@ function splitTransactionsAndForms(
       continue;
     }
 
-    // Non-form commands can't execute within a form, so we respect the command
-    // reorder behavior and move the command accordingly.
-    if (commandSet.isCommandNonFormCommand(command)) {
-      switch (reorderBehavior) {
-        default:
-          Util.exhaustiveMatchGuard(reorderBehavior);
-          break;
-        case Cmds.CommandReorderBehavior.afterAllForms:
-        case Cmds.CommandReorderBehavior.beforeAllForms:
-          reorderedCommands.push(command);
-          continue;
-        case Cmds.CommandReorderBehavior.closeForm:
-          if (currentForm.withinForm) {
-            // The label wasn't closed so we must do it ourselves. Add a command
-            // to close the label on the stack and send it back around.
-            commandStack.push(command);
-            commandStack.push(new Cmds.EndLabel());
+    if (currentForm.withinForm) {
+      if (command.type === "StartLabel") {
+        // Assume they meant to close the previous form and start a new one.
+        // Insert the missing EndLabel and go back through.
+        commandStack.push(command);
+        commandStack.push(new Cmds.EndLabel());
+        continue;
+      } else if (command.type === "EndLabel") {
+        currentForm.withinForm = false;
+      } else if (commandSet.isCommandNonFormCommand(command)) {
+        // Some commands won't work within a form, move them out according to the
+        // selected behavior.
+        switch (reorderBehavior) {
+          default:
+            Util.exhaustiveMatchGuard(reorderBehavior);
+            break;
+          case Cmds.CommandReorderBehavior.afterAllForms:
+          case Cmds.CommandReorderBehavior.beforeAllForms:
+            reorderedCommands.push(command);
+            // Replace with a placeholder in case this is the last command
+            commandStack.push(new Cmds.NoOp());
             continue;
-          }
-          break;
-        case Cmds.CommandReorderBehavior.throwError:
-          if (currentForm.withinForm) {
-            throw new Cmds.TranspileDocumentError("Non-form command present within a document form and Command Reorder Behavior was set to throw errors.");
-          }
-          break;
+          case Cmds.CommandReorderBehavior.closeForm:
+            if (currentForm.withinForm) {
+              // The label wasn't closed so we must do it ourselves. Add a command
+              // to close the label on the stack and send it back around.
+              commandStack.push(command);
+              commandStack.push(new Cmds.EndLabel());
+              continue;
+            }
+            break;
+          case Cmds.CommandReorderBehavior.throwError:
+            if (currentForm.withinForm) {
+              throw new Cmds.TranspileDocumentError("Non-form command present within a document form and Command Reorder Behavior was set to throw errors.");
+            }
+            break;
+        }
       }
-    } else if (command.type === "StartLabel") {
-      currentForm.withinForm = true;
-    } else if (!currentForm.withinForm) {
-      // It's a form command outside of a form and not a new form command.
-      // Add an implicit new form command and send it back around.
-      commandStack.push(command);
-      commandStack.push(new Cmds.StartLabel());
-      continue;
+
+    } else {
+      if (command.type === "StartLabel") {
+        currentForm.withinForm = true;
+      } else if (command.type === "EndLabel") {
+        // Spurious EndLabel?
+        commandStack.push(new Cmds.NoOp());
+        continue;
+      } else if (!commandSet.isCommandNonFormCommand(command)) {
+        // Conversely, if we're outside a form and the command should be in a form
+        // we start a form for it.
+        commandStack.push(command);
+        commandStack.push(new Cmds.StartLabel());
+        continue;
+      }
     }
 
     // Record the command in the transpile buffer.
-    currentTrans.push(command);
-    command.effectFlags.forEach(f => currentForm.effects.add(f));
+    if (command.type !== "NoOp") {
+      currentTrans.commands.push(command);
+      command.effectFlags.forEach(f => currentForm.effects.add(f));
+    }
 
     if (command.effectFlags.has("waitsForResponse")) {
-      // This command expects the printer to provide feedback. We should pause
-      // sending more commands until we get its response, which could take some
-      // amount of time.
-      // This is the end of our transaction.
-      currentForm.transactions.push({
-        commands: currentTrans,
-        waitCommand: command,
-      });
-      currentTrans = [];
+      // This command expects the printer to provide feedback.
+      // Mark it as awaited in Valhalla.
+      currentTrans.waitCommands.push(command);
+      if (!currentForm.withinForm) {
+        // We have an awaited command and we're outside a form, this is a great
+        // spot to segment a transaction so we can wait for the printer's response.
+        currentForm.transactions.push(currentTrans);
+        currentTrans = {
+          commands: [],
+          waitCommands: []
+        };
+      }
     }
 
     if (command.type === "EndLabel") {
-      if (currentTrans.length > 0) {
-        currentForm.transactions.push({ commands: currentTrans} );
-        currentTrans = [];
+      if (currentTrans.commands.length > 0) {
+        currentForm.transactions.push(currentTrans);
+        currentTrans = {
+          commands: [],
+          waitCommands: []
+        };
       }
       forms.push(currentForm);
       currentForm = {
@@ -160,9 +185,12 @@ function splitTransactionsAndForms(
         continue;
       }
       // If we have commands in a transaction buffer close that too.
-      if (currentTrans.length > 0) {
-        currentForm.transactions.push({ commands: currentTrans} );
-        currentTrans = [];
+      if (currentTrans.commands.length > 0) {
+        currentForm.transactions.push(currentTrans);
+        currentTrans = {
+          commands: [],
+          waitCommands: []
+        };
       }
       // And if the current form has any contents close it out.
       if (currentForm.transactions.length > 0) {
@@ -220,8 +248,8 @@ function compileTransaction(
 
   return {
     transaction: new Transaction(
-      commandSet.combineCommands(...cmds),
-      trans.waitCommand
+      commandSet.combineCommands(commandSet.documentStartPrefix, ...cmds, commandSet.documentEndSuffix),
+      trans.waitCommands
     ),
     errors
   };

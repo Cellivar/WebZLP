@@ -40,7 +40,7 @@ export class LabelPrinter<TChannelType extends Conf.MessageArrayLike> extends Ev
   private _streamListener?: Mux.InputMessageListener<TChannelType>;
   private _commandSet?: Cmds.CommandSet<Conf.MessageArrayLike>;
 
-  private _awaitedCommand?: Cmds.AwaitedCommand;
+  private _awaitedCommands: Cmds.AwaitedCommand[] = [];
   private _awaitedCommandTimeoutMS = 5000;
 
   private _printerOptions: Cmds.PrinterConfig;
@@ -313,12 +313,11 @@ export class LabelPrinter<TChannelType extends Conf.MessageArrayLike> extends Ev
   private async sendTransactionAndWait(
     transaction: Docs.Transaction
   ): Promise<boolean> {
-    if (transaction.awaitedCommand !== undefined) {
-      this.logIfDebug(`Transaction will await a response to '${transaction.awaitedCommand.toDisplay()}'.`);
+    this._awaitedCommands = transaction.awaitedCommands.map(cmd => {
       let awaitResolve;
       let awaitReject;
       const awaiter: Cmds.AwaitedCommand = {
-        cmd: transaction.awaitedCommand,
+        cmd,
         promise: new Promise<boolean>((resolve, reject) => {
           awaitResolve = resolve;
           awaitReject = reject;
@@ -326,8 +325,8 @@ export class LabelPrinter<TChannelType extends Conf.MessageArrayLike> extends Ev
       };
       awaiter.reject = awaitReject;
       awaiter.resolve = awaitResolve;
-      this._awaitedCommand = awaiter;
-    }
+      return awaiter;
+    });
 
     this.logResultIfDebug(() => {
       const debugMsg = Cmds.asString(transaction.commands);
@@ -355,19 +354,17 @@ export class LabelPrinter<TChannelType extends Conf.MessageArrayLike> extends Ev
     );
 
     try {
-      if (this._awaitedCommand) {
-        this.logIfDebug(`Awaiting response to command '${this._awaitedCommand.cmd.name}' for up to ${this._awaitedCommandTimeoutMS}ms...`);
+      if (this._awaitedCommands.length > 0) {
+        this.logIfDebug(`Awaiting response to ${this._awaitedCommands.length} commands for up to ${this._awaitedCommandTimeoutMS}ms...`);
         await promiseWithTimeout(
-          this._awaitedCommand.promise,
+          Promise.all(this._awaitedCommands.map(c => c.promise)),
           this._awaitedCommandTimeoutMS,
-          new Mux.DeviceCommunicationError(`Timed out waiting for '${this._awaitedCommand.cmd.name}' response.`)
+          new Mux.DeviceCommunicationError(`Timed out waiting for ${this._awaitedCommands.length} command's response.`)
         );
-        this.logIfDebug(`Got a response to command '${this._awaitedCommand.cmd.name}'!`);
-        this._awaitedCommand = undefined;
       }
     }
     finally {
-      this._awaitedCommand = undefined;
+      this._awaitedCommands = [];
     }
     return true;
   }
@@ -381,14 +378,18 @@ export class LabelPrinter<TChannelType extends Conf.MessageArrayLike> extends Ev
       return { remainderData: input }
     }
 
-    if (this._awaitedCommand !== undefined) {
-      this.logIfDebug(`Checking if the messages is a response to '${this._awaitedCommand.cmd.name}'.`);
+    if (this._awaitedCommands.length > 0) {
+      this.logIfDebug(`Checking if the messages is a response to one of ${this._awaitedCommands.length} messages.`);
     } else {
       this.logIfDebug(`Not awaiting a command. This message was a surprise, to be sure, but a welcome one.`);
     }
 
+    // When a device can return multiple messages there's no safety in relying on
+    // deterministic message order. It's a happy accident if it happens.
+    // Iterate through the response message and the command candidates in order,
+    // but always validate the message is the format we wanted.
     const msg = this._channelMessageTransformer.combineMessages(...input);
-    const parsed = await Cmds.parseRaw(msg, this._commandSet, this._awaitedCommand);
+    const parsed = await Cmds.parseRaw(msg, this._commandSet, this._awaitedCommands);
 
     parsed.messages.forEach(m => {
       switch (m.messageType) {
@@ -407,8 +408,8 @@ export class LabelPrinter<TChannelType extends Conf.MessageArrayLike> extends Ev
       }
     });
 
-    this.logIfDebug(`Returning unused ${parsed.remainderData.length} bytes.`);
-    const remainderData = parsed.remainderData.length === 0 ? [] : [parsed.remainderData];
+    this.logIfDebug(`Returning unused ${parsed.remainderMsg.length} bytes.`);
+    const remainderData = parsed.remainderMsg.length === 0 ? [] : [parsed.remainderMsg];
     return { remainderData }
   }
 
