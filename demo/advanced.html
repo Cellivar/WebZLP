@@ -123,7 +123,7 @@
 
             // You can do stuff with the printer that connected. It's a good idea
             // to immediately query the printer for its status.
-            printer.sendDocument(printer.getConfigDocument().queryStatus().finalize());
+            printer.sendDocument(WebLabel.ReadyToPrintDocuments.printerStatusDocument);
         });
 
         // There's also an event that will tell you when a printer disconnects.
@@ -186,7 +186,7 @@
                     printer.addEventListener('reportedError', ({ detail: msg }) => {
                         // Error messages may indicate no error, we can ignore those.
                         if (msg.NoError) { return; }
-                        
+
                         const alertWrapper = document.createElement('div');
                         alertWrapper.innerHTML = `
                         <div class="alert alert-warning alert-dismissible fade show alert-printererror" role="alert">
@@ -200,7 +200,7 @@
 
                         // and even go one layer deeper!
                         alertWrapper.firstElementChild!.addEventListener('closed.bs.alert', () => {
-                            printer.sendDocument(printer.getConfigDocument().queryStatus().finalize());
+                            printer.sendDocument(WebLabel.ReadyToPrintDocuments.printerStatusDocument);
                         });
                     });
                 });

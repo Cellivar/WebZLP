@@ -25,9 +25,12 @@ export class ConfigDocumentBuilder
   // The config document appends an additional command to the end of the document
   // to commit the changes to stored memory. EPL does this automatically, ZPL does not
   // so to bring them closer to parity this is automatically implied.
+  private _doSave = false;
   // TODO: Consider whether this should move to a ZPL extended command.
   override finalize() {
-    this.andThen(new Cmds.SaveCurrentConfigurationCommand());
+    if (this._doSave) {
+      this.andThen(new Cmds.SaveCurrentConfigurationCommand());
+    }
     return super.finalize();
   }
 
@@ -38,6 +41,7 @@ export class ConfigDocumentBuilder
   }
 
   rebootPrinter(): IDocument {
+    this._doSave = false;
     return this.andThen(new Cmds.RebootPrinterCommand()).finalize();
   }
 
@@ -47,8 +51,8 @@ export class ConfigDocumentBuilder
     return this.andThen(new Cmds.QueryConfigurationCommand());
   }
 
-  printConfiguration(): IDocument {
-    return this.andThen(new Cmds.PrintConfigurationCommand()).finalize();
+  printConfiguration(): IConfigDocumentBuilder {
+    return this.andThen(new Cmds.PrintConfigurationCommand());
   }
 
   queryStatus(): IConfigDocumentBuilder {
@@ -58,16 +62,19 @@ export class ConfigDocumentBuilder
   ///////////////////// ALTER PRINTER CONFIG
 
   setDarknessConfig(darknessPercent: Conf.DarknessPercent) {
+    this._doSave = true;
     return this.andThen(
       new Cmds.SetDarknessCommand(darknessPercent)
     );
   }
 
   setPrintDirection(upsideDown = false) {
+    this._doSave = true;
     return this.andThen(new Cmds.SetPrintDirectionCommand(upsideDown));
   }
 
   setPrintSpeed(speed: Conf.PrintSpeed, mediaSlewSpeed = Conf.PrintSpeed.ipsAuto) {
+    this._doSave = true;
     if (!this._config.speedTable.isValid(speed)) {
       throw new UnsupportedPrinterConfigError(
         'setPrintSpeed',
@@ -101,6 +108,7 @@ export class ConfigDocumentBuilder
   }
 
   setLabelDimensions(widthInInches: number, lengthInInches?: number, gapLengthInInches?: number) {
+    this._doSave = true;
     const dpi = this._config.dpi;
     return this.setLabelDimensionsDots(
       widthInInches * dpi,
@@ -110,12 +118,14 @@ export class ConfigDocumentBuilder
   }
 
   setLabelDimensionsDots(widthInDots: number, lengthInDots?: number, gapLengthInDots?: number) {
+    this._doSave = true;
     return this.andThen(
       new Cmds.SetLabelDimensionsCommand(widthInDots, lengthInDots, gapLengthInDots)
     );
   }
 
   setLabelHomeOffsetDots(horizontalOffsetInDots: number, verticalOffsetInDots: number) {
+    this._doSave = true;
     return this.andThen(
       new Cmds.SetLabelHomeCommand({
         left: horizontalOffsetInDots,
@@ -125,6 +135,7 @@ export class ConfigDocumentBuilder
   }
 
   setLabelPrintOriginOffsetCommand(horizontalOffsetInDots: number, verticalOffsetInDots: number) {
+    this._doSave = true;
     return this.andThen(
       new Cmds.SetLabelPrintOriginOffsetCommand({
         left: horizontalOffsetInDots,
@@ -134,6 +145,7 @@ export class ConfigDocumentBuilder
   }
 
   setLabelMediaToContinuous(labelLengthInInches: number): IConfigDocumentBuilder {
+    this._doSave = true;
     const dpi = this._config.dpi;
     return this.andThen(
       new Cmds.SetLabelToContinuousMediaCommand(dpi * labelLengthInInches)
@@ -144,6 +156,7 @@ export class ConfigDocumentBuilder
     labelLengthInInches: number,
     labelGapInInches: number
   ): IConfigDocumentBuilder {
+    this._doSave = true;
     const dpi = this._config.dpi;
     return this.andThen(
       new Cmds.SetLabelToWebGapMediaCommand(
@@ -158,6 +171,7 @@ export class ConfigDocumentBuilder
     blackLineThicknessInInches: number,
     blackLineOffsetInInches: number
   ): IConfigDocumentBuilder {
+    this._doSave = true;
     const dpi = this._config.dpi;
     return this.andThen(
       new Cmds.SetLabelToMarkMediaCommand(
@@ -185,7 +199,7 @@ export interface IPrinterConfigBuilder {
   queryConfiguration(): IConfigDocumentBuilder;
 
   /** Print the configuration directly on labels. Must be final command. */
-  printConfiguration(): IDocument;
+  printConfiguration(): IConfigDocumentBuilder;
 }
 
 export interface IPrinterLabelConfigBuilder {

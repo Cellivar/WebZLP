@@ -59,7 +59,7 @@ printerMgr.addEventListener('connectedDevice', ({ detail }) => {
 
     // You can do stuff with the printer that connected. It's a good idea
     // to immediately query the printer for its status.
-    printer.sendDocument(printer.getConfigDocument().queryStatus().finalize());
+    printer.sendDocument(WebLabel.ReadyToPrintDocuments.printerStatusDocument);
 });
 
 // There's also an event that will tell you when a printer disconnects.
@@ -136,7 +136,7 @@ class BasicLabelDesignerApp {
 
                 // and even go one layer deeper!
                 alertWrapper.firstElementChild!.addEventListener('closed.bs.alert', () => {
-                    printer.sendDocument(printer.getConfigDocument().queryStatus().finalize());
+                    printer.sendDocument(WebLabel.ReadyToPrintDocuments.printerStatusDocument);
                 });
             });
         });

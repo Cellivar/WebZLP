@@ -6,15 +6,8 @@ import { CmdErrorReporting, handleCmdErrorReporting } from './CmdErrorReporting.
 
 /** Command set for communicating with an EPL II printer. */
 export class EplPrinterCommandSet extends Cmds.StringCommandSet {
-  get documentStartCommands(): Cmds.IPrinterCommand[] {
-    // All ZPL documents start with the start-of-document command.
-    return []
-  }
-
-  get documentEndCommands(): Cmds.IPrinterCommand[] {
-    // There's no formal command for the end of an EPL doc
-    return []
-  }
+  override get documentStartPrefix() { return '\r\n'; };
+  override get documentEndSuffix() { return '\r\n'; };
 
   // TODO: Method to add extended commands to the non-form list.
   protected nonFormCommands: (symbol | Cmds.CommandType)[] = [
@@ -23,6 +16,7 @@ export class EplPrinterCommandSet extends Cmds.StringCommandSet {
     'QueryConfiguration',
     'RebootPrinter',
     'SetDarkness',
+    'StartLabel',
     'CutNow',
     'ClearImageBuffer',
     'GetStatus',
@@ -74,6 +68,7 @@ export class EplPrinterCommandSet extends Cmds.StringCommandSet {
         // No specific command, prints should have happened.
         return '\r\n';
       case 'NewLabel':
+      case 'NoOp':
         // Should have been compiled out at a higher step.
         return this.noop;
 

@@ -13,8 +13,17 @@ export class ReadyToPrintDocuments {
     return this.printerGetConfigDoc;
   }
 
+  private static readonly printerStatusDoc = new Docs.ConfigDocumentBuilder()
+    .queryStatus()
+    .finalize();
+  /** A command document to query the printer's status. */
+  static get printerStatusDocument() {
+    return this.printerStatusDoc;
+  }
+
   private static readonly printerPrintConfigDoc = new Docs.ConfigDocumentBuilder()
-    .printConfiguration();
+    .printConfiguration()
+    .finalize();
   /** A command document to make the printer print its configuration. */
   static get printConfigDocument() {
     return this.printerPrintConfigDoc;

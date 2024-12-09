@@ -8,26 +8,22 @@ import { CmdHostQuery, handleCmdHostQuery } from './CmdHostQuery.js';
 
 /** Command set for communicating with a ZPL II printer. */
 export class ZplPrinterCommandSet extends Cmds.StringCommandSet {
-  get documentStartCommands(): Cmds.IPrinterCommand[] {
-    // All ZPL documents start with the start-of-document command.
-    return [new Cmds.StartLabel()]
-  }
-
-  get documentEndCommands(): Cmds.IPrinterCommand[] {
-    // All ZPL documents end with the end-of-document command.
-    return [new Cmds.EndLabel()]
-  }
+  override get documentStartPrefix() { return '\r\n'; };
+  override get documentEndSuffix() { return '\r\n'; };
 
   // TODO: Method to add extended commands to the non-form list.
+  // ZPL is easier here as the prefixes are more consistent:
+  // ~ means non-form command
+  // ^ means form command
+  // The pause commands have both versions just to make things fun!
   protected nonFormCommands: (symbol | Cmds.CommandType)[] = [
     'AutosenseLabelDimensions',
     'PrintConfiguration',
     'RebootPrinter',
     'SetDarkness',
     'CutNow',
+    'StartLabel',
     'GetStatus',
-    'SaveCurrentConfiguration',
-    CmdXmlQuery.typeE,
     CmdHostIdentification.typeE,
     CmdHostQuery.typeE
   ];
@@ -81,6 +77,7 @@ export class ZplPrinterCommandSet extends Cmds.StringCommandSet {
       case 'EndLabel':
         return '\n' + '^XZ' +'\n';
       case 'NewLabel':
+      case 'NoOp':
         // Should have been compiled out at a higher step.
         return this.noop;
 

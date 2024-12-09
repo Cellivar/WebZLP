@@ -23,10 +23,10 @@ export interface CommandSet<TCmdType extends Conf.MessageArrayLike> {
   /** Gets the command language this command set implements */
   get commandLanguage(): Conf.PrinterCommandLanguage;
 
-  /** Gets the commands to start a new document. */
-  get documentStartCommands(): Commands.IPrinterCommand[];
-  /** Gets the commands to end a document. */
-  get documentEndCommands(): Commands.IPrinterCommand[];
+  /** Gets the prefix to start a new document. */
+  get documentStartPrefix(): TCmdType;
+  /** Gets the suffix to end a document. */
+  get documentEndSuffix(): TCmdType;
 
   /** Get expanded commands for a given command, if applicable. */
   expandCommand(cmd: Commands.IPrinterCommand): Commands.IPrinterCommand[];
@@ -81,8 +81,8 @@ export abstract class PrinterCommandSet<TCmdType extends Conf.MessageArrayLike> 
   }
 
   abstract parseMessage<TReceived extends Conf.MessageArrayLike>(msg: TReceived, sentCommand?: Commands.IPrinterCommand): IMessageHandlerResult<TReceived>;
-  abstract get documentStartCommands(): Commands.IPrinterCommand[];
-  abstract get documentEndCommands(): Commands.IPrinterCommand[];
+  abstract get documentStartPrefix(): TCmdType;
+  abstract get documentEndSuffix(): TCmdType;
   abstract transpileCommand(cmd: Commands.IPrinterCommand, docMetadata: TranspiledDocumentState): TCmdType | TranspileDocumentError;
 
   public isCommandNonFormCommand(cmd: Commands.IPrinterCommand): boolean {

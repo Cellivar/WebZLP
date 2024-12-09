@@ -73,6 +73,7 @@ export type CommandType
   // General printer commands
   | "RebootPrinter"
   | "Raw"
+  | "NoOp"
   // Status commands
   | "GetStatus"
   | "PrintConfiguration"
@@ -145,6 +146,12 @@ export class PrintCommand implements IPrinterCommand {
   }
 
   effectFlags = new CommandEffectFlags(['feedsPaper']);
+}
+
+export class NoOp extends BasicCommand {
+  name = 'No operation placeholder';
+  type: CommandType = 'NoOp';
+  constructor() { super(); }
 }
 
 export class GetStatusCommand extends BasicCommand {
