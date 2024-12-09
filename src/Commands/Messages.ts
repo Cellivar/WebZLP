@@ -49,7 +49,7 @@ export class RawMessageTransformer implements MessageTransformer<Uint8Array> {
 
 export class StringMessageTransformer implements MessageTransformer<string> {
   transformerType: Conf.MessageArrayLikeType = "string";
-  
+
   combineMessages(...messages: string[]): string {
     return messages.join('');
   }
@@ -111,6 +111,8 @@ export interface IStatusMessage {
 /** An error message sent by the printer. */
 export interface IErrorMessage {
   messageType: 'ErrorMessage',
+
+  NoError?: boolean;
 
   // Clearly user-generated errors:
   CommandSyntaxError?: boolean;

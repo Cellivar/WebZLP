@@ -18,7 +18,10 @@ function getResult(
 describe('getErrorMessage', () => {
   it('Handles no error', () => {
     const msg = '00\r\n';
-    expect(getErrorMessage(msg)).toEqual(getResult({messageType: 'ErrorMessage'}));
+    expect(getErrorMessage(msg)).toEqual(getResult({
+      messageType: 'ErrorMessage',
+      NoError: true
+    }));
   });
 
   it('Handles error 01', () => {
@@ -36,6 +39,15 @@ describe('getErrorMessage', () => {
       NotInDataEntryMode: true,
     }));
   })
+
+  it('Handles error 07 with no unprinted label number', () => {
+    const msg = '07\r\n';
+    expect(getErrorMessage(msg)).toEqual(getResult({
+      messageType: 'ErrorMessage',
+      PaperEmptyError: true,
+      RibbonEmptyError: true
+    }));
+  });
 
   it('Handles error 07 with unprinted labels', () => {
     const msg = '07P123\r\n';
@@ -61,7 +73,8 @@ describe('getErrorMessage', () => {
   it('Returns remainder past error message', () => {
     const msg = "00\r\n05\r\n";
     expect(getErrorMessage(msg)).toEqual(getResult({
-      messageType: 'ErrorMessage'
+      messageType: 'ErrorMessage',
+      NoError: true
     },
   false, true, "05\r\n"));
   })

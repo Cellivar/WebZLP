@@ -41,6 +41,7 @@ function getErrorFromCode(errCode: number, errMsg: Cmds.IErrorMessage): EplError
   // TODO: Better way to do this.
   switch (errCode) {
     case EplErrorCode.NoError:
+      errMsg.NoError = true;
       return EplErrorCode.NoError;
     case EplErrorCode.SyntaxError:
       errMsg.CommandSyntaxError = true;
