@@ -166,14 +166,14 @@ export class LabelPrinter<TChannelType extends Conf.MessageArrayLike> extends Ev
 
     this._printerOptions.update(Cmds.deviceInfoToOptionsUpdate(this._channel.getDeviceInfo()));
 
-    this._commandSet = await this.detectLanguage(this._printerOptions);
-
     this._streamListener = new Mux.InputMessageListener<TChannelType>(
       this._channel.getInput.bind(this._channel),
       this.parseAndDispatchMessage.bind(this),
       this._deviceCommOpts.debug,
     );
     this._streamListener.start();
+
+    this._commandSet = await this.detectLanguage(this._printerOptions);
 
     // Now that we're listening for messages we can query for the full config.
     await this.refreshPrinterConfiguration();
@@ -235,19 +235,10 @@ export class LabelPrinter<TChannelType extends Conf.MessageArrayLike> extends Ev
       throw new Mux.DeviceNotReadyError("Printer is not ready to communicate.");
     }
 
+    // TODO: deal with errors halfway through document sending?
     for (const trans of doc.transactions) {
-      try {
-        const result = await this.sendTransactionAndWait(trans);
-        if (!result) { return false; }
-      } catch (e) {
-        // TODO: Just throw this instead
-        if (e instanceof Mux.DeviceCommunicationError) {
-          console.error(e);
-          return false;
-        } else {
-          throw e;
-        }
-      }
+      const result = await this.sendTransactionAndWait(trans);
+      if (!result) { return false; }
     }
 
     return true;
@@ -281,18 +272,8 @@ export class LabelPrinter<TChannelType extends Conf.MessageArrayLike> extends Ev
       // and the message parser will make sure it's a valid response to what we
       // asked. If we time out waiting for the response we move on to the next.
       this._awaitedCommandTimeoutMS = 1000;
-      const tmpListener = new Mux.InputMessageListener(
-        this._channel.getInput.bind(this._channel),
-        async (i) => {
-          const msg = this._channelMessageTransformer.combineMessages(...i);
-          const remainderData = (await Cmds.parseRaw(msg, set, this._awaitedCommand)).remainderData
-          return { remainderData: [remainderData] }
-        },
-        this._deviceCommOpts.debug,
-      );
-      tmpListener.start();
+      this._commandSet = set;
 
-      // Make sure that listener gets disposed.
       try {
         // For reasons I don't fully understand sometimes EPL printers in particular
         // take more than one try to get this right.
@@ -319,8 +300,8 @@ export class LabelPrinter<TChannelType extends Conf.MessageArrayLike> extends Ev
         } while (retryLimit > 0);
       }
       finally {
-        tmpListener.dispose();
         this._awaitedCommandTimeoutMS = awaitedTimeoutOriginal;
+        this._commandSet = undefined;
       }
     }
 
@@ -348,6 +329,11 @@ export class LabelPrinter<TChannelType extends Conf.MessageArrayLike> extends Ev
       this._awaitedCommand = awaiter;
     }
 
+    this.logResultIfDebug(() => {
+      const debugMsg = Cmds.asString(transaction.commands);
+      return `Transaction being sent to printer:\n${debugMsg}\n--end of transaction--`;
+    })
+
     // TODO: Better type guards??
     let sendCmds: TChannelType;
     switch(this._channelType) {
@@ -368,16 +354,20 @@ export class LabelPrinter<TChannelType extends Conf.MessageArrayLike> extends Ev
       new Mux.DeviceCommunicationError(`Timed out sending commands to printer, is there a problem with the printer?`)
     );
 
-    // TODO: Still needed??
-    //await this._awaitedCommand?.promise;
-    if (this._awaitedCommand) {
-      this.logIfDebug(`Awaiting response to command '${this._awaitedCommand.cmd.name}'...`);
-      await promiseWithTimeout(
-        this._awaitedCommand.promise,
-        this._awaitedCommandTimeoutMS,
-        new Mux.DeviceCommunicationError(`Timed out waiting for '${this._awaitedCommand.cmd.name}' response.`)
-      );
-      this.logIfDebug(`Got a response to command '${this._awaitedCommand.cmd.name}'!`);
+    try {
+      if (this._awaitedCommand) {
+        this.logIfDebug(`Awaiting response to command '${this._awaitedCommand.cmd.name}' for up to ${this._awaitedCommandTimeoutMS}ms...`);
+        await promiseWithTimeout(
+          this._awaitedCommand.promise,
+          this._awaitedCommandTimeoutMS,
+          new Mux.DeviceCommunicationError(`Timed out waiting for '${this._awaitedCommand.cmd.name}' response.`)
+        );
+        this.logIfDebug(`Got a response to command '${this._awaitedCommand.cmd.name}'!`);
+        this._awaitedCommand = undefined;
+      }
+    }
+    finally {
+      this._awaitedCommand = undefined;
     }
     return true;
   }
@@ -385,7 +375,11 @@ export class LabelPrinter<TChannelType extends Conf.MessageArrayLike> extends Ev
   private async parseAndDispatchMessage(
     input: TChannelType[]
   ): Promise<Mux.IHandlerResponse<TChannelType>> {
-    if (this._commandSet === undefined) { return { remainderData: input } }
+    if (this._commandSet === undefined) {
+      // TODO: Better option than hoping..
+      await new Promise(r => setTimeout(r, 500));
+      return { remainderData: input }
+    }
 
     if (this._awaitedCommand !== undefined) {
       this.logIfDebug(`Checking if the messages is a response to '${this._awaitedCommand.cmd.name}'.`);

@@ -42,6 +42,8 @@ refreshPrinterBtn.addEventListener('click', async () => printerMgr.forceReconnec
 
 // Next we wire up some events on the UsbDeviceManager itself.
 printerMgr.addEventListener('connectedDevice', ({ detail }) => {
+
+    // Let's print some details about the printer that was connected.
     const printer = detail.device;
     console.log('New printer is a', printer.printerModel);
     const config = printer.printerOptions;
@@ -54,6 +56,10 @@ printerMgr.addEventListener('connectedDevice', ({ detail }) => {
         config.mediaLengthInches,
         'in long');
     console.log('Printer media mode is', WebLabel.MediaMediaGapDetectionMode[config.mediaGapDetectMode]);
+
+    // You can do stuff with the printer that connected. It's a good idea
+    // to immediately query the printer for its status.
+    printer.sendDocument(printer.getConfigDocument().queryStatus().finalize());
 });
 
 // There's also an event that will tell you when a printer disconnects.
@@ -107,9 +113,32 @@ class BasicLabelDesignerApp {
 
         // Add a second set of event listeners for printer connect and disconnect to redraw
         // the printer list when it changes.
-        this.manager.addEventListener('connectedDevice', () => {
+        this.manager.addEventListener('connectedDevice', ({detail}) => {
             this.activePrinterIndex = -1;
             this.redrawPrinterButtons();
+
+            // Printers themselves also have events, let's show an alert on errors.
+            const printer = detail.device;
+            printer.addEventListener('reportedError', ({ detail: msg }) => {
+                // Error messages may indicate no error, we can ignore those.
+                if (msg.NoError) { return; }
+
+                const alertWrapper = document.createElement('div');
+                alertWrapper.innerHTML = `
+                <div class="alert alert-warning alert-dismissible fade show alert-printererror" role="alert">
+                    <h4>Printer <strong>${printer.printerSerial}</strong> has an error</h4>
+                    <p>${JSON.stringify(msg, null, 2)}</p>
+                    <hr>
+                    <p>Fix the issue, then dismiss this alert to check the status again.</p>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>`
+                document.getElementById('printerAlertSpace')?.appendChild(alertWrapper);
+
+                // and even go one layer deeper!
+                alertWrapper.firstElementChild!.addEventListener('closed.bs.alert', () => {
+                    printer.sendDocument(printer.getConfigDocument().queryStatus().finalize());
+                });
+            });
         });
         this.manager.addEventListener('disconnectedDevice', () => {
             this.activePrinterIndex = -1;
