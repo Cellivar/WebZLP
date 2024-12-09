@@ -45,7 +45,7 @@
     "@eslint/js": "^9.9.0",
     "@types/bootstrap": "^5.2.10",
     "@types/eslint__js": "^8.42.3",
-    "@types/node": "^20.8.9",
+    "@types/node": "^20.14.8",
     "@types/w3c-web-usb": "^1.0.10",
     "@vitest/coverage-v8": "^2.1.6",
     "eslint": "^9.9.0",
@@ -59,6 +59,6 @@
     "vitest": "^2.1.6"
   },
   "dependencies": {
-    "web-device-mux": "^0.2.3"
+    "web-device-mux": "^0.3.0"
   }
 }

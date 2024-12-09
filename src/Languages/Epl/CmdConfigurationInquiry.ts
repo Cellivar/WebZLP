@@ -2,7 +2,7 @@
 import * as Util from '../../Util/index.js';
 import * as Conf from '../../Configs/index.js';
 import * as Cmds from '../../Commands/index.js';
-import * as eplPrinters from "./EplPrinters.json"
+import * as eplPrinters from "./EplPrinters.json" assert { type: 'json' };
 
 type SpeedMaps = keyof typeof eplPrinters.default.speedMaps;
 interface EplSpeedMap {
