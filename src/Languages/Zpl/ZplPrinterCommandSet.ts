@@ -4,6 +4,7 @@ import * as Cmds from '../../Commands/index.js';
 import { handleMessage } from './Messages.js';
 import { CmdXmlQuery, handleCmdXmlQuery } from './CmdXmlQuery.js';
 import { CmdHostIdentification, handleCmdHostIdentification } from './CmdHostIdentification.js';
+import { CmdHostQuery, handleCmdHostQuery } from './CmdHostQuery.js';
 
 /** Command set for communicating with a ZPL II printer. */
 export class ZplPrinterCommandSet extends Cmds.StringCommandSet {
@@ -32,6 +33,7 @@ export class ZplPrinterCommandSet extends Cmds.StringCommandSet {
 
     this.extendedCommandMap.set(CmdXmlQuery.typeE, handleCmdXmlQuery);
     this.extendedCommandMap.set(CmdHostIdentification.typeE, handleCmdHostIdentification);
+    this.extendedCommandMap.set(CmdHostQuery.typeE, handleCmdHostQuery);
   }
 
   public override expandCommand(cmd: Cmds.IPrinterCommand): Cmds.IPrinterCommand[] {

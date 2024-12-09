@@ -2,10 +2,12 @@ import * as Conf from '../../Configs/index.js';
 import * as Cmds from '../../Commands/index.js';
 import { CmdXmlQuery, parseCmdXmlQueryResponse } from "./CmdXmlQuery.js";
 import { CmdHostIdentification, parseCmdHostIdentification } from './CmdHostIdentification.js';
+import { CmdHostQuery, parseCmdHostQuery } from './CmdHostQuery.js';
 
 const messageHandlerMap = new Map<symbol | Cmds.CommandType, Cmds.MessageHandlerDelegate<string>>([
   [CmdXmlQuery.typeE, parseCmdXmlQueryResponse], // ~HZ command
-  [CmdHostIdentification.typeE, parseCmdHostIdentification] // ~HI command
+  [CmdHostIdentification.typeE, parseCmdHostIdentification], // ~HI command
+  [CmdHostQuery.typeE, parseCmdHostQuery] // ~HQ command
 ]);
 
 export function handleMessage<TReceived extends Conf.MessageArrayLike>(
