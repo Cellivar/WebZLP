@@ -182,7 +182,7 @@ export class ClearImageBufferCommand extends BasicCommand {
 export class QueryConfigurationCommand extends BasicCommand {
   name = 'Query for printer config';
   type: CommandType = 'QueryConfiguration';
-  constructor() { super([]); }
+  constructor() { super(['waitsForResponse']); }
 }
 
 /** A command to have the printer print its configuration labels. */

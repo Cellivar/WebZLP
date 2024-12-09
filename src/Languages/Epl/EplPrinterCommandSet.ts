@@ -8,7 +8,7 @@ import { CmdErrorReporting, handleCmdErrorReporting } from './CmdErrorReporting.
 export class EplPrinterCommandSet extends Cmds.StringCommandSet {
   get documentStartCommands(): Cmds.IPrinterCommand[] {
     // All ZPL documents start with the start-of-document command.
-    return [new Cmds.ClearImageBufferCommand()]
+    return []
   }
 
   get documentEndCommands(): Cmds.IPrinterCommand[] {
@@ -70,7 +70,9 @@ export class EplPrinterCommandSet extends Cmds.StringCommandSet {
       case 'StartLabel':
       case 'ClearImageBuffer':
         return '\r\n' + 'N' + '\r\n';
-      case 'EndLabel': // No specific command, prints should have happened.
+      case 'EndLabel':
+        // No specific command, prints should have happened.
+        return '\r\n';
       case 'NewLabel':
         // Should have been compiled out at a higher step.
         return this.noop;
@@ -86,7 +88,7 @@ export class EplPrinterCommandSet extends Cmds.StringCommandSet {
         return this.noop;
       case 'GetStatus':
         // Referred to as 'return error' but really returns general status info.
-        return '^ee' + '\r\n';
+        return '\r\n' + '^ee' + '\r\n';
 
       case 'SetPrintDirection':
         return this.setPrintDirectionCommand((cmd as Cmds.SetPrintDirectionCommand).upsideDown);

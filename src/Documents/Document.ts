@@ -53,8 +53,8 @@ export abstract class DocumentBuilder<TBuilder extends DocumentBuilder<TBuilder>
     return { commands: this._commands }
   }
 
-  protected andThen(...command: Cmds.IPrinterCommand[]): TBuilder {
+  protected andThen(...command: Cmds.IPrinterCommand[]): this {
     this._commands.push(...command);
-    return this as unknown as TBuilder;
+    return this;
   }
 }

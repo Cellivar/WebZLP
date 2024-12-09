@@ -51,6 +51,10 @@ export class ConfigDocumentBuilder
     return this.andThen(new Cmds.PrintConfigurationCommand()).finalize();
   }
 
+  queryStatus(): IConfigDocumentBuilder {
+    return this.andThen(new Cmds.GetStatusCommand());
+  }
+
   ///////////////////// ALTER PRINTER CONFIG
 
   setDarknessConfig(darknessPercent: Conf.DarknessPercent) {
@@ -171,6 +175,9 @@ export interface IPrinterBasicCommandBuilder {
 
   /** Simulate turning the printer off and back on. Must be the final command. */
   rebootPrinter(): IDocument;
+
+  /** Get any error messages from the printer. */
+  queryStatus(): IConfigDocumentBuilder;
 }
 
 export interface IPrinterConfigBuilder {

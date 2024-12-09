@@ -33,7 +33,9 @@ export class LabelDocumentBuilder
   }
 
   addPrintCmd(count?: number, additionalDuplicateOfEach?: number): ILabelDocumentBuilder {
-    return this.andThen(new Cmds.PrintCommand(count ?? 1, additionalDuplicateOfEach ?? 0));
+    return this
+      .andThen(new Cmds.PrintCommand(count ?? 1, additionalDuplicateOfEach ?? 0))
+      .andThen(new Cmds.GetStatusCommand());
   }
 
   addCutNowCommand(): ILabelDocumentBuilder {
