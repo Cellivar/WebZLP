@@ -44,6 +44,8 @@ export function parseConfigResponse(
     return result;
   }
 
+  console.log('EPL config: ', msg);
+
   // Unfortunately EPL-only printers tended to have a LOT of variance on
   // what they actually put into the config. Firmware versions, especially
   // customized versions, can and do omit information.
@@ -328,6 +330,12 @@ function updateHardwareOptions(str: string, msg: Cmds.ISettingUpdateMessage) {
         break;
     }
   });
+}
+
+export function tryGetModel(rawModel?: string): Conf.IPrinterHardwareUpdate | undefined {
+  if (rawModel === undefined || rawModel === '') { return undefined }
+  const model = getModel(rawModel);
+  return model.model !== "Unknown_EPL" ? model : undefined;
 }
 
 // TODO: Way to have user supply new models?

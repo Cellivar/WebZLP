@@ -1,5 +1,5 @@
 import { expect, describe, it } from 'vitest';
-import { parseConfigResponse } from './CmdConfigurationInquiry.js';
+import { parseConfigResponse, tryGetModel } from './CmdConfigurationInquiry.js';
 
 
 describe("CmdConfigurationInquiry", () => {
@@ -210,5 +210,82 @@ Cover: T=118, C=129
         ]
       `);
     });
+
+    it('Real config 4', () => {
+      const real_config_4 = `
+UKQ1935HLU       V4.70.1A
+S/N: 42A000000000
+Serial port:96,N,8,1
+Page Mode
+Image buffer size:0245K
+Fmem used: 0 (bytes)
+Gmem used: 0
+Emem used: 29600
+Available: 100959
+I8,A,001 rY JF WN
+S4 D11 R104,0 ZB UN
+q616 Q56,169
+Option:d,S,Ff
+oEv,w,x,y,z
+12 21 30
+Cover: T=120, C=141`;
+      const result = parseConfigResponse(real_config_4, undefined!);
+      expect(result.messages).toMatchInlineSnapshot(`
+        [
+          {
+            "messageType": "SettingUpdateMessage",
+            "printerHardware": {
+              "dpi": 203,
+              "firmware": "V4.70.1A",
+              "manufacturer": "Zebra Corporation",
+              "maxMediaDarkness": 15,
+              "maxMediaLengthDots": 2223,
+              "maxMediaWidthDots": 832,
+              "model": "LP2844",
+              "serialNumber": "42A000000000",
+              "speedTable": SpeedTable {
+                "speedTable": Map {
+                  3 => 1,
+                  4 => 2,
+                  5 => 3,
+                  7 => 4,
+                  1 => 1,
+                  1000 => 4,
+                  0 => 3,
+                },
+              },
+            },
+            "printerMedia": {
+              "darknessPercent": 74,
+              "mediaGapDetectMode": 1,
+              "mediaGapDots": 169,
+              "mediaLengthDots": 50,
+              "mediaPrintOriginOffsetDots": {
+                "left": 104,
+                "top": 0,
+              },
+              "mediaWidthDots": 609,
+              "printOrientation": 0,
+              "speed": PrintSpeedSettings {
+                "printSpeed": 7,
+                "slewSpeed": 7,
+              },
+              "thermalPrintMode": 0,
+            },
+          },
+        ]
+      `);
+    });
+  });
+
+  describe('tryGetModel', () => {
+    it('Gets a real model', () => {
+      const id = "LP2844";
+      expect(tryGetModel(id)).not.toBeUndefined();
+    });
+    it('Gets undefined for weirdness', () => {
+      const id = "XDG9954";
+      expect(tryGetModel(id)).toBeUndefined();
+    })
   });
 })
