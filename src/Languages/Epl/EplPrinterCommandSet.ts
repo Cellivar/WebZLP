@@ -22,7 +22,12 @@ export class EplPrinterCommandSet extends Cmds.StringCommandSet {
     'PrintConfiguration',
     'QueryConfiguration',
     'RebootPrinter',
-    'CutNow'
+    'SetDarkness',
+    'CutNow',
+    'ClearImageBuffer',
+    'GetStatus',
+    'SaveCurrentConfiguration',
+    CmdErrorReporting.typeE
   ];
 
   constructor(
@@ -63,8 +68,9 @@ export class EplPrinterCommandSet extends Cmds.StringCommandSet {
       case 'CustomCommand':
         return this.getExtendedCommand(cmd)(cmd, docState, this);
       case 'StartLabel':
+      case 'ClearImageBuffer':
         return '\r\n' + 'N' + '\r\n';
-      case 'EndLabel':
+      case 'EndLabel': // No specific command, prints should have happened.
       case 'NewLabel':
         // Should have been compiled out at a higher step.
         return this.noop;
@@ -104,8 +110,6 @@ export class EplPrinterCommandSet extends Cmds.StringCommandSet {
       case 'SetLabelToWebGapMedia':
         return this.setLabelToWebGapMediaCommand(cmd as Cmds.SetLabelToWebGapMediaCommand);
 
-      case 'ClearImageBuffer':
-        return '\r\nN';
       case 'SuppressFeedBackup':
         // EPL uses an on/off style for form backup, it'll remain off until reenabled.
         return 'JB' + '\r\n';

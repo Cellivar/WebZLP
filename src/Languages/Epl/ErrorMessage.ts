@@ -7,17 +7,17 @@ export function getErrorMessage(
 ): Cmds.IMessageHandlerResult<string> {
   const result: Cmds.IMessageHandlerResult<string> = {
     messageIncomplete: false,
-    messageMatchedExpectedCommand: false,
+    messageMatchedExpectedCommand: true,
     messages: [],
     remainder: msg,
   }
   const errorMsg: Cmds.IErrorMessage = {
     messageType: 'ErrorMessage'
   }
-  let remainderSlice = 3;
 
-  const errorCode = Number(msg.slice(0, 2));
-  const eplError = getErrorFromCode(errorCode, errorMsg);
+  const {sliced, remainder } = Cmds.sliceToCRLF(msg);
+  result.remainder = remainder;
+  const eplError = getErrorFromCode(Number(sliced.slice(0, 2)), errorMsg);
   if (eplError === EplErrorCode.PaperOrRibbonEmpty) {
     // This error may include additional data.
     // If `US` error reporting is enabled it will include Pnnn, where nnn is
@@ -25,18 +25,15 @@ export function getErrorMessage(
     if (msg.at(2) === 'P') {
       // 07P123
       errorMsg.UnprintedLabels = Number(msg.slice(3, 6));
-      remainderSlice = 7;
       // If `UT` alternate error reporting is enabled it also adds Lyyyyy,
       // where the yyyyy is the number of unprinted raster lines.
       if (msg.at(6) === 'L') {
         // 07P123L12345
         errorMsg.UnprintedRasterLines = Number(msg.slice(7, 12));
-        remainderSlice = 13;
       }
     }
   }
   result.messages.push(errorMsg);
-  result.remainder = msg.slice(0, remainderSlice);
   return result;
 }
 

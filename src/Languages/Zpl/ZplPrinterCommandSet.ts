@@ -23,7 +23,13 @@ export class ZplPrinterCommandSet extends Cmds.StringCommandSet {
     'AutosenseLabelDimensions',
     'PrintConfiguration',
     'RebootPrinter',
-    'SetDarkness'
+    'SetDarkness',
+    'CutNow',
+    'GetStatus',
+    'SaveCurrentConfiguration',
+    CmdXmlQuery.typeE,
+    CmdHostIdentification.typeE,
+    CmdHostQuery.typeE
   ];
 
   constructor(
