@@ -123,6 +123,9 @@ export class SpeedTable {
   // Every speed table should also have entries for ipsPrinterMin, ipsPrinterMax, and auto.
   // These should be duplicate entries of real values in the speed table so that
   // we have sane defaults for commands to default to.
+  get table(): ReadonlyMap<PrintSpeed, number> {
+    return this.speedTable;
+  }
   constructor(
     private readonly speedTable: Map<PrintSpeed, number> = new Map<PrintSpeed, number>()
   ) {}

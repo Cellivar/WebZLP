@@ -28,6 +28,9 @@ function promiseWithTimeout<T>(
   return Promise.race<T>([promise, timeout]);
 }
 
+/** Type alias for a Label Printer the communicates over USB. */
+export type LabelPrinterUsb = LabelPrinter<Uint8Array>;
+
 /** A class for working with a label printer. */
 export class LabelPrinter<TChannelType extends Conf.MessageArrayLike> extends EventTarget implements Mux.IDevice {
   // Printer communication handles
@@ -82,7 +85,7 @@ export class LabelPrinter<TChannelType extends Conf.MessageArrayLike> extends Ev
   static async fromUSBDevice(
     device: USBDevice,
     options: Mux.IDeviceCommunicationOptions
-  ) {
+  ): Promise<LabelPrinterUsb> {
     const p = new LabelPrinter(
       new Mux.UsbDeviceChannel(device, options),
       new Cmds.RawMessageTransformer(),
