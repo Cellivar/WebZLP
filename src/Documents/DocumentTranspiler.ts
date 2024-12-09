@@ -112,7 +112,7 @@ function splitTransactionsAndForms(
           }
           break;
       }
-    } else if (command.type === "NewLabel") {
+    } else if (command.type === "StartLabel") {
       currentForm.withinForm = true;
     } else if (!currentForm.withinForm) {
       // It's a form command outside of a form and not a new form command.

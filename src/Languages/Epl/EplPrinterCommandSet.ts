@@ -33,6 +33,18 @@ export class EplPrinterCommandSet extends Cmds.StringCommandSet {
     this.extendedCommandMap.set(CmdErrorReporting.typeE, handleCmdErrorReporting);
   }
 
+  public override expandCommand(cmd: Cmds.IPrinterCommand): Cmds.IPrinterCommand[] {
+    switch (cmd.type) {
+      default:
+        return [];
+      case 'NewLabel':
+        return [
+          new Cmds.EndLabel(),
+          new Cmds.StartLabel()
+        ]
+    }
+  }
+
   public parseMessage<TReceived extends Conf.MessageArrayLike>(
     msg: TReceived,
     sentCommand?: Cmds.IPrinterCommand

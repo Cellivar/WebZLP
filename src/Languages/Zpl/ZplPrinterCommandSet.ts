@@ -45,6 +45,11 @@ export class ZplPrinterCommandSet extends Cmds.StringCommandSet {
         return [
           new CmdXmlQuery('All'),
         ];
+      case 'NewLabel':
+        return [
+          new Cmds.EndLabel(),
+          new Cmds.StartLabel()
+        ]
     }
   }
 

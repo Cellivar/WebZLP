@@ -39,7 +39,7 @@ export class RawMessageTransformer implements MessageTransformer<Uint8Array> {
   }
 
   messageToString(message: Uint8Array): string {
-    return Util.DecodeAscii(message);
+    return asString(message);
   }
 
   messageToUint8Array(message: Uint8Array): Uint8Array {
@@ -48,17 +48,16 @@ export class RawMessageTransformer implements MessageTransformer<Uint8Array> {
 }
 
 export class StringMessageTransformer implements MessageTransformer<string> {
-  private encoder = new TextEncoder();
-
   transformerType: Conf.MessageArrayLikeType = "string";
+  
   combineMessages(...messages: string[]): string {
-    return messages.join();
+    return messages.join('');
   }
   messageToString(message: string): string {
     return message;
   }
   messageToUint8Array(message: string): Uint8Array {
-    return this.encoder.encode(message);
+    return asUint8Array(message);
   }
 }
 
