@@ -108,44 +108,84 @@ export interface IStatusMessage {
   rfid?: IStatusMessageRfid;
 }
 
+export enum ErrorState {
+  UnknownError = "UnknownError",
+
+  // User-generated errors
+  CommandSyntaxError                 = "CommandSyntaxError",
+  ObjectExceededLabelBorder          = "ObjectExceededLabelBorder",
+  BarCodeDataLengthError             = "BarCodeDataLengthError",
+  InsufficientMemoryToStoreData      = "InsufficientMemoryToStoreData",
+  DuplicateNameFormGraphicOrSoftFont = "DuplicateNameFormGraphicOrSoftFont",
+  NameNotFoundFormGraphicOrSoftFont  = "NameNotFoundFormGraphicOrSoftFont",
+  NotInDataEntryMode                 = "NotInDataEntryMode",
+  PDF417CodedDataTooLargeToFit       = "PDF417CodedDataTooLargeToFit",
+  ReceiveBufferFull                  = "ReceiveBufferFull",
+  PresenterNotRunning                = "PresenterNotRunning",
+
+  // Physical problems with the device
+  MemoryConfigurationError = "MemoryConfigurationError",
+  RS232InterfaceError      = "RS232InterfaceError",
+  CorruptRamConfigLost     = "CorruptRamConfigLost",
+  InvalidFirmwareConfig    = "InvalidFirmwareConfig",
+  PrintheadThermistorOpen  = "PrintheadThermistorOpen",
+  PrintheadDetectionError  = "PrintheadDetectionError",
+  BadPrintheadElement      = "BadPrintheadElement",
+  IllegalInterruptOccurred = "IllegalInterruptOccurred",
+
+  // Errors that need user action to resolve
+  PrintheadUp = "PrintheadUp",
+
+  MediaEmptyError  = "MediaEmptyError",
+  MediaNearEnd     = "MediaNearEnd",
+  RibbonEmptyError = "RibbonEmptyError",
+
+  PrintheadTooHot  = "PrintheadTooHot",
+  PrintheadTooCold = "PrintheadTooCold",
+  MotorTooHot      = "MotorTooHot",
+  MotorTooCold     = "MotorTooCold",
+  //MotorJuuuuuuuustRight
+
+  BatteryLowWarning40Percent = "BatteryLowWarning40Percent",
+  BatteryLowLimit20Percent   = "BatteryLowLimit20Percent",
+
+  CutterJammedOrNotInstalled = "CutterJammedOrNotInstalled",
+  PressFeedButtonToRecover   = "PressFeedButtonToRecover",
+  PaperFeedError             = "PaperFeedError",
+  PaperJamDuringRetract      = "PaperJamDuringRetract",
+
+  PrintheadNeedsCleaning  = "PrintheadNeedsCleaning",
+  PrintheadNeedsReplacing = "PrintheadNeedsReplacing",
+
+  // Media calibration errors
+  MediaErrorOrBlacklineNotDetectedOrExcessiveMediaFeeding = "MediaErrorOrBlacklineNotDetectedOrExcessiveMediaFeeding",
+
+  BlackMarkNotFound        = "BlackMarkNotFound",
+  BlackMarkCalirateError   = "BlackMarkCalirateError",
+  AutoSenseOrSensorFailure = "AutoSenseOrSensorFailure",
+  ExcessiveMediaFeeding    = "ExcessiveMediaFeeding",
+  RetractFunctionTimeout   = "RetractFunctionTimeout",
+  NeedToCalibrateMedia     = "NeedToCalibrateMedia",
+
+  // Statuses
+  PrinterBusyProcessingPrintJob = "PrinterBusyProcessingPrintJob",
+  PrinterPaused                 = "PrinterPaused",
+  PartialFormatInProgress       = "PartialFormatInProgress",
+  CommDiagnosticModeActive      = "CommDiagnosticModeActive",
+  LabelWaitingToBeTaken         = "LabelWaitingToBeTaken",
+
+}
+export type ErrorStates = keyof typeof ErrorState;
+export class ErrorStateSet extends Set<ErrorState> {}
+
 /** An error message sent by the printer. */
 export interface IErrorMessage {
   messageType: 'ErrorMessage',
 
-  NoError?: boolean;
+  errors: ErrorStateSet;
 
-  // Clearly user-generated errors:
-  CommandSyntaxError?: boolean;
-  ObjectExceededLabelBorder?: boolean;
-  BarCodeDataLengthError?: boolean;
-  InsufficientMemoryToStoreData?: boolean;
-  DuplicateNameFormGraphicOrSoftFont?: boolean;
-  NameNotFoundFormGraphicOrSoftFont?: boolean;
-  NotInDataEntryMode?: boolean;
-  PDF417CodedDataTooLargeToFit?: boolean;
-
-  // Physical problem errors:
-  MemoryConfigurationError?: boolean;
-  RS232InterfaceError?: boolean;
-  PrintHeadTooHot?: boolean;
-  MotorTooHot?: boolean;
-  BatteryLowWarning40Percent?: boolean;
-  BatteryLowLimit20Percent?: boolean;
-  CutterJammedOrNotInstalled?: boolean;
-  MediaErrorOrBlacklineNotDetectedOrExcessiveMediaFeeding?: boolean;
-  AutoSenseOrSensorFailure?: boolean;
-
-  PrintheadUp?: boolean;
-  PaperEmptyError?: boolean;
-  RibbonEmptyError?: boolean;
-  PrinterBusyProcessingPrintJob?: boolean;
-  PrinterPaused?: boolean;
-
-  UnprintedLabels?: number;
-  UnprintedRasterLines?: number;
-
-  // Catch-all for anything else printers throw.
-  UnknownError?: boolean;
+  unprintedRasterLines?: number;
+  unprintedLabels?: number;
 }
 
 /** RFID-specific status message results. */

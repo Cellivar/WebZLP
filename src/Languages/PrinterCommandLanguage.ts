@@ -26,7 +26,9 @@ export function guessLanguageFromModelHint(deviceInfo?: IDeviceInformation): Con
   switch (true) {
     case /LP 2824 Plus/gim.test(modelName): // LP 2844 Plus
       return Conf.PrinterCommandLanguage.zplEmulateEpl;
-      
+
+    // ZTC ZD410-203dpi ZPL
+    case /\sZPL$/gim.test(modelName): // Ends in literlaly 'ZPL'.
     case /^T?LP28[24]4-Z/gim.test(modelName):  // LP2844-Z
     case /\sT?LP28[24]4-Z/gim.test(modelName): // ZTC LP2844-Z-200dpi
       return Conf.PrinterCommandLanguage.zpl;

@@ -20,7 +20,7 @@ describe('getErrorMessage', () => {
     const msg = '00\r\n';
     expect(getErrorMessage(msg)).toEqual(getResult({
       messageType: 'ErrorMessage',
-      NoError: true
+      errors: new Cmds.ErrorStateSet(),
     }));
   });
 
@@ -28,7 +28,7 @@ describe('getErrorMessage', () => {
     const msg = '01\r\n';
     expect(getErrorMessage(msg)).toEqual(getResult({
       messageType: 'ErrorMessage',
-      CommandSyntaxError: true,
+      errors: new Cmds.ErrorStateSet([Cmds.ErrorState.CommandSyntaxError]),
     }));
   })
 
@@ -36,7 +36,7 @@ describe('getErrorMessage', () => {
     const msg = '10\r\n';
     expect(getErrorMessage(msg)).toEqual(getResult({
       messageType: 'ErrorMessage',
-      NotInDataEntryMode: true,
+      errors: new Cmds.ErrorStateSet([Cmds.ErrorState.NotInDataEntryMode]),
     }));
   })
 
@@ -44,8 +44,7 @@ describe('getErrorMessage', () => {
     const msg = '07\r\n';
     expect(getErrorMessage(msg)).toEqual(getResult({
       messageType: 'ErrorMessage',
-      PaperEmptyError: true,
-      RibbonEmptyError: true
+      errors: new Cmds.ErrorStateSet([Cmds.ErrorState.MediaEmptyError, Cmds.ErrorState.RibbonEmptyError]),
     }));
   });
 
@@ -53,9 +52,8 @@ describe('getErrorMessage', () => {
     const msg = '07P123\r\n';
     expect(getErrorMessage(msg)).toEqual(getResult({
       messageType: 'ErrorMessage',
-      PaperEmptyError: true,
-      RibbonEmptyError: true,
-      UnprintedLabels: 123,
+      errors: new Cmds.ErrorStateSet([Cmds.ErrorState.MediaEmptyError, Cmds.ErrorState.RibbonEmptyError]),
+      unprintedLabels: 123,
     }));
   });
 
@@ -63,10 +61,9 @@ describe('getErrorMessage', () => {
     const msg = '07P123L54321\r\n';
     expect(getErrorMessage(msg)).toEqual(getResult({
       messageType: 'ErrorMessage',
-      PaperEmptyError: true,
-      RibbonEmptyError: true,
-      UnprintedLabels: 123,
-      UnprintedRasterLines: 54321
+      errors: new Cmds.ErrorStateSet([Cmds.ErrorState.MediaEmptyError, Cmds.ErrorState.RibbonEmptyError]),
+      unprintedLabels: 123,
+      unprintedRasterLines: 54321
     }));
   });
 
@@ -74,7 +71,7 @@ describe('getErrorMessage', () => {
     const msg = "00\r\n05\r\n";
     expect(getErrorMessage(msg)).toEqual(getResult({
       messageType: 'ErrorMessage',
-      NoError: true
+      errors: new Cmds.ErrorStateSet(),
     },
   false, true, "05\r\n"));
   })

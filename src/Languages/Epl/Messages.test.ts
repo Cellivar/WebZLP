@@ -38,7 +38,9 @@ describe('handleMessage', () => {
     expect(result.messages).toMatchInlineSnapshot(`
       [
         {
-          "CommandSyntaxError": true,
+          "errors": Set {
+            "CommandSyntaxError",
+          },
           "messageType": "ErrorMessage",
         },
       ]
@@ -53,7 +55,9 @@ describe('handleMessage', () => {
     expect(result.messages).toMatchInlineSnapshot(`
       [
         {
-          "PrinterBusyProcessingPrintJob": true,
+          "errors": Set {
+            "PrinterBusyProcessingPrintJob",
+          },
           "messageType": "ErrorMessage",
         },
       ]
@@ -67,10 +71,12 @@ describe('handleMessage', () => {
     expect(result.messages).toMatchInlineSnapshot(`
       [
         {
-          "PaperEmptyError": true,
-          "RibbonEmptyError": true,
-          "UnprintedLabels": 1,
+          "errors": Set {
+            "MediaEmptyError",
+            "RibbonEmptyError",
+          },
           "messageType": "ErrorMessage",
+          "unprintedLabels": 1,
         },
       ]
     `);
@@ -83,11 +89,13 @@ describe('handleMessage', () => {
     expect(result.messages).toMatchInlineSnapshot(`
       [
         {
-          "PaperEmptyError": true,
-          "RibbonEmptyError": true,
-          "UnprintedLabels": 696,
-          "UnprintedRasterLines": 91234,
+          "errors": Set {
+            "MediaEmptyError",
+            "RibbonEmptyError",
+          },
           "messageType": "ErrorMessage",
+          "unprintedLabels": 696,
+          "unprintedRasterLines": 91234,
         },
       ]
     `);
