@@ -304,7 +304,7 @@ describe('DocumentTranspiler', () => {
                   "commands": "
 
             ^XA
-            ^PQ1,0,0,N
+            ^FD ^PQ1,0,0
             ^XZ
 
             ",
@@ -347,7 +347,7 @@ describe('DocumentTranspiler', () => {
                   "commands": "
 
             ^XA
-            ^FO0,0,^GB4,40,4,B,^FS^FO0,40,^GB1,20,1,B,^FS^FO1,60,^GB1,20,1,B,^FS^FO2,80,^GB1,20,1,B,^FS^FO3,100,^GB1,20,1,B,^FS^FO0,125,^GB1,8,1,B,^FS^FO1,133,^GB1,8,1,B,^FS^FO2,141,^GB1,8,1,B,^FS^FO3,149,^GB1,8,1,B,^FS^FO4,125,^GB1,8,1,B,^FS^FO5,133,^GB1,8,1,B,^FS^FO6,141,^GB1,8,1,B,^FS^FO7,149,^GB1,8,1,B,^FS^PQ1,0,0,N
+            ^FO0,0,^GB4,40,4,B,^FS^FO0,40,^GB1,20,1,B,^FS^FO1,60,^GB1,20,1,B,^FS^FO2,80,^GB1,20,1,B,^FS^FO3,100,^GB1,20,1,B,^FS^FO0,125,^GB1,8,1,B,^FS^FO1,133,^GB1,8,1,B,^FS^FO2,141,^GB1,8,1,B,^FS^FO3,149,^GB1,8,1,B,^FS^FO4,125,^GB1,8,1,B,^FS^FO5,133,^GB1,8,1,B,^FS^FO6,141,^GB1,8,1,B,^FS^FO7,149,^GB1,8,1,B,^FS^FD ^PQ1,0,0
             ^XZ
 
             ",
