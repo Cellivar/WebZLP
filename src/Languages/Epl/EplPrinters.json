@@ -15,8 +15,9 @@
       "modelHints": [
         "UKQ1935HLU",
         "UKQ1935HMU",
-        ".*\\sFDX\\s.*",
-        ".*\\sUPS\\s.*",
+        "UKQ1935H U",
+        ".*\\sFDX$",
+        ".*\\sUPS$",
         "^LP2844$"
       ],
       "dpi": 203,
