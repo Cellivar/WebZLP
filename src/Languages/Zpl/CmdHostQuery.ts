@@ -76,9 +76,17 @@ export class CmdHostQuery implements Cmds.IPrinterExtendedCommand {
 
 export function handleCmdHostQuery(
   cmd: Cmds.IPrinterCommand,
-  _docState: Cmds.TranspiledDocumentState,
+  docState: Cmds.TranspiledDocumentState,
   _commandSet: Cmds.CommandSet<string>
-): string {
+): string | Cmds.TranspileDocumentError {
+  // Version check.
+  // The V45 (LP28XX series) firmware version doesn't support this command. I
+  // am not sure what other firmware versions don't.
+  const badVers = ['V45.'];
+  if (badVers.filter(v => docState.initialConfig.firmware.startsWith(v)).length > 0) {
+    return new Cmds.TranspileDocumentError(`The command CmdHostQuery ~HQ is not supported on printer firmware ${docState.initialConfig.firmware}. Remove the command from your document.`);
+  }
+
   const command = cmd as CmdHostQuery;
   return `~HQ${queryToCmdArg[command.query]}\n`;
 }
