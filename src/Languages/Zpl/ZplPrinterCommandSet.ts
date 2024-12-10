@@ -45,6 +45,8 @@ export class ZplPrinterCommandSet extends Cmds.StringCommandSet {
     switch (cmd.type) {
       default:
         return [];
+      case 'Identify':
+        return [new CmdHostIdentification()]
       case 'GetStatus':
         return [new CmdHostStatus()];
       case 'QueryConfiguration':
@@ -78,6 +80,9 @@ export class ZplPrinterCommandSet extends Cmds.StringCommandSet {
         return '\n' + '^XA' +'\n';
       case 'EndLabel':
         return '\n' + '^XZ' +'\n';
+
+      // Should have been compiled out at a higher step.
+      case 'Identify':
       case 'NewLabel':
       case 'NoOp':
       case 'QueryConfiguration':

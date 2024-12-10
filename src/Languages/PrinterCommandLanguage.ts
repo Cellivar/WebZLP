@@ -24,11 +24,11 @@ export function guessLanguageFromModelHint(deviceInfo?: IDeviceInformation): Con
   const modelName = deviceInfo.productName ?? '';
   // ZPL printers follow standard formats and can usually be trusted.
   switch (true) {
-    case /LP 2824 Plus/gim.test(modelName):
-      // LP 2844 Plus
+    case /LP 2824 Plus/gim.test(modelName): // LP 2844 Plus
       return Conf.PrinterCommandLanguage.zplEmulateEpl;
-    case /\sT?LP28\d4-Z/gim.test(modelName):
-      // ZTC LP2844-Z-200dpi
+      
+    case /^T?LP28[24]4-Z/gim.test(modelName):  // LP2844-Z
+    case /\sT?LP28[24]4-Z/gim.test(modelName): // ZTC LP2844-Z-200dpi
       return Conf.PrinterCommandLanguage.zpl;
   }
 

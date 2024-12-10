@@ -71,6 +71,7 @@ export type CommandType
   // Users/PCLs may supply printer commands. This uses a different lookup table.
   = "CustomCommand"
   // General printer commands
+  | "Identify"
   | "RebootPrinter"
   | "Raw"
   | "NoOp"

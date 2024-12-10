@@ -36,6 +36,8 @@ export class EplPrinterCommandSet extends Cmds.StringCommandSet {
     switch (cmd.type) {
       default:
         return [];
+      case 'Identify':
+        return [new Cmds.GetStatusCommand()]
       case 'NewLabel':
         return [
           new Cmds.EndLabel(),
@@ -67,6 +69,8 @@ export class EplPrinterCommandSet extends Cmds.StringCommandSet {
       case 'EndLabel':
         // No specific command, prints should have happened.
         return '\r\n';
+
+      case 'Identify':
       case 'NewLabel':
       case 'NoOp':
         // Should have been compiled out at a higher step.

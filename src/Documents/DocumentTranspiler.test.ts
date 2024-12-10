@@ -248,16 +248,19 @@ describe('DocumentTranspiler', () => {
               "transactions": [
                 Transaction {
                   "awaitedCommands": [
-                    GetStatusCommand {
+                    CmdHostStatus {
+                      "commandLanguageApplicability": 1,
                       "effectFlags": Set {
                         "waitsForResponse",
                       },
-                      "name": "Get the immediate printer status",
-                      "type": "GetStatus",
+                      "name": "Get host status",
+                      "type": "CustomCommand",
+                      "typeExtended": Symbol(CmdHostStatus),
                     },
                   ],
                   "commands": "
-            ~HQES
+            ~HS
+
             ",
                 },
               ],
@@ -277,6 +280,7 @@ describe('DocumentTranspiler', () => {
                   "awaitedCommands": [],
                   "commands": "
             ~WC
+
             ",
                 },
               ],
@@ -307,16 +311,19 @@ describe('DocumentTranspiler', () => {
                 },
                 Transaction {
                   "awaitedCommands": [
-                    GetStatusCommand {
+                    CmdHostStatus {
+                      "commandLanguageApplicability": 1,
                       "effectFlags": Set {
                         "waitsForResponse",
                       },
-                      "name": "Get the immediate printer status",
-                      "type": "GetStatus",
+                      "name": "Get host status",
+                      "type": "CustomCommand",
+                      "typeExtended": Symbol(CmdHostStatus),
                     },
                   ],
                   "commands": "
-            ~HQES
+            ~HS
+
             ",
                 },
               ],
@@ -347,16 +354,19 @@ describe('DocumentTranspiler', () => {
                 },
                 Transaction {
                   "awaitedCommands": [
-                    GetStatusCommand {
+                    CmdHostStatus {
+                      "commandLanguageApplicability": 1,
                       "effectFlags": Set {
                         "waitsForResponse",
                       },
-                      "name": "Get the immediate printer status",
-                      "type": "GetStatus",
+                      "name": "Get host status",
+                      "type": "CustomCommand",
+                      "typeExtended": Symbol(CmdHostStatus),
                     },
                   ],
                   "commands": "
-            ~HQES
+            ~HS
+
             ",
                 },
               ],
