@@ -173,7 +173,7 @@ export class LabelPrinter<TChannelType extends Conf.MessageArrayLike> extends Ev
     );
     this._streamListener.start();
 
-    this._commandSet = await this.detectLanguage(this._printerOptions);
+    this._commandSet = await this.detectLanguage(this._channel.getDeviceInfo());
 
     // Now that we're listening for messages we can query for the full config.
     await this.refreshPrinterConfiguration();
@@ -288,7 +288,7 @@ export class LabelPrinter<TChannelType extends Conf.MessageArrayLike> extends Ev
           catch (e) {
             if (
               e instanceof Mux.DeviceCommunicationError &&
-              e.message.startsWith(`Timed out waiting for '${doc.commands[0].name}' response.`)
+              e.message.startsWith(`Timed out waiting for sent command response`)
             ) {
               // Response timeout means we guessed wrong, move on
               this.logIfDebug('Timed out waiting for response, moving onto next guess.');
@@ -359,7 +359,7 @@ export class LabelPrinter<TChannelType extends Conf.MessageArrayLike> extends Ev
         await promiseWithTimeout(
           Promise.all(this._awaitedCommands.map(c => c.promise)),
           this._awaitedCommandTimeoutMS,
-          new Mux.DeviceCommunicationError(`Timed out waiting for ${this._awaitedCommands.length} command's response.`)
+          new Mux.DeviceCommunicationError(`Timed out waiting for sent command response, expected ${this._awaitedCommands.length} responses.`)
         );
       }
     }

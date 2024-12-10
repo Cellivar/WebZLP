@@ -5,11 +5,12 @@ import { handleMessage } from './Messages.js';
 import { CmdXmlQuery, handleCmdXmlQuery } from './CmdXmlQuery.js';
 import { CmdHostIdentification, handleCmdHostIdentification } from './CmdHostIdentification.js';
 import { CmdHostQuery, handleCmdHostQuery } from './CmdHostQuery.js';
+import { CmdHostStatus, handleCmdHostStatus } from './CmdHostStatus.js';
 
 /** Command set for communicating with a ZPL II printer. */
 export class ZplPrinterCommandSet extends Cmds.StringCommandSet {
-  override get documentStartPrefix() { return '\r\n'; };
-  override get documentEndSuffix() { return '\r\n'; };
+  override get documentStartPrefix() { return '\n'; };
+  override get documentEndSuffix() { return '\n'; };
 
   // TODO: Method to add extended commands to the non-form list.
   // ZPL is easier here as the prefixes are more consistent:
@@ -25,7 +26,8 @@ export class ZplPrinterCommandSet extends Cmds.StringCommandSet {
     'StartLabel',
     'GetStatus',
     CmdHostIdentification.typeE,
-    CmdHostQuery.typeE
+    CmdHostQuery.typeE,
+    CmdHostStatus.typeE,
   ];
 
   constructor(
@@ -36,17 +38,17 @@ export class ZplPrinterCommandSet extends Cmds.StringCommandSet {
     this.extendedCommandMap.set(CmdXmlQuery.typeE, handleCmdXmlQuery);
     this.extendedCommandMap.set(CmdHostIdentification.typeE, handleCmdHostIdentification);
     this.extendedCommandMap.set(CmdHostQuery.typeE, handleCmdHostQuery);
+    this.extendedCommandMap.set(CmdHostStatus.typeE, handleCmdHostStatus);
   }
 
   public override expandCommand(cmd: Cmds.IPrinterCommand): Cmds.IPrinterCommand[] {
     switch (cmd.type) {
       default:
         return [];
+      case 'GetStatus':
+        return [new CmdHostStatus()];
       case 'QueryConfiguration':
-        // Getting the complete config from ZPL requires two steps.
-        return [
-          new CmdXmlQuery('All'),
-        ];
+        return [new CmdXmlQuery('All')];
       case 'NewLabel':
         return [
           new Cmds.EndLabel(),
@@ -65,7 +67,7 @@ export class ZplPrinterCommandSet extends Cmds.StringCommandSet {
   public transpileCommand(
     cmd: Cmds.IPrinterCommand,
     docState: Cmds.TranspiledDocumentState
-  ): string {
+  ): string | Cmds.TranspileDocumentError {
     switch (cmd.type) {
       default:
         Util.exhaustiveMatchGuard(cmd.type);
@@ -73,34 +75,28 @@ export class ZplPrinterCommandSet extends Cmds.StringCommandSet {
       case 'CustomCommand':
         return this.getExtendedCommand(cmd)(cmd, docState, this);
       case 'StartLabel':
-        return '\n' +'^XA' +'\n';
+        return '\n' + '^XA' +'\n';
       case 'EndLabel':
         return '\n' + '^XZ' +'\n';
       case 'NewLabel':
       case 'NoOp':
-        // Should have been compiled out at a higher step.
+      case 'QueryConfiguration':
+      case 'GetStatus':
         return this.noop;
 
       case 'RebootPrinter':
-        return '~JR';
-      case 'QueryConfiguration':
-        // Should be split into a composite command prior to running.
-        return this.noop;
+        return '~JR\n';
       case 'PrintConfiguration':
-        return '~WC';
+        return '~WC\n';
       case 'SaveCurrentConfiguration':
-        return '^JUS';
-      case 'GetStatus':
-        // HQES will return errors that other commands will hang on
-        // such as media out or head open
-        return '~HQES'
+        return '^JUS\n';
 
       case 'SetPrintDirection':
         return this.setPrintDirectionCommand((cmd as Cmds.SetPrintDirectionCommand).upsideDown);
       case 'SetDarkness':
         return this.setDarknessCommand(cmd as Cmds.SetDarknessCommand, docState);
       case 'AutosenseLabelDimensions':
-        return '~JC';
+        return '~JC\n';
       case 'SetPrintSpeed':
         return this.setPrintSpeedCommand(cmd as Cmds.SetPrintSpeedCommand, docState);
       case 'SetLabelDimensions':
@@ -271,7 +267,7 @@ export class ZplPrinterCommandSet extends Cmds.StringCommandSet {
   ): string {
     const length = Math.trunc(cmd.labelLengthInDots);
     const lineOffset = Math.trunc(cmd.blackLineOffset);
-    return `^MNM,${lineOffset}\n^LL${length}`;
+    return `^MNM,${lineOffset}^LL${length}`;
   }
 
   private printCommand(
@@ -282,7 +278,8 @@ export class ZplPrinterCommandSet extends Cmds.StringCommandSet {
     // while the third is duplicates.
     const total = Math.trunc(cmd.labelCount * (cmd.additionalDuplicateOfEach + 1));
     const dup = Math.trunc(cmd.additionalDuplicateOfEach);
-    return `^PQ${total},0,${dup},N`; // TODO: is the N here correct??
+    // Add a single space character to ensure blank labels print too.
+    return `^FD ^PQ${total},0,${dup}`;
   }
 
   private addLineCommand(

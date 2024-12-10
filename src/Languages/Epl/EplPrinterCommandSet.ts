@@ -54,7 +54,7 @@ export class EplPrinterCommandSet extends Cmds.StringCommandSet {
   public transpileCommand(
     cmd: Cmds.IPrinterCommand,
     docState: Cmds.TranspiledDocumentState
-  ): string {
+  ): string | Cmds.TranspileDocumentError {
     switch (cmd.type) {
       default:
         Util.exhaustiveMatchGuard(cmd.type);

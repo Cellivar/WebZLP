@@ -1,7 +1,6 @@
 import { expect, describe, it } from 'vitest';
 import { parseConfigResponse, tryGetModel } from './CmdConfigurationInquiry.js';
 
-
 describe("CmdConfigurationInquiry", () => {
   it('Rejects empty message', () => {
     const result = parseConfigResponse("", undefined!);

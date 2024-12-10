@@ -47,7 +47,7 @@ export type TranspileCommandDelegate<TOutput extends Conf.MessageArrayLike> = (
   cmd: Commands.IPrinterCommand,
   docState: TranspiledDocumentState,
   commandSet: CommandSet<TOutput>
-) => TOutput;
+) => TOutput | TranspileDocumentError;
 
 /** A manifest for a custom extended printer command. */
 export interface IPrinterExtendedCommandMapping<TOutput extends Conf.MessageArrayLike> {
