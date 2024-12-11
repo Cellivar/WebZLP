@@ -69,6 +69,7 @@
         // First import the lib!
         // This is our lib in this repo here
         import * as WebLabel from 'webzlp';
+
         // This is a utility lib we'll be using that makes it easier to use devices.
         import * as WebDevices from 'web-device-mux';
 
@@ -104,7 +105,7 @@
         const refreshPrinterBtn = document.getElementById('refreshPrinters')!;
         refreshPrinterBtn.addEventListener('click', async () => printerMgr.forceReconnect());
 
-        // Next we wire up some events on the UsbDeviceManager itself.
+        // Next we wire up some events on the PrinterUsbManager itself.
         printerMgr.addEventListener('connectedDevice', ({ detail }) => {
 
             // Let's print some details about the printer that was connected.

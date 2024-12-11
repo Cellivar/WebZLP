@@ -1,6 +1,6 @@
 import * as WebLabel from '../src/index.js';
-import * as WebDevices from 'web-device-mux';
 import bootstrap from 'bootstrap';
+import * as WebDevices from 'web-device-mux';
 // This file exists to test the index.html's typescript. Unfortunately there isn't
 // a good way to configure Visual Studio Code to, well, treat it as typescript.
 ////////////////////////////////////////////////////////////////////////////////

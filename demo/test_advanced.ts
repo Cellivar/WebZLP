@@ -40,7 +40,7 @@ addPrinterBtn.addEventListener('click', async () => printerMgr.promptForNewDevic
 const refreshPrinterBtn = document.getElementById('refreshPrinters')!;
 refreshPrinterBtn.addEventListener('click', async () => printerMgr.forceReconnect());
 
-// Next we wire up some events on the UsbDeviceManager itself.
+// Next we wire up some events on the PrinterUsbManager itself.
 printerMgr.addEventListener('connectedDevice', ({ detail }) => {
 
     // Let's print some details about the printer that was connected.
