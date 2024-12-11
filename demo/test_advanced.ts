@@ -121,7 +121,7 @@ class BasicLabelDesignerApp {
             const printer = detail.device;
             printer.addEventListener('reportedError', ({ detail: msg }) => {
                 // Error messages may indicate no error, we can ignore those.
-                if (msg.NoError) { return; }
+                if (msg.errors.has(WebLabel.ErrorState.NoError)) { return; }
 
                 const alertWrapper = document.createElement('div');
                 alertWrapper.innerHTML = `

@@ -109,6 +109,7 @@ export interface IStatusMessage {
 }
 
 export enum ErrorState {
+  NoError      = "NoError",
   UnknownError = "UnknownError",
 
   // User-generated errors
