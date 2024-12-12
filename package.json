@@ -1,6 +1,6 @@
 {
   "name": "webzlp",
-  "version": "2.0.0-rc.3",
+  "version": "2.0.0-rc.5",
   "description": "A small library using WebUSB to print labels on label printers.",
   "type": "module",
   "repository": {
@@ -25,6 +25,7 @@
     "build": "tsc && vite build",
     "lint": "eslint .",
     "test": "vitest --run",
+    "test:snapshot": "vitest --run -u",
     "serve-local": "export PORT=4444 || set PORT=4444 && serve .",
     "all": "npm run build && npm run lint && npm run test"
   },
@@ -44,20 +45,20 @@
     "@eslint/js": "^9.9.0",
     "@types/bootstrap": "^5.2.10",
     "@types/eslint__js": "^8.42.3",
-    "@types/node": "^20.8.9",
+    "@types/node": "^20.14.8",
     "@types/w3c-web-usb": "^1.0.10",
-    "@vitest/coverage-v8": "^2.0.5",
+    "@vitest/coverage-v8": "^2.1.6",
     "eslint": "^9.9.0",
     "globals": "^15.9.0",
     "https-localhost": "^4.7.1",
-    "typescript": "^5.5.4",
-    "typescript-eslint": "^8.0.1",
-    "vite": "^5.4.0",
-    "vite-plugin-dts": "^4.0.2",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.16.0",
+    "vite": "^6.0.0",
+    "vite-plugin-dts": "^4.3.0",
     "vite-plugin-eslint": "^1.8.1",
-    "vitest": "^2.0.5"
+    "vitest": "^2.1.6"
   },
   "dependencies": {
-    "web-device-mux": "^0.2.3"
+    "web-device-mux": "^0.4.1"
   }
 }

@@ -1,7 +1,6 @@
-import * as Commands from './Commands.js';
+import * as Util from '../Util/index.js';
+import * as Cmds from '../Commands/index.js';
 import { DocumentBuilder } from './Document.js';
-import * as Options from '../Printers/Configuration/PrinterOptions.js';
-import { BitmapGRF, type ImageConversionOptions } from './BitmapGRF.js';
 
 export interface ILabelDocumentBuilder
   extends DocumentBuilder<ILabelDocumentBuilder>,
@@ -13,100 +12,105 @@ export class LabelDocumentBuilder
   extends DocumentBuilder<ILabelDocumentBuilder>
   implements ILabelDocumentBuilder {
 
-  get commandReorderBehavior(): Commands.CommandReorderBehavior {
-    return Commands.CommandReorderBehavior.none;
+  get commandReorderBehavior(): Cmds.CommandReorderBehavior {
+    return Cmds.CommandReorderBehavior.closeForm;
   }
 
   constructor(
-    config?: Options.PrinterOptions,
-    // TOOD: Implement other document types, such as stored forms, with type safety
+    config?: Cmds.PrinterConfig,
+    // TODO: Implement other document types, such as stored forms, with type safety
     // so that only certain commands can be used on them.
     // Maybe different types??
     public readonly docType: LabelDocumentType = LabelDocumentType.instanceForm
   ) {
-    super(config ?? Options.PrinterOptions.invalid);
+    super(config ?? new Cmds.PrinterConfig());
   }
 
   ///////////////////// GENERAL LABEL HANDLING
 
   clearImageBuffer(): ILabelDocumentBuilder {
-    return this.andThen(new Commands.ClearImageBufferCommand());
+    return this.andThen(new Cmds.ClearImageBufferCommand());
   }
 
   addPrintCmd(count?: number, additionalDuplicateOfEach?: number): ILabelDocumentBuilder {
-    return this.andThen(new Commands.PrintCommand(count ?? 1, additionalDuplicateOfEach ?? 0));
+    return this
+      .andThen(new Cmds.PrintCommand(count ?? 1, additionalDuplicateOfEach ?? 0))
+      .andThen(new Cmds.GetStatusCommand());
   }
 
   addCutNowCommand(): ILabelDocumentBuilder {
-    return this.andThen(new Commands.CutNowCommand());
+    return this.andThen(new Cmds.CutNowCommand());
   }
 
   startNewLabel(): ILabelDocumentBuilder {
-    return this.andThen(new Commands.NewLabelCommand());
+    return this.andThen(new Cmds.EndLabel(), new Cmds.StartLabel());
   }
 
   suppressFeedBackupForLabel(): ILabelDocumentBuilder {
-    return this.andThen(new Commands.SuppressFeedBackupCommand());
+    return this.andThen(new Cmds.SuppressFeedBackupCommand());
   }
 
   reenableFeedBackup(): ILabelDocumentBuilder {
-    return this.andThen(new Commands.EnableFeedBackupCommand());
+    return this.andThen(new Cmds.EnableFeedBackupCommand());
   }
 
   ///////////////////// OFFSET AND SPACING
 
   setOffset(horizontal: number, vertical?: number): ILabelDocumentBuilder {
-    return this.andThen(new Commands.OffsetCommand(horizontal, vertical, true));
+    return this.andThen(new Cmds.OffsetCommand(horizontal, vertical, true));
   }
 
   setLabelHomeOffsetDots(horizontalOffsetInDots: number, verticalOffsetInDots: number) {
     return this.andThen(
-      new Commands.SetLabelHomeCommand(horizontalOffsetInDots, verticalOffsetInDots)
+      new Cmds.SetLabelHomeCommand({
+        left: horizontalOffsetInDots,
+        top: verticalOffsetInDots
+      })
     );
   }
 
   addOffset(horizontal: number, vertical?: number): ILabelDocumentBuilder {
-    return this.andThen(new Commands.OffsetCommand(horizontal, vertical));
+    return this.andThen(new Cmds.OffsetCommand(horizontal, vertical));
   }
 
   resetOffset(): ILabelDocumentBuilder {
-    return this.andThen(new Commands.OffsetCommand(0, 0, true));
+    return this.andThen(new Cmds.OffsetCommand(0, 0, true));
   }
 
   ///////////////////// LABEL IMAGE CONTENTS
 
   addImageFromImageData(
     imageData: ImageData,
-    imageConversionOptions: ImageConversionOptions = {}
+    imageConversionOptions: Util.ImageConversionOptions = {}
   ): ILabelDocumentBuilder {
     return this.andThen(
-      new Commands.AddImageCommand(
-        BitmapGRF.fromCanvasImageData(imageData),
+      new Cmds.AddImageCommand(
+        Util.BitmapGRF.fromCanvasImageData(imageData),
         imageConversionOptions
       )
     );
   }
 
   addImageFromGRF(
-    image: BitmapGRF,
-    imageConversionOptions: ImageConversionOptions = {}
+    image: Util.BitmapGRF,
+    imageConversionOptions: Util.ImageConversionOptions = {}
   ): ILabelDocumentBuilder {
-    return this.andThen(new Commands.AddImageCommand(image, imageConversionOptions));
+    return this.andThen(new Cmds.AddImageCommand(image, imageConversionOptions));
   }
 
   async addImageFromSVG(
     svg: string,
     widthInDots: number,
     heightInDots: number,
-    imageConversionOptions: ImageConversionOptions = {}
+    imageConversionOptions: Util.ImageConversionOptions = {}
   ): Promise<ILabelDocumentBuilder> {
-    const img = await BitmapGRF.fromSVG(svg, widthInDots, heightInDots, imageConversionOptions);
+    const img = await Util.BitmapGRF.fromSVG(svg, widthInDots, heightInDots, imageConversionOptions);
     const result = this.addImageFromGRF(img, imageConversionOptions);
     return result;
   }
 
-  addLine(lengthInDots: number, heightInDots: number, color = Commands.DrawColor.black) {
-    return this.andThen(new Commands.AddLineCommand(lengthInDots, heightInDots, color));
+  addLine(lengthInDots: number, heightInDots: number, color = Cmds.DrawColor.black) {
+    return this.andThen(new Cmds.AddLineCommand(lengthInDots, heightInDots, color));
   }
 
   addBox(
@@ -115,7 +119,7 @@ export class LabelDocumentBuilder
     thicknessInDots: number
   ): ILabelDocumentBuilder {
     return this.andThen(
-      new Commands.AddBoxCommand(lengthInDots, heightInDots, thicknessInDots)
+      new Cmds.AddBoxCommand(lengthInDots, heightInDots, thicknessInDots)
     );
   }
 }
@@ -182,25 +186,25 @@ export interface ILabelContentCommandBuilder {
   /** Add an ImageData object as an image to the label */
   addImageFromImageData(
     imageData: ImageData,
-    imageConversionOptions?: ImageConversionOptions
+    imageConversionOptions?: Util.ImageConversionOptions
   ): ILabelDocumentBuilder;
 
   /** Add a bitmap GRF image to the label */
-  addImageFromGRF(image: BitmapGRF): ILabelDocumentBuilder;
+  addImageFromGRF(image: Util.BitmapGRF): ILabelDocumentBuilder;
 
   /** Add an SVG image to the label, rendered to the given width and height. */
   addImageFromSVG(
     svg: string,
     widthInDots: number,
     heightInDots: number,
-    imageConversionOptions?: ImageConversionOptions
+    imageConversionOptions?: Util.ImageConversionOptions
   ): Promise<ILabelDocumentBuilder>;
 
   /** Draw a line from the current offset for the length and height. */
   addLine(
     lengthInDots: number,
     heightInDots: number,
-    color?: Commands.DrawColor
+    color?: Cmds.DrawColor
   ): ILabelDocumentBuilder;
 
   /** Draw a box from the current offset. */
