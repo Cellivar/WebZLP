@@ -28,7 +28,7 @@ function promiseWithTimeout<T>(
   return Promise.race<T>([promise, timeout]);
 }
 
-/** Type alias for a Label Printer the communicates over USB. */
+/** Type alias for a Label Printer that communicates over USB. */
 export type LabelPrinterUsb = LabelPrinter<Uint8Array>;
 
 /** A class for working with a label printer. */
@@ -103,7 +103,12 @@ export class LabelPrinter<TChannelType extends Conf.MessageArrayLike> extends Ev
     deviceCommunicationOptions: Mux.IDeviceCommunicationOptions = { debug: false },
     printerOptions?: Cmds.PrinterConfig,
   ) {
-    const p = new LabelPrinter(channel, channelMessageTransformer, channelType, deviceCommunicationOptions, printerOptions);
+    const p = new LabelPrinter(
+      channel,
+      channelMessageTransformer,
+      channelType,
+      deviceCommunicationOptions,
+      printerOptions);
     await p.setup();
     return p;
   }
@@ -331,7 +336,7 @@ export class LabelPrinter<TChannelType extends Conf.MessageArrayLike> extends Ev
     this.logResultIfDebug(() => {
       const debugMsg = Cmds.asString(transaction.commands);
       return `Transaction being sent to printer:\n${debugMsg}\n--end of transaction--`;
-    })
+    });
 
     // TODO: Better type guards??
     let sendCmds: TChannelType;

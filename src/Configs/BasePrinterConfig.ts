@@ -1,7 +1,7 @@
-import { MediaMediaGapDetectionMode, MediaPrintMode, PrintOrientation, PrintSpeed, PrintSpeedSettings, SpeedTable, ThermalPrintMode, type Coordinate, type DarknessPercent, type IPrinterHardware } from "./ConfigurationTypes.js";
+import { MediaMediaGapDetectionMode, MediaPrintMode, PrintOrientation, PrintSpeed, PrintSpeedSettings, SpeedTable, ThermalPrintMode, type Coordinate, type DarknessPercent, type IPrinterHardware, type IPrinterMedia } from "./ConfigurationTypes.js";
 
-/** Configured options for a label printer */
-export abstract class BasePrinterConfig implements IPrinterHardware {
+/** Configured options for a printer */
+export abstract class BasePrinterConfig implements IPrinterHardware, IPrinterMedia {
 
   // Read-only printer config info
   protected _serial = 'no_serial_nm';
@@ -18,8 +18,6 @@ export abstract class BasePrinterConfig implements IPrinterHardware {
 
   protected _firmware = '';
   get firmware() { return this._firmware; }
-
-  public labelDimensionRoundingStep = 0.25;
 
   protected _speed = new PrintSpeedSettings(PrintSpeed.unknown);
   get speed() { return this._speed; }
@@ -38,6 +36,8 @@ export abstract class BasePrinterConfig implements IPrinterHardware {
 
   protected _mediaPrintMode = MediaPrintMode.tearOff;
   get mediaPrintMode() { return this._mediaPrintMode; }
+
+  public mediaDimensionRoundingStep = 0.25;
 
   protected _printOrientation = PrintOrientation.normal;
   get printOrientation() { return this._printOrientation; }
