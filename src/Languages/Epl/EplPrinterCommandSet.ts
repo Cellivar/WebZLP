@@ -11,7 +11,7 @@ export class EplPrinterCommandSet extends Cmds.StringCommandSet {
 
   // TODO: Method to add extended commands to the non-form list.
   protected nonFormCommands: (symbol | Cmds.CommandType)[] = [
-    'AutosenseLabelDimensions',
+    'AutosenseMediaDimensions',
     'PrintConfiguration',
     'QueryConfiguration',
     'RebootPrinter',
@@ -93,7 +93,7 @@ export class EplPrinterCommandSet extends Cmds.StringCommandSet {
         return this.setPrintDirectionCommand((cmd as Cmds.SetPrintDirectionCommand).upsideDown);
       case 'SetDarkness':
         return this.setDarknessCommand(cmd as Cmds.SetDarknessCommand, docState);
-      case 'AutosenseLabelDimensions':
+      case 'AutosenseMediaDimensions':
         return 'xa' + '\r\n';
       case 'SetPrintSpeed':
         // EPL has no separate media slew speed setting.

@@ -6,6 +6,7 @@ import { CmdXmlQuery, handleCmdXmlQuery } from './CmdXmlQuery.js';
 import { CmdHostIdentification, handleCmdHostIdentification } from './CmdHostIdentification.js';
 import { CmdHostQuery, handleCmdHostQuery } from './CmdHostQuery.js';
 import { CmdHostStatus, handleCmdHostStatus } from './CmdHostStatus.js';
+import { CmdHostConfig, handleCmdHostConfig } from './CmdHostConfig.js';
 
 /** Command set for communicating with a ZPL II printer. */
 export class ZplPrinterCommandSet extends Cmds.StringCommandSet {
@@ -18,7 +19,7 @@ export class ZplPrinterCommandSet extends Cmds.StringCommandSet {
   // ^ means form command
   // The pause commands have both versions just to make things fun!
   protected nonFormCommands: (symbol | Cmds.CommandType)[] = [
-    'AutosenseLabelDimensions',
+    'AutosenseMediaDimensions',
     'PrintConfiguration',
     'RebootPrinter',
     'SetDarkness',
@@ -39,6 +40,7 @@ export class ZplPrinterCommandSet extends Cmds.StringCommandSet {
     this.extendedCommandMap.set(CmdHostIdentification.typeE, handleCmdHostIdentification);
     this.extendedCommandMap.set(CmdHostQuery.typeE, handleCmdHostQuery);
     this.extendedCommandMap.set(CmdHostStatus.typeE, handleCmdHostStatus);
+    this.extendedCommandMap.set(CmdHostConfig.typeE, handleCmdHostConfig);
   }
 
   public override expandCommand(cmd: Cmds.IPrinterCommand): Cmds.IPrinterCommand[] {
@@ -50,7 +52,10 @@ export class ZplPrinterCommandSet extends Cmds.StringCommandSet {
       case 'GetStatus':
         return [new CmdHostStatus()];
       case 'QueryConfiguration':
-        return [new CmdXmlQuery('All')];
+        return [
+          new CmdXmlQuery('All'),
+          new CmdHostConfig(),
+        ];
       case 'NewLabel':
         return [
           new Cmds.EndLabel(),
@@ -100,7 +105,7 @@ export class ZplPrinterCommandSet extends Cmds.StringCommandSet {
         return this.setPrintDirectionCommand((cmd as Cmds.SetPrintDirectionCommand).upsideDown);
       case 'SetDarkness':
         return this.setDarknessCommand(cmd as Cmds.SetDarknessCommand, docState);
-      case 'AutosenseLabelDimensions':
+      case 'AutosenseMediaDimensions':
         return '~JC\n';
       case 'SetPrintSpeed':
         return this.setPrintSpeedCommand(cmd as Cmds.SetPrintSpeedCommand, docState);

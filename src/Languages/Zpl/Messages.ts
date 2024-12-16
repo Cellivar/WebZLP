@@ -4,12 +4,14 @@ import { CmdXmlQuery, parseCmdXmlQueryResponse } from "./CmdXmlQuery.js";
 import { CmdHostIdentification, parseCmdHostIdentification } from './CmdHostIdentification.js';
 import { CmdHostQuery, parseCmdHostQuery } from './CmdHostQuery.js';
 import { CmdHostStatus, parseCmdHostStatus } from './CmdHostStatus.js';
+import { CmdHostConfig, parseCmdHostConfig } from './CmdHostConfig.js';
 
 const messageHandlerMap = new Map<symbol | Cmds.CommandType, Cmds.MessageHandlerDelegate<string>>([
   [CmdXmlQuery.typeE, parseCmdXmlQueryResponse], // ~HZ command
   [CmdHostIdentification.typeE, parseCmdHostIdentification], // ~HI command
   [CmdHostQuery.typeE, parseCmdHostQuery], // ~HQ command
   [CmdHostStatus.typeE, parseCmdHostStatus], // ~HS command
+  [CmdHostConfig.typeE, parseCmdHostConfig], // ^HH command
 ]);
 
 export function handleMessage<TReceived extends Conf.MessageArrayLike>(

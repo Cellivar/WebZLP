@@ -81,7 +81,7 @@ export type CommandType
   | "QueryConfiguration"
   // Configuration commands
   | "SaveCurrentConfiguration"
-  | "AutosenseLabelDimensions"
+  | "AutosenseMediaDimensions"
   | "SetDarkness"
   | "SetLabelDimensions"
   | "SetLabelHome"
@@ -343,14 +343,12 @@ export class SetLabelToMarkMediaCommand implements IPrinterCommand {
   ) { }
 }
 
-/** Command class to cause the printer to auto-sense the media length. */
-export class AutosenseLabelDimensionsCommand extends BasicCommand {
-  get name() { return 'Auto-sense the label length by feeding several labels.'; }
-  type: CommandType = 'AutosenseLabelDimensions';
+/** Command to cause the printer to auto-sense the media length. */
+export class AutosenseMediaDimensionsCommand extends BasicCommand {
+  get name() { return 'Auto-sense the media length by feeding several labels.'; }
+  type: CommandType = 'AutosenseMediaDimensions';
   constructor() { super (['altersConfig', 'feedsPaperIgnoringPeeler', 'feedsPaper'])}
-  override toDisplay(): string {
-    return this.name;
-  }
+  override toDisplay(): string { return this.name; }
 }
 
 /** Command class to modify an offset. */
