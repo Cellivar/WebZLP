@@ -86,9 +86,9 @@ export type CommandType
   | "SetLabelDimensions"
   | "SetLabelHome"
   | "SetLabelPrintOriginOffset"
-  | "SetLabelToContinuousMedia"
-  | "SetLabelToWebGapMedia"
-  | "SetLabelToMarkMedia"
+  | "SetMediaToContinuousMedia"
+  | "SetMediaToWebGapMedia"
+  | "SetMediaToMarkMedia"
   | "SetPrintDirection"
   | "SetPrintSpeed"
   | "SetBackfeedAfterTaken"
@@ -303,43 +303,44 @@ export class SetLabelPrintOriginOffsetCommand implements IPrinterCommand {
   constructor(public offset: Conf.Coordinate) { }
 }
 
-/** A command class to set the media handling mode to continuous media. */
-export class SetLabelToContinuousMediaCommand implements IPrinterCommand {
-  name = 'Sets the media handling mode to continuous media.';
-  type: CommandType = 'SetLabelToContinuousMedia';
-  toDisplay(): string {
-    return this.name;
-  }
-  effectFlags = new CommandEffectFlags(['altersConfig']);
-
-  constructor(public labelLengthInDots: number, public labelGapInDots = 0) { }
-}
-
-/** A command class to set the media handling mode to web gap detection. */
-export class SetLabelToWebGapMediaCommand implements IPrinterCommand {
-  name = 'Sets the media handling mode to web gap detection.';
-  type: CommandType = 'SetLabelToWebGapMedia';
-  toDisplay(): string {
-    return this.name;
-  }
-  effectFlags = new CommandEffectFlags(['altersConfig']);
-
-  constructor(public labelLengthInDots: number, public labelGapInDots: number) { }
-}
-
-/** A command class to set the media handling mode to black mark detection. */
-export class SetLabelToMarkMediaCommand implements IPrinterCommand {
-  name = 'Sets the media handling mode to black mark detection.';
-  type: CommandType = 'SetLabelToMarkMedia';
-  toDisplay(): string {
-    return this.name;
-  }
+/** A command to set the media tracking type to continuous media. */
+export class SetMediaToContinuousMediaCommand implements IPrinterCommand {
+  name = 'Sets the media tracking type to continuous media.';
+  type: CommandType = 'SetMediaToContinuousMedia';
+  toDisplay(): string { return this.name; }
   effectFlags = new CommandEffectFlags(['altersConfig']);
 
   constructor(
-    public labelLengthInDots: number,
+    public mediaLengthInDots: number,
+    public formGapInDots: number
+  ) { }
+}
+
+/** A command to set the media tracking type to web gap detection. */
+export class SetMediaToWebGapMediaCommand implements IPrinterCommand {
+  name = 'Sets the media tracking type to web gap detection.';
+  type: CommandType = 'SetMediaToWebGapMedia';
+  toDisplay(): string { return this.name; }
+  effectFlags = new CommandEffectFlags(['altersConfig']);
+
+  constructor(
+    public mediaLengthInDots: number,
+    public mediaGapInDots: number,
+    public mediaGapOffsetInDots: number = 0,
+  ) { }
+}
+
+/** A command to set the media tracking type to black mark detection. */
+export class SetMediaToMarkMediaCommand implements IPrinterCommand {
+  name = 'Sets the media tracking type to black mark detection.';
+  type: CommandType = 'SetMediaToMarkMedia';
+  toDisplay(): string { return this.name; }
+  effectFlags = new CommandEffectFlags(['altersConfig']);
+
+  constructor(
+    public mediaLengthInDots: number,
     public blackLineThicknessInDots: number,
-    public blackLineOffset: number
+    public blackLineOffset: number = 0
   ) { }
 }
 

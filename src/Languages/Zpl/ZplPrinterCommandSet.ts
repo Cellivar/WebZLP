@@ -115,12 +115,12 @@ export class ZplPrinterCommandSet extends Cmds.StringCommandSet {
         return this.setLabelHomeCommand(cmd as Cmds.SetLabelHomeCommand);
       case 'SetLabelPrintOriginOffset':
         return this.setLabelPrintOriginOffsetCommand(cmd as Cmds.SetLabelPrintOriginOffsetCommand);
-      case 'SetLabelToContinuousMedia':
-        return this.setLabelToContinuousMediaCommand(cmd as Cmds.SetLabelToContinuousMediaCommand);
-      case 'SetLabelToMarkMedia':
-        return this.setLabelToMarkMediaCommand(cmd as Cmds.SetLabelToMarkMediaCommand);
-      case 'SetLabelToWebGapMedia':
-        return this.setLabelToWebGapMediaCommand(cmd as Cmds.SetLabelToWebGapMediaCommand);
+      case 'SetMediaToContinuousMedia':
+        return this.setLabelToContinuousMediaCommand(cmd as Cmds.SetMediaToContinuousMediaCommand);
+      case 'SetMediaToMarkMedia':
+        return this.setLabelToMarkMediaCommand(cmd as Cmds.SetMediaToMarkMediaCommand);
+      case 'SetMediaToWebGapMedia':
+        return this.setLabelToWebGapMediaCommand(cmd as Cmds.SetMediaToWebGapMediaCommand);
       case 'SetBackfeedAfterTaken':
         return this.setBackfeedAfterTaken((cmd as Cmds.SetBackfeedAfterTakenMode).mode);
 
@@ -239,13 +239,16 @@ export class ZplPrinterCommandSet extends Cmds.StringCommandSet {
     const width = Math.trunc(cmd.widthInDots);
     let outCmd = `^PW${width}`;
 
-    if (cmd.setsLength && cmd.lengthInDots !== undefined && cmd.gapLengthInDots !== undefined) {
-      const length = Math.trunc(cmd.lengthInDots);
-      const lengthCmd = `^LL${length},N`; // TODO: this probably isn't right
-      outCmd += lengthCmd;
+    if (cmd.setsLength && cmd.lengthInDots !== undefined) {
+      outCmd += this.setLengthCommand(cmd.lengthInDots);
     }
 
     return outCmd;
+  }
+
+  private setLengthCommand(length: number) {
+    const len = Util.clampToRange(Math.trunc(length), 1, 32000);
+    return `^LL${len}^ML${(len * 2) + 100}`;
   }
 
   private setLabelHomeCommand(cmd: Cmds.SetLabelHomeCommand) {
@@ -266,26 +269,23 @@ export class ZplPrinterCommandSet extends Cmds.StringCommandSet {
   }
 
   private setLabelToContinuousMediaCommand(
-    cmd: Cmds.SetLabelToContinuousMediaCommand
+    cmd: Cmds.SetMediaToContinuousMediaCommand
   ): string {
-    const length = Math.trunc(cmd.labelLengthInDots);
-    const gap = Math.trunc(cmd.labelGapInDots);
-    return `^MNN^LL${length + gap}`; // TODO: double check this too
+    const length = Util.clampToRange(Math.trunc(cmd.mediaLengthInDots), 1, 32000);
+    const gap    = Util.clampToRange(Math.trunc(cmd.formGapInDots), 0, 2000);
+    return '^MNN' + this.setLengthCommand(length + gap);
   }
 
   private setLabelToWebGapMediaCommand(
-    cmd: Cmds.SetLabelToWebGapMediaCommand
+    cmd: Cmds.SetMediaToWebGapMediaCommand
   ): string {
-    const length = Math.trunc(cmd.labelLengthInDots);
-    return `^MNY^LL${length},Y`;
+    return '^MNY' + this.setLengthCommand(cmd.mediaLengthInDots);
   }
 
   private setLabelToMarkMediaCommand(
-    cmd: Cmds.SetLabelToMarkMediaCommand
+    cmd: Cmds.SetMediaToMarkMediaCommand
   ): string {
-    const length = Math.trunc(cmd.labelLengthInDots);
-    const lineOffset = Math.trunc(cmd.blackLineOffset);
-    return `^MNM,${lineOffset}^LL${length}`;
+    return '^MNM' + this.setLengthCommand(cmd.mediaLengthInDots);
   }
 
   private printCommand(

@@ -218,6 +218,7 @@ function updateFormDimensions(str: string, msg: Cmds.ISettingUpdateMessage) {
   const dpi = msg.printerHardware.dpi ?? 203;
 
   // Label width includes 4 dots of padding. Ish. Maybe.
+  // TODO: Does it though?
   msg.printerMedia.mediaWidthDots =
     parseInt(settingsForm[0].substring(1)) - 4;
   if (rounding) {
@@ -227,39 +228,57 @@ function updateFormDimensions(str: string, msg: Cmds.ISettingUpdateMessage) {
     ));
   }
 
-  // Length is fuzzy, depending on the second value this can be
-  // A: The length of the label surface
-  // B: The distance between black line marks
-  // C: The length of the form on continuous media
-  // Format is Qp1,p2[,p3]
-  const length = settingsForm[1].split(',');
-  // p1 is always present and can be treated as the 'label length' consistently.
-  msg.printerMedia.mediaLengthDots = parseInt(length[0].substring(1));
+  // The three Q values tell us the print mode and length info.
+  // Format is Qp1,[B]p2[+/-p3]
+  const [len, mark] = settingsForm[1].split(',');
+  if (mark.at(0) === 'B') {
+    msg.printerMedia.mediaGapDetectMode = Conf.MediaMediaGapDetectionMode.markSensing;
+    // Q123,B24[+/-156]
+    msg.printerMedia.mediaLengthDots = Number(len.substring(1));
+    if (mark.indexOf('-') > 0) {
+      // Negative offset
+      const idx = mark.indexOf('-');
+      msg.printerMedia.mediaGapDots = Number(mark.substring(1, idx));
+      msg.printerMedia.mediaLineOffsetDots = Number(mark.substring(idx + 1)) * -1;
+    }
+    else if (mark.indexOf('+') > 0) {
+      // Positive offset.
+      const idx = mark.indexOf('+');
+      msg.printerMedia.mediaGapDots = Number(mark.substring(1, idx));
+      msg.printerMedia.mediaLineOffsetDots = Number(mark.substring(idx + 1));
+    } else {
+      // No offset
+      msg.printerMedia.mediaGapDots = Number(mark.substring(1));
+      msg.printerMedia.mediaLineOffsetDots = 0;
+    }
+  } else if (mark.at(0)) {
+    msg.printerMedia.mediaGapDetectMode = Conf.MediaMediaGapDetectionMode.continuous;
+    // Q24,0
+    // Form length is variable, the Q value is feed distance between forms.
+    msg.printerMedia.mediaLengthDots = 0
+    msg.printerMedia.mediaGapDots = Number(len.substring(1));
+    msg.printerMedia.mediaLineOffsetDots = 0;
+  } else {
+    msg.printerMedia.mediaGapDetectMode = Conf.MediaMediaGapDetectionMode.webSensing;
+    // Q123,24[+12]
+    msg.printerMedia.mediaLengthDots = Number(len.substring(1));
+    if (mark.indexOf('+') > 0) {
+      // Only Positive offset allowed, if present.
+      const idx = mark.indexOf('+');
+      msg.printerMedia.mediaGapDots = Number(mark.substring(1, idx));
+      msg.printerMedia.mediaLineOffsetDots = Number(mark.substring(idx + 1));
+    } else {
+      // No offset
+      msg.printerMedia.mediaGapDots = Number(mark.substring(1));
+      msg.printerMedia.mediaLineOffsetDots = 0;
+    }
+  }
+
   if (rounding > 0) {
     msg.printerMedia.mediaLengthDots = Math.floor(Util.roundToNearestStep(
       msg.printerMedia.mediaLengthDots,
       rounding * dpi
     ));
-  }
-
-  // p2 value depends on...
-  const rawGapMode = length[1].trim();
-  if (rawGapMode === '0') {
-    // Length of '0' indicates continuous media.
-    msg.printerMedia.mediaGapDetectMode = Conf.MediaMediaGapDetectionMode.continuous;
-    msg.printerMedia.mediaGapDots = 0;
-  } else if (rawGapMode.startsWith('B')) {
-    // A B character enables black line detect mode, gap is the line width.
-    msg.printerMedia.mediaGapDetectMode = Conf.MediaMediaGapDetectionMode.markSensing;
-    msg.printerMedia.mediaGapDots = parseInt(rawGapMode.substring(1));
-  } else {
-    // Otherwise this is the gap length between labels.
-    msg.printerMedia.mediaGapDetectMode = Conf.MediaMediaGapDetectionMode.webSensing;
-    msg.printerMedia.mediaGapDots = parseInt(rawGapMode);
-  }
-  // A third value is required for black line, ignored for others.
-  if (length[2]) {
-    msg.printerMedia.mediaLineOffsetDots = parseInt(length[2]);
   }
 }
 

@@ -104,12 +104,21 @@ export class EplPrinterCommandSet extends Cmds.StringCommandSet {
         return this.setLabelHomeCommand(cmd as Cmds.SetLabelHomeCommand, docState);
       case 'SetLabelPrintOriginOffset':
         return this.setLabelPrintOriginOffsetCommand(cmd as Cmds.SetLabelPrintOriginOffsetCommand);
-      case 'SetLabelToContinuousMedia':
-        return this.setLabelToContinuousMediaCommand(cmd as Cmds.SetLabelToContinuousMediaCommand);
-      case 'SetLabelToMarkMedia':
-        return this.setLabelToMarkMediaCommand(cmd as Cmds.SetLabelToMarkMediaCommand);
-      case 'SetLabelToWebGapMedia':
-        return this.setLabelToWebGapMediaCommand(cmd as Cmds.SetLabelToWebGapMediaCommand);
+      case 'SetMediaToContinuousMedia':
+        return this.setLabelToContinuousMediaCommand(
+          cmd as Cmds.SetMediaToContinuousMediaCommand,
+          docState.initialConfig,
+        );
+      case 'SetMediaToMarkMedia':
+        return this.setLabelToMarkMediaCommand(
+          cmd as Cmds.SetMediaToMarkMediaCommand,
+          docState.initialConfig,
+        );
+      case 'SetMediaToWebGapMedia':
+        return this.setLabelToWebGapMediaCommand(
+          cmd as Cmds.SetMediaToWebGapMediaCommand,
+          docState.initialConfig,
+        );
       case 'SetBackfeedAfterTaken':
         return this.setBackfeedAfterTaken((cmd as Cmds.SetBackfeedAfterTakenMode).mode);
 
@@ -205,29 +214,158 @@ export class EplPrinterCommandSet extends Cmds.StringCommandSet {
   }
 
   private setLabelToContinuousMediaCommand(
-    cmd: Cmds.SetLabelToContinuousMediaCommand,
+    cmd: Cmds.SetMediaToContinuousMediaCommand,
+    conf: Cmds.PrinterConfig,
   ): string {
-    // EPL seems to not have a static label length? All labels are variable?
-    // Needs testing.
-    const length = Math.trunc(cmd.labelLengthInDots);
-    return `Q${length},0` + '\r\n';
+    return this.setMediaTrackingMode(conf, {
+      mode: 'continuous',
+      formGapFeed: Util.clampToRange(Math.trunc(cmd.formGapInDots), 0, 65535),
+    });
   }
 
   private setLabelToWebGapMediaCommand(
-    cmd: Cmds.SetLabelToWebGapMediaCommand,
+    cmd: Cmds.SetMediaToWebGapMediaCommand,
+    conf: Cmds.PrinterConfig,
   ): string {
-    const length = Math.trunc(cmd.labelLengthInDots);
-    const gap = Math.trunc(cmd.labelGapInDots);
-    return `Q${length},${gap}` + '\r\n';
+    const length = Util.clampToRange(Math.trunc(cmd.mediaLengthInDots), 24, 65535);
+    const minGap = conf.dpi === 300 ? 18 : 16;
+    return this.setMediaTrackingMode(conf, {
+      mode: 'web',
+      length,
+      gapLength: Util.clampToRange(Math.trunc(cmd.mediaGapInDots), minGap, 240),
+      gapOffset: Util.clampToRange(Math.trunc(cmd.mediaGapOffsetInDots), 0, length),
+    });
   }
 
   private setLabelToMarkMediaCommand(
-    cmd: Cmds.SetLabelToMarkMediaCommand,
+    cmd: Cmds.SetMediaToMarkMediaCommand,
+    conf: Cmds.PrinterConfig,
   ): string {
-    const length = Math.trunc(cmd.labelLengthInDots);
-    const lineLength = Math.trunc(cmd.blackLineThicknessInDots);
-    const lineOffset = Math.trunc(cmd.blackLineOffset);
-    return `Q${length},B${lineLength},${lineOffset}` + '\r\n';
+    const length = Util.clampToRange(Math.trunc(cmd.mediaLengthInDots), 24, 65535);
+    const minLine = conf.dpi === 300 ? 18 : 16;
+    return this.setMediaTrackingMode(conf, {
+      mode: 'mark',
+      length,
+      blackLength: Util.clampToRange(Math.trunc(cmd.blackLineThicknessInDots), minLine, 240),
+      blackOffset: Util.clampToRange(Math.trunc(cmd.blackLineOffset), 0, length),
+    });
+  }
+
+  private setMediaTrackingMode(
+    conf: Cmds.PrinterConfig,
+    mode: {
+      mode: 'web'
+      length: number,
+      gapLength: number,
+      gapOffset: number,
+    } | {
+      mode: 'continuous'
+      formGapFeed: number,
+    } | {
+      mode: 'mark',
+      length: number,
+      blackLength: number,
+      blackOffset: number,
+    }
+  ) {
+    switch (mode.mode) {
+      case 'web': {
+        // Length is the label length, marker is gap length
+        // Marker offset is additional dots 'down' into the label. If a notch is
+        // 4mm 'down' from the true edge then 4mm * 8 dots = 24 offset.
+        // Q123,24+24
+        const offset = mode.gapOffset === 0 ? '' : ('+' + mode.gapOffset);
+        return `Q${mode.length},${mode.gapLength}${offset}\r\n` +
+          this.setHardwareMode(conf, { reverseSensor: false });
+      }
+      case 'mark': {
+        // Length is distance between black line marks.
+        // Marker length is the length of the black line mark.
+        // Marker offset is the distance from the end of the black mark to the
+        // perforation point. Positive is 'down' into the black line, positive
+        // is 'up' into the label.
+        // TODO: validate that statement...
+        // Q123,B24-156
+        let offset = '';
+        if (mode.blackOffset < 0) {
+          offset = '-' + mode.blackOffset;
+        } else if (mode.blackOffset > 0) {
+          offset = '+' + mode.blackOffset;
+        }
+        return `Q${mode.length},B${mode.blackLength}${offset}\r\n` +
+          this.setHardwareMode(conf, { reverseSensor: true });
+      }
+      case 'continuous':
+        // Form length is variable, we just use the gap between forms.
+        // Q24,0
+        return `Q${mode.formGapFeed},0\r\n` +
+          this.setHardwareMode(conf, { reverseSensor: false });
+    }
+  }
+
+  private setHardwareMode(
+    config: Cmds.PrinterConfig,
+    modify: {
+      // TODO: Support C{num} batching
+      cutter?: 'off' | 'on' | 'cmd',
+      directThermal?: Conf.ThermalPrintMode,
+      labelTaken?: boolean,
+      reverseSensor?: boolean,
+      feedButton?: Conf.FeedButtonMode
+  }) {
+    // The EPL 'O' command is stateless, if you try to change one setting it resets
+    // the other settings to defaults. To properly modify a setting you must supply
+    // the other current settings too.
+    // The parameters for this function are overrides, we default to current set
+    // values from the printer for the rest.
+
+    // Cutter - C, Cb, C{batch}
+    let c = '';
+    if (modify.cutter === undefined) {
+      switch (config.mediaPrintMode) {
+        case Conf.MediaPrintMode.cutter:
+          c = 'C';
+          break;
+        case Conf.MediaPrintMode.cutterWaitForCommand:
+          c = 'Cb';
+          break;
+      }
+    } else if (modify.cutter === 'on') {
+      c = 'C';
+    } else if (modify.cutter === 'cmd') {
+      c = 'Cb';
+    }
+
+    // Direct thermal - D, <blank>
+    const directThermal = modify.directThermal ?? config.thermalPrintMode === Conf.ThermalPrintMode.direct;
+    const d = directThermal ? 'D' : '';
+
+    // Label taken sensor - P, <blank>
+    const labelTaken = modify.labelTaken ?? (
+      config.mediaPrintMode === Conf.MediaPrintMode.peel
+      || config.mediaPrintMode === Conf.MediaPrintMode.peelWithPrePeel)
+    let p = labelTaken ? 'P' : '';
+
+    // Reverse sensor - S, <blank>
+    const revSensor = modify.reverseSensor ?? config.mediaGapDetectMode === Conf.MediaMediaGapDetectionMode.markSensing;
+    const s = revSensor ? 'S' : '';
+
+    const feedButton = modify.feedButton ?? config.feedButtonMode;
+    let l = '';
+    let f = 'Ff';
+    if (feedButton === 'disabled') {
+      f = 'Fi';
+    } else if (feedButton === 'tapToReprint') {
+      f = 'Fr';
+    } else if (feedButton === 'tapToPrint') {
+      // Special mode, overrides label taken sensor too.
+      p = '';
+      l = 'L';
+    }
+
+    // Put it together in the correct order.
+    // OCp1,D,P,L,S,F
+    return 'O' + ([c, d, p, l, s, f].join(','));
   }
 
   private printCommand(
