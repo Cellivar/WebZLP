@@ -98,6 +98,21 @@ export enum MediaPrintMode {
   kiosk
 }
 
+/** Percentage to backfeed after taking/cutting label, vs before printing the next. */
+export type BackfeedAfterTaken
+  = 'Disabled'
+  | '0'
+  | '10'
+  | '20'
+  | '30'
+  | '40'
+  | '50'
+  | '60'
+  | '70'
+  | '80'
+  | '90'
+  | '100';
+
 /** Class for representing a printer's relationship between speeds and raw values */
 export class SpeedTable {
   // Speed is determined by what the printer supports
@@ -233,6 +248,16 @@ export interface IPrinterHardwareUpdate {
   maxMediaDarkness?: number,
   serialNumber?: string;
   speedTable?: SpeedTable;
+}
+
+/** Settings for printer behavior */
+export interface IPrinterSettings {
+  /** What percentage of backfeed happens after cutting/taking label, vs before printing. */
+  readonly backfeedAfterTaken: BackfeedAfterTaken;
+}
+
+export interface IPrinterSettingsUpdate {
+  backfeedAfterTaken?: BackfeedAfterTaken;
 }
 
 /** Printer options related to the media media being printed */

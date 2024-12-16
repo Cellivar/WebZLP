@@ -71,6 +71,9 @@ Cover: T=137, C=147
               },
               "thermalPrintMode": 0,
             },
+            "printerSettings": {
+              "backfeedAfterTaken": "90",
+            },
           },
         ]
       `);
@@ -138,6 +141,9 @@ Cover: T=144, C=167
               },
               "thermalPrintMode": 0,
             },
+            "printerSettings": {
+              "backfeedAfterTaken": "90",
+            },
           },
         ]
       `);
@@ -165,9 +171,7 @@ Cover: T=118, C=129
       expect(result.messages).toMatchInlineSnapshot(`
         [
           {
-            "headDistanceIn": 249392,
             "messageType": "SettingUpdateMessage",
-            "printerDistanceIn": 249392,
             "printerHardware": {
               "dpi": 203,
               "firmware": "V4.45",
@@ -204,6 +208,9 @@ Cover: T=118, C=129
                 "slewSpeed": 7,
               },
               "thermalPrintMode": 0,
+            },
+            "printerSettings": {
+              "backfeedAfterTaken": "90",
             },
           },
         ]
@@ -271,6 +278,9 @@ Cover: T=120, C=141`;
               },
               "thermalPrintMode": 0,
             },
+            "printerSettings": {
+              "backfeedAfterTaken": "90",
+            },
           },
         ]
       `);
@@ -334,6 +344,9 @@ oUs,t,u
                 "slewSpeed": 7,
               },
               "thermalPrintMode": 0,
+            },
+            "printerSettings": {
+              "backfeedAfterTaken": "90",
             },
           },
         ]

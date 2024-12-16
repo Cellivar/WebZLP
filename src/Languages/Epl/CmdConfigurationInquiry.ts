@@ -77,13 +77,14 @@ export function parseConfigResponse(
     );
   }
 
-  const update: Cmds.ISettingUpdateMessage = {
-    messageType: 'SettingUpdateMessage',
+  const update = {
+    messageType: 'SettingUpdateMessage' as const,
     printerHardware: {
       ...hardware,
       firmware
     },
     printerMedia: {},
+    printerSettings: {},
   }
 
   // All the rest of these follow some kind of standard pattern for
@@ -123,13 +124,13 @@ export function parseConfigResponse(
 
       case /^HEAD {4}usage =/.test(str): {
         // HEAD    usage =     249,392"    # Odometer of the head
-        update.headDistanceIn = Number(str.replaceAll(/[^\d]/g, ''));
+        //update.headDistanceIn = Number(str.replaceAll(/[^\d]/g, ''));
         break;
       }
 
       case /^PRINTER usage =/.test(str): {
         // PRINTER usage =     249,392"    # Odometer of the printer
-        update.printerDistanceIn = Number(str.replaceAll(/[^\d]/g, ''));
+        //update.printerDistanceIn = Number(str.replaceAll(/[^\d]/g, ''));
         break;
       }
 
@@ -195,6 +196,8 @@ export function parseConfigResponse(
 }
 
 function updateFormDimensions(str: string, msg: Cmds.ISettingUpdateMessage) {
+  msg.printerMedia ??= {};
+  msg.printerHardware ??= {};
 
   const settingsForm = str.trim().split(' ');
 
@@ -254,14 +257,27 @@ function updateFormDimensions(str: string, msg: Cmds.ISettingUpdateMessage) {
 }
 
 function updateSettingsLines(settingLine: string, msg: Cmds.ISettingUpdateMessage) {
+  msg.printerMedia ??= {};
+  msg.printerSettings ??= {};
+  msg.printerHardware ??= {};
+
   if (settingLine.at(0) === "I") {
     // Line J from the EPL manual.
-    //const lineJ = settingLine.split(' ');
+    const lineJ = settingLine.split(' ');
     // I8,A,001 rY JF WY
     //lineJ.at(0); // I8,A,001 - Character set (ignored)
     //lineJ.at(1); // rY - Double buffering (ignored, always on)
-    // TODO: Top of form backup
-    //lineJ.at(2); // JF - ? Top of form backup (ignored)
+    switch(lineJ.at(2)) {
+      case 'JF':
+        msg.printerSettings.backfeedAfterTaken = '90';
+        break;
+        // TODO: Is supporting JC actually important?
+      case 'JC':
+      case 'JB':
+        msg.printerSettings.backfeedAfterTaken = 'Disabled';
+        break;
+    } // JF - Top of form backup
+
     //lineJ.at(3); // WY - ? Windows mode (ignored)
   }
 
@@ -297,6 +313,7 @@ function updateSettingsLines(settingLine: string, msg: Cmds.ISettingUpdateMessag
 }
 
 function updateHardwareOptions(str: string, msg: Cmds.ISettingUpdateMessage) {
+  msg.printerMedia ??= {};
   // Option:D,Ff         # Config settings M1
 
   // TODO: Other options
@@ -311,6 +328,7 @@ function updateHardwareOptions(str: string, msg: Cmds.ISettingUpdateMessage) {
   msg.printerMedia.thermalPrintMode = Conf.ThermalPrintMode.transfer;
 
   str.substring(7).split(',').forEach(o => {
+    msg.printerMedia ??= {};
     switch (o.trim()) {
       case "d":
       case "D":
