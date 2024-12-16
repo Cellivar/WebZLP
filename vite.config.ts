@@ -16,10 +16,19 @@ export default defineConfig({
   define: {
     'import.meta.vitest': 'undefined',
   },
-  plugins: [dts(), eslint({
-    failOnError: false
-  })],
+  plugins: [
+    dts({
+      exclude: [
+        '**/node_modules',
+        '**/*.test.ts'
+      ]
+    }),
+    eslint({
+      failOnError: false
+    })
+  ],
   test: {
+    environment: 'happy-dom',
     includeSource: ['src/**/*.{js,ts}'],
     coverage: {
       enabled: true,
