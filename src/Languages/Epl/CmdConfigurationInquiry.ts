@@ -269,12 +269,12 @@ function updateSettingsLines(settingLine: string, msg: Cmds.ISettingUpdateMessag
     //lineJ.at(1); // rY - Double buffering (ignored, always on)
     switch(lineJ.at(2)) {
       case 'JF':
-        msg.printerSettings.backfeedAfterTaken = '90';
+        msg.printerSettings.backfeedAfterTaken = '100';
         break;
         // TODO: Is supporting JC actually important?
       case 'JC':
       case 'JB':
-        msg.printerSettings.backfeedAfterTaken = 'Disabled';
+        msg.printerSettings.backfeedAfterTaken = 'disabled';
         break;
     } // JF - Top of form backup
 

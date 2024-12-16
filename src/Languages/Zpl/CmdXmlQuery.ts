@@ -280,7 +280,7 @@ const backfeedTable: Map<string, Conf.BackfeedAfterTaken> = new Map([
   ['80%', '80'],
   ['DEFAULT', '90'],
   ['AFTER', '100'],
-  ['OFF', 'Disabled'],
+  ['OFF', 'disabled'],
 ]);
 
 function getBackfeedMode(doc: Document): Conf.BackfeedAfterTaken {

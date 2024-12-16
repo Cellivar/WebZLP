@@ -72,7 +72,7 @@ Cover: T=137, C=147
               "thermalPrintMode": 0,
             },
             "printerSettings": {
-              "backfeedAfterTaken": "90",
+              "backfeedAfterTaken": "100",
             },
           },
         ]
@@ -174,6 +174,75 @@ Cover: T=118, C=129
             "messageType": "SettingUpdateMessage",
             "printerHardware": {
               "dpi": 203,
+              "firmware": "V4.70.1A",
+              "manufacturer": "Zebra Corporation",
+              "maxMediaDarkness": 15,
+              "maxMediaLengthDots": 2223,
+              "maxMediaWidthDots": 832,
+              "model": "LP2844",
+              "serialNumber": "42A000000000",
+              "speedTable": SpeedTable {
+                "speedTable": Map {
+                  3 => 1,
+                  4 => 2,
+                  5 => 3,
+                  7 => 4,
+                  1 => 1,
+                  1000 => 4,
+                  0 => 3,
+                },
+              },
+            },
+            "printerMedia": {
+              "darknessPercent": 67,
+              "mediaGapDetectMode": 1,
+              "mediaGapDots": 25,
+              "mediaLengthDots": 913,
+              "mediaPrintOriginOffsetDots": {
+                "left": 8,
+                "top": 0,
+              },
+              "mediaWidthDots": 812,
+              "printOrientation": 1,
+              "speed": PrintSpeedSettings {
+                "printSpeed": 7,
+                "slewSpeed": 7,
+              },
+              "thermalPrintMode": 0,
+            },
+            "printerSettings": {
+              "backfeedAfterTaken": "100",
+            },
+          },
+        ]
+      `);
+    });
+
+    it('Real config 4', () => {
+      const real_config_4 = `
+UKQ1935HLU       V4.70.1A
+S/N: 42A000000000
+Serial port:96,N,8,1
+Page Mode
+Image buffer size:0245K
+Fmem used: 0 (bytes)
+Gmem used: 0
+Emem used: 29600
+Available: 100959
+I8,A,001 rY JF WN
+S4 D11 R104,0 ZB UN
+q616 Q56,169
+Option:d,S,Ff
+oEv,w,x,y,z
+12 21 30
+Cover: T=120, C=141`;
+      const result = parseConfigResponse(real_config_4, undefined!);
+      expect(result.messages).toMatchInlineSnapshot(`
+        [
+          {
+            "messageType": "SettingUpdateMessage",
+            "printerHardware": {
+              "dpi": 203,
               "firmware": "V4.45",
               "manufacturer": "Zebra Corporation",
               "maxMediaDarkness": 15,
@@ -210,32 +279,30 @@ Cover: T=118, C=129
               "thermalPrintMode": 0,
             },
             "printerSettings": {
-              "backfeedAfterTaken": "90",
+              "backfeedAfterTaken": "100",
             },
           },
         ]
       `);
     });
 
-    it('Real config 4', () => {
-      const real_config_4 = `
-UKQ1935HLU       V4.70.1A
-S/N: 42A000000000
+    it('Real config 5', () => {
+      const real_config_5 = `
+UKQ1935H U  UPS V4.51
+S/N: 64A060601536
 Serial port:96,N,8,1
-Page Mode
 Image buffer size:0245K
 Fmem used: 0 (bytes)
-Gmem used: 0
-Emem used: 29600
-Available: 100959
+Gmem used: 7443
+Emem used: 9732
+Available: 113384
 I8,A,001 rY JF WN
-S4 D11 R104,0 ZB UN
-q616 Q56,169
-Option:d,S,Ff
-oEv,w,x,y,z
-12 21 30
-Cover: T=120, C=141`;
-      const result = parseConfigResponse(real_config_4, undefined!);
+S4 D08 R008,000 ZB UN
+q816 Q56,189+4
+Option:d,S
+oUs,t,u
+09 14 20 `;
+      const result = parseConfigResponse(real_config_5, undefined!);
       expect(result.messages).toMatchInlineSnapshot(`
         [
           {
@@ -279,74 +346,7 @@ Cover: T=120, C=141`;
               "thermalPrintMode": 0,
             },
             "printerSettings": {
-              "backfeedAfterTaken": "90",
-            },
-          },
-        ]
-      `);
-    });
-
-    it('Real config 5', () => {
-      const real_config_5 = `
-UKQ1935H U  UPS V4.51
-S/N: 64A060601536
-Serial port:96,N,8,1
-Image buffer size:0245K
-Fmem used: 0 (bytes)
-Gmem used: 7443
-Emem used: 9732
-Available: 113384
-I8,A,001 rY JF WN
-S4 D08 R008,000 ZB UN
-q816 Q56,189+4
-Option:d,S
-oUs,t,u
-09 14 20 `;
-      const result = parseConfigResponse(real_config_5, undefined!);
-      expect(result.messages).toMatchInlineSnapshot(`
-        [
-          {
-            "messageType": "SettingUpdateMessage",
-            "printerHardware": {
-              "dpi": 203,
-              "firmware": "V4.51",
-              "manufacturer": "Zebra Corporation",
-              "maxMediaDarkness": 15,
-              "maxMediaLengthDots": 2223,
-              "maxMediaWidthDots": 832,
-              "model": "LP2844",
-              "serialNumber": "64A060601536",
-              "speedTable": SpeedTable {
-                "speedTable": Map {
-                  3 => 1,
-                  4 => 2,
-                  5 => 3,
-                  7 => 4,
-                  1 => 1,
-                  1000 => 4,
-                  0 => 3,
-                },
-              },
-            },
-            "printerMedia": {
-              "darknessPercent": 54,
-              "mediaGapDetectMode": 1,
-              "mediaGapDots": 189,
-              "mediaLengthDots": 50,
-              "mediaPrintOriginOffsetDots": {
-                "left": 8,
-                "top": 0,
-              },
-              "mediaWidthDots": 812,
-              "printOrientation": 0,
-              "speed": PrintSpeedSettings {
-                "printSpeed": 7,
-                "slewSpeed": 7,
-              },
-              "thermalPrintMode": 0,
-            },
-            "printerSettings": {
-              "backfeedAfterTaken": "90",
+              "backfeedAfterTaken": "100",
             },
           },
         ]

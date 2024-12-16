@@ -116,19 +116,14 @@ export class ZplPrinterCommandSet extends Cmds.StringCommandSet {
         return this.setLabelToMarkMediaCommand(cmd as Cmds.SetLabelToMarkMediaCommand);
       case 'SetLabelToWebGapMedia':
         return this.setLabelToWebGapMediaCommand(cmd as Cmds.SetLabelToWebGapMediaCommand);
+      case 'SetBackfeedAfterTaken':
+        return this.setBackfeedAfterTaken((cmd as Cmds.SetBackfeedAfterTakenMode).mode);
 
       case 'ClearImageBuffer':
         // Clear image buffer isn't a relevant command on ZPL printers.
         // Closest equivalent is the ~JP (pause and cancel) or ~JA (cancel all) but both
         // affect in-progress printing operations which is unlikely to be desired operation.
         // Translate as a no-op.
-        return this.noop;
-      case 'SuppressFeedBackup':
-        // ZPL needs this for every form printed.
-        return '^XB';
-      case 'EnableFeedBackup':
-        // ZPL doesn't have an enable, it just expects XB for every label
-        // that should not back up.
         return this.noop;
 
       case 'Offset':
@@ -197,6 +192,19 @@ export class ZplPrinterCommandSet extends Cmds.StringCommandSet {
   private setPrintDirectionCommand(upsideDown: boolean) {
     const dir = upsideDown ? 'I' : 'N';
     return `^PO${dir}`;
+  }
+
+  private setBackfeedAfterTaken(
+    mode: Conf.BackfeedAfterTaken
+  ) {
+    // ZPL has special names for some percentages because of course it does.
+    switch (mode) {
+      case 'disabled': return '~JSO';
+      case '100'     : return '~JSA';
+      case '90'      : return '~JSN';
+      case '0'       : return '~JSB';
+      default        : return `~JS${mode}`;
+    }
   }
 
   private setDarknessCommand(

@@ -155,6 +155,7 @@
           modalLabelWidth     : HTMLInputElement
           modalMediaType      : HTMLSelectElement
           modalSpeed          : HTMLSelectElement
+          modalBackfeedPercent: HTMLSelectElement
           modalSubmit         : HTMLButtonElement
           modalWithAutosense  : HTMLInputElement
         }
@@ -302,12 +303,13 @@
             }
 
             (this.configModal.querySelector('#modalPrinterIndex')     as HTMLInputElement)!.value = config.serialNumber;
-            (this.configModal.querySelector('#modalPrinterIndexText') as HTMLSelectElement)!.textContent = printerIdx.toString();
-            (this.configModal.querySelector('#modalLabelWidth')       as HTMLSelectElement)!.value = config.mediaWidthInches.toString();
-            (this.configModal.querySelector('#modalLabelHeight')      as HTMLSelectElement)!.value = config.mediaLengthInches.toString();
-            (this.configModal.querySelector('#modalDarkness')         as HTMLSelectElement)!.value = config.darknessPercent.toString();
-            (this.configModal.querySelector('#modalLabelOffsetLeft')  as HTMLSelectElement)!.value = config.mediaPrintOriginOffsetDots.left.toString();
-            (this.configModal.querySelector('#modalLabelOffsetTop')   as HTMLSelectElement)!.value = config.mediaPrintOriginOffsetDots.top.toString();
+            (this.configModal.querySelector('#modalPrinterIndexText') as HTMLInputElement)!.textContent = printerIdx.toString();
+            (this.configModal.querySelector('#modalLabelWidth')       as HTMLInputElement)!.value = config.mediaWidthInches.toString();
+            (this.configModal.querySelector('#modalLabelHeight')      as HTMLInputElement)!.value = config.mediaLengthInches.toString();
+            (this.configModal.querySelector('#modalDarkness')         as HTMLInputElement)!.value = config.darknessPercent.toString();
+            (this.configModal.querySelector('#modalLabelOffsetLeft')  as HTMLInputElement)!.value = config.mediaPrintOriginOffsetDots.left.toString();
+            (this.configModal.querySelector('#modalLabelOffsetTop')   as HTMLInputElement)!.value = config.mediaPrintOriginOffsetDots.top.toString();
+            (this.configModal.querySelector('#modalBackfeedPercent')  as HTMLSelectElement)!.value = config.backfeedAfterTaken.toString();
             this.configModalHandle.show();
           }
 
@@ -527,6 +529,8 @@
             const offsetLeft = parseInt(form.modalLabelOffsetLeft.value);
             const offsetTop = parseInt(form.modalLabelOffsetTop.value);
 
+            const backfeedAfterTaken = form.modalBackfeedPercent.value as WebLabel.BackfeedAfterTaken;
+
             // Construct the config document with the values from the form
             const configDoc = printer.getConfigDocument();
 
@@ -551,13 +555,15 @@
               .setLabelPrintOriginOffsetCommand(offsetLeft, offsetTop)
               .setPrintSpeed(rawSpeed)
               .setDarknessConfig(darkness)
-              .setLabelDimensions(mediaWidthInches);
+              .setLabelDimensions(mediaWidthInches)
+              .setBackfeedAfterTakenMode(backfeedAfterTaken);
             const doc = autosense
               ? configDoc.autosenseLabelLength()
               : configDoc.finalize();
             // And send the whole shebang to the printer!
             await printer.sendDocument(doc);
 
+            form.modalWithAutosense.checked = false;
             form.modalSubmit.removeAttribute("disabled");
             form.modalCancel.removeAttribute("disabled");
             this.activePrinterIndex = printerIdx;
@@ -590,181 +596,212 @@
         // We're done here. Bring in the dancing lobsters.
 
     </script>
-    <row>
-        <div class="container-fluid">
-            <div class="col-md-9 offset-md-1" style="margin-top: 5px">
+    <div>
+      <div class="container-fluid">
+        <div class="row" style="padding-top: 16px;">
+          <div class="col-3">
+            <div class="d-grid gap-2 col-8 mx-auto mb-3">
+              <div class="row">
+                <div class="col-9">
+                  <button class="btn btn-primary" id="addprinter">➕ Add Printer</button>
+                </div>
+                <div class="col-3">
+                  <button class="btn btn-success" id="refreshPrinters">🔃</button>
+                </div>
+              </div>
+            </div>
+            <ol id="printerlist" class="list-group list-group-numbered">
+            </ol>
+          </div>
+          <div class="col-9">
+            <div class="row">
+              <div class="col-12" id="printerAlertSpace">
                 <div class="alert alert-warning alert-dismissible d-none" role="alert" id="windowsDriverWarning">
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    <h4>Windows may need extra configuration</h4>
-                    <p>It looks like your operating system is Windows. The <a href="https://web.dev/build-for-webusb/#windows">windows driver model conflicts with WebUSB</a> and might prevent this page from working with a printer.</p>
-                    <p>To make this demo work you'll need to <a href="https://cellivar.github.io/WebZLP/docs/windows_driver">set up your driver correctly</a>. You'll see errors in the developer console if it isn't configured correctly.</p>
+                  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                  <h4>Windows may need extra configuration</h4>
+                  <p>It looks like your operating system is Windows. The <a href="https://web.dev/build-for-webusb/#windows">windows driver model conflicts with WebUSB</a> and might prevent this page from working with a printer.</p>
+                  <p>To make this demo work you'll need to <a href="https://cellivar.github.io/WebZLP/docs/windows_driver">set up your driver correctly</a>. You'll see errors in the developer console if it isn't configured correctly.</p>
                 </div>
                 <div class="alert alert-warning alert-dismissible d-none" role="alert" id="linuxDriverWarning">
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    <h4>Linux may need extra configuration</h4>
-                    <p>It looks like your operating system is Linux. The <a href="https://web.dev/build-for-webusb/#linux">linux default driver conflicts with WebUSB</a> and might prevent this page from working with a printer.</p>
-                    <p>If a printer doesn't connect successfully you'll need to <a href="https://github.com/anthroarts/artshow-jockey/tree/73a794bcaa0f0a10625c94d4b2876eba5b638287/udev">set up udev rules</a> to load a different driver. You'll see errors in the developer console if it isn't configured correctly.</p>
-                    <p>You may be able to find the correct USB IDs for your device by visiting either opening <pre>chrome://usb-internals</pre> in a new tab and clicking on the 'Devices' tab, or visiting the <a href="http://www.linux-usb.org/usb-ids.html">the USB ID Repository</a>.</p>
+                  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                  <h4>Linux may need extra configuration</h4>
+                  <p>It looks like your operating system is Linux. The <a href="https://web.dev/build-for-webusb/#linux">linux default driver conflicts with WebUSB</a> and might prevent this page from working with a printer.</p>
+                  <p>If a printer doesn't connect successfully you'll need to <a href="https://github.com/anthroarts/artshow-jockey/tree/73a794bcaa0f0a10625c94d4b2876eba5b638287/udev">set up udev rules</a> to load a different driver. You'll see errors in the developer console if it isn't configured correctly.</p>
+                  <p>You may be able to find the correct USB IDs for your device by visiting either opening <pre>chrome://usb-internals</pre> in a new tab and clicking on the 'Devices' tab, or visiting the <a href="http://www.linux-usb.org/usb-ids.html">the USB ID Repository</a>.</p>
                 </div>
                 <div class="alert alert-warning d-none" role="alert" id="browserNoWebUsb">
-                    <h4>Your browser doesn't support WebUSB</h4>
-                    <p>This demo uses WebUSB to function and your browser doesn't seem to have that available.</p>
+                  <h4>Your browser doesn't support WebUSB</h4>
+                  <p>This demo uses WebUSB to function and your browser doesn't seem to have that available.</p>
                 </div>
                 <div class="alert alert-warning d-none" role="alert" id="urlNotSecure">
-                    <h4>WebUSB requires HTTPS</h4>
-                    <p>It looks like this URL is not using HTTPS, and WebUSB <a href="https://developer.mozilla.org/en-US/docs/Web/API/WebUSB_API">only works in a secure context.</a> You'll need to load this page over HTTPS instead.</p>
+                  <h4>WebUSB requires HTTPS</h4>
+                  <p>It looks like this URL is not using HTTPS, and WebUSB <a href="https://developer.mozilla.org/en-US/docs/Web/API/WebUSB_API">only works in a secure context.</a> You'll need to load this page over HTTPS instead.</p>
                 </div>
                 <div class="alert alert-info" role="alert" id="loadingIndicator">
-                    <h4>Loading....</h4>
-                    <p>If you see this for a long time check the dev console for errors and try the <button id="emergencyRefreshBtn">emergency reset button.</button></p>
+                  <h4>Loading....</h4>
+                  <p>If you see this for a long time check the dev console for errors and try the <button id="emergencyRefreshBtn">emergency reset button.</button></p>
                 </div>
+              </div>
             </div>
-        </div>
-    </row>
-    <row>
-        <div class="container-fluid">
-            <div class="row" style="padding-top: 16px;">
-                <div class="col-3">
-                    <div class="d-grid gap-2 col-8 mx-auto mb-3">
-                        <div class="row">
-                            <div class="col-9">
-                                <button class="btn btn-primary" id="addprinter">➕ Add Printer</button>
-                            </div>
-                            <div class="col-3">
-                                <button class="btn btn-success" id="refreshPrinters">🔃</button>
-                            </div>
-                        </div>
-                    </div>
-                    <ol id="printerlist" class="list-group list-group-numbered">
-                    </ol>
-                </div>
-                <div class="col-9">
-                    <div id="printerAlertSpace"></div>
-                    <form id="labelForm" action="javascript:void(0);" class="d-none">
-                        <h5>Preview</h5>
-                        <canvas id="labelCanvas" width="584" height="160" style="border: 2px solid blue; background-color: white; margin-bottom: 10px;"></canvas>
-                        <h5>Input</h5>
-                        <label for="previewFontSize" class="form-label">Font Size</label>
-                        <div class="input-group">
-                            <input id="previewFontSize" type="number" class="form-control" placeholder="16"
-                                aria-label="Font Size" value="16">
-                        </div>
-                        <textarea id="labelFormText" name="labelText" cols="40" rows="10" wrap="hard"
-                            style="font-family: monospace; resize: both;"
-                            placeholder="Enter your label text here!"></textarea>
-                    </form>
-                    <div id="labelFormInstructions">
-                        <p>Connect a printer to your computer, then click Add Printer!</p>
-                        <p>Once a printer is connected select it by clicking on it on the left.</p>
-                    </div>
-                </div>
+            <div id="labelFormInstructions" class="row">
+              <p>Connect a printer to your computer, then click Add Printer!</p>
+              <p>Once a printer is connected select it by clicking on it on the left.</p>
             </div>
+            <div class="row">
+              <form id="labelForm" action="javascript:void(0);" class="d-none">
+                <h5>Input</h5>
+                <label for="previewFontSize" class="form-label">Font Size</label>
+                <div class="input-group">
+                  <input id="previewFontSize" type="number" class="form-control" placeholder="16"
+                    aria-label="Font Size" value="16">
+                </div>
+                <textarea id="labelFormText" name="labelText" cols="40" rows="10" wrap="hard"
+                  style="font-family: monospace; resize: both;"
+                  placeholder="Enter your label text here!"></textarea>
+                <h5>Preview</h5>
+                <canvas id="labelCanvas" width="584" height="160" style="border: 2px solid blue; background-color: white; margin-bottom: 10px;"></canvas>
+              </form>
+            </div>
+          </div>
         </div>
-    </row>
+      </div>
+    </div>
     <div id="printerOptionModal" class="modal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <form id="printerSettingsForm">
-                    <div class="modal-header">
-                        <h5 class="modal-title">Label Settings</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <label for="modalPrinterIndex" class="form-label">Printer ID</label>
-                        <div class="input-group mb-3">
-                            <span id="modalPrinterIndexText" class="input-group-text">42Q424242424</span>
-                            <input id="modalPrinterIndex" class="form-control" type="text" value="-1"
-                                aria-label="Printer ID" aria-describedby="modalPrinterIndexText" disabled readonly>
-                        </div>
-                        <div class="mb-3">
-                            <div class="row">
-                                <div class="col">
-                                    <label for="modalLabelWidth" class="form-label">Label Width</label>
-                                    <div class="input-group mb-3">
-                                        <input id="modalLabelWidth" type="text" class="form-control" placeholder="2.25"
-                                            aria-label="Width" required pattern="\d+\.*\d*">
-                                        <span id="modalLabelWidthText" class="input-group-text">in</span>
-                                    </div>
-                                </div>
-                                <div class="col">
-                                    <label for="modalLabelHeight" class="form-label">Label Height</label>
-                                    <div class="input-group mb-3">
-                                        <input id="modalLabelHeight" type="text" class="form-control" placeholder="2.25"
-                                            aria-label="Height" required pattern="\d+\.*\d*">
-                                        <span id="modalLabelHeightText" class="input-group-text">in</span>
-                                    </div>
-                                </div>
-                                <div class="col">
-                                    <div class="form-check form-switch">
-                                        <input id="modalWithAutosense" type="checkbox" role="switch" class="form-check-input"
-                                            aria-label="RunAutosense">
-                                        <label for="modalWithAutosense" class="form-check-label">Perform autosense</label>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <div class="row">
-                                <div class="col row mb-3">
-                                    <label for="modalDarkness" class="col-sm-5 col-form-label">Darkness</label>
-                                    <div class="col-sm-7">
-                                        <div class="input-group col-sm-7">
-                                            <input type="number" min="1" max="99" id="modalDarkness" class="form-control" aria-label="Darkness"/>
-                                            <span class="input-group-text">%</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col row mb-3">
-                                    <label for="modalSpeed" class="col-sm-5 col-form-label">Speed</label>
-                                    <div class="col-sm-7">
-                                        <select id="modalSpeed" class="form-select" aria-label="Speed">
-                                            <option value="3">1.5 ips</option>
-                                            <option value="4">2 ips</option>
-                                            <option value="5">2.5 ips</option>
-                                            <option value="7">3.5 ips</option>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <div class="row">
-                                <div class="col">
-                                    <label for="modalLabelOffsetLeft" class="form-label">Left Offset</label>
-                                    <div class="input-group mb-3">
-                                        <input id="modalLabelOffsetLeft" type="text" class="form-control" placeholder="0"
-                                            aria-label="Width" required pattern="-?\d+">
-                                        <span class="input-group-text">dots</span>
-                                    </div>
-                                </div>
-                                <div class="col">
-                                    <label for="modalLabelOffsetTop" class="form-label">Top Offset</label>
-                                    <div class="input-group mb-3">
-                                        <input id="modalLabelOffsetTop" type="text" class="form-control" placeholder="0"
-                                            aria-label="Height" required pattern="-?\d+">
-                                        <span class="input-group-text">dots</span>
-                                    </div>
-                                </div>
-                                <div class="col">
-                                    <label for="modalMediaType" class="form-label">Media Type</label>
-                                    <div class="mb-3">
-                                        <select id="modalMediaType" class="form-select" aria-label="Media Type">
-                                            <option value="continuous">Continuous</option>
-                                            <option value="gap">Gap-sense</option>
-                                            <option value="mark">Mark-sense</option>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button id="modalCancel" type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <input id="modalSubmit" type="submit" class="btn btn-primary" value="Save">
-                    </div>
-                </form>
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <form id="printerSettingsForm">
+            <div class="modal-header">
+              <h4 class="modal-title">Settings</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
+            <div class="modal-body">
+              <div class="row">
+                <label for="modalPrinterIndex" class="form-label">Printer ID</label>
+                <div class="input-group mb-3">
+                  <span id="modalPrinterIndexText" class="input-group-text">42Q424242424</span>
+                  <input id="modalPrinterIndex" class="form-control" type="text" value="-1"
+                    aria-label="Printer ID" aria-describedby="modalPrinterIndexText" disabled readonly>
+                </div>
+              </div>
+              <div class="mb-3">
+                <div class="row">
+                  <h5>Media Settings</h5>
+                </div>
+                <div class="row">
+                  <div class="col">
+                    <label for="modalLabelWidth" class="form-label">Media Width</label>
+                    <div class="input-group mb-3">
+                      <input id="modalLabelWidth" type="text" class="form-control" placeholder="2.25"
+                        aria-label="Width" required pattern="\d+\.*\d*">
+                      <span id="modalLabelWidthText" class="input-group-text">in</span>
+                    </div>
+                  </div>
+                  <div class="col">
+                    <label for="modalLabelHeight" class="form-label">Media Length</label>
+                    <div class="input-group mb-3">
+                      <input id="modalLabelHeight" type="text" class="form-control" placeholder="2.25"
+                        aria-label="Height" required pattern="\d+\.*\d*">
+                      <span id="modalLabelHeightText" class="input-group-text">in</span>
+                    </div>
+                  </div>
+                  <div class="col">
+                    <label class="form-label">Auto-Calibrate</label>
+                    <div class="input-group mb-3">
+                      <input id="modalWithAutosense" type="checkbox" class="btn-check"
+                        aria-label="RunAutosense" autocomplete="off">
+                      <label for="modalWithAutosense" class="btn btn-outline-primary"
+                        data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="right" title="Will feed several labels to calibrate sensor.<br/><b>Make sure to unspool peeler first!</b>"
+                        >Run on save</label>
+                    </div>
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="col">
+                    <label for="modalLabelOffsetLeft" class="form-label">Left Offset</label>
+                    <div class="input-group mb-3">
+                      <input id="modalLabelOffsetLeft" type="text" class="form-control" placeholder="0"
+                        aria-label="Width" required pattern="-?\d+">
+                      <span class="input-group-text">dots</span>
+                    </div>
+                  </div>
+                  <div class="col">
+                    <label for="modalLabelOffsetTop" class="form-label">Top Offset</label>
+                    <div class="input-group mb-3">
+                      <input id="modalLabelOffsetTop" type="text" class="form-control" placeholder="0"
+                        aria-label="Height" required pattern="-?\d+">
+                      <span class="input-group-text">dots</span>
+                    </div>
+                  </div>
+                  <div class="col">
+                    <label for="modalMediaType" class="form-label">Media Type</label>
+                    <div class="mb-3">
+                      <select id="modalMediaType" class="form-select" aria-label="Media Type">
+                        <option value="continuous">Continuous</option>
+                        <option value="gap">Web/gap sense</option>
+                        <option value="mark">Line mark sense</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="mb-3">
+                <div class="row">
+                  <h5>Printer Settings</h5>
+                </div>
+                <div class="row">
+                  <div class="col row mb-3">
+                    <label for="modalDarkness" class="col-sm-5 col-form-label">Darkness</label>
+                    <div class="col-sm-7">
+                      <div class="input-group col-sm-7">
+                        <input type="number" min="1" max="99" id="modalDarkness" class="form-control" aria-label="Darkness"/>
+                        <span class="input-group-text">%</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col row mb-3">
+                    <label for="modalSpeed" class="col-sm-5 col-form-label">Speed</label>
+                    <div class="col-sm-7">
+                      <select id="modalSpeed" class="form-select" aria-label="Speed">
+                        <option value="3">1.5 ips</option>
+                        <option value="4">2 ips</option>
+                        <option value="5">2.5 ips</option>
+                        <option value="7">3.5 ips</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="col">
+                    <label for="modalBackfeedPercent" class="form-label">Backfeed sequence</label>
+                    <div class="mb-3">
+                      <select id="modalBackfeedPercent" class="form-select" aria-label="Media Type"
+                      data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="right" title="Percent of backfeed after cut/take, then rest is at next print.<br>Disabled prevents any backfeed."
+                      >
+                        <option value="disabled">Disabled</option>
+                        <option value="0">0%</option>
+                        <option value="10">10%</option>
+                        <option value="20">20%</option>
+                        <option value="30">30%</option>
+                        <option value="40">40%</option>
+                        <option value="50">50%</option>
+                        <option value="60">60%</option>
+                        <option value="70">70%</option>
+                        <option value="80">80%</option>
+                        <option value="90">90%</option>
+                        <option value="100">100%</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button id="modalCancel" type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+              <input id="modalSubmit" type="submit" class="btn btn-primary" value="Save">
+            </div>
+          </form>
         </div>
+      </div>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.10.2/dist/umd/popper.min.js"
         integrity="sha384-7+zCNj/IqJ95wo16oMtfsKbZ9ccEh31eOz1HGyDuCQ6wgnyJNSYdrPa03rtR1zdB"
@@ -772,6 +809,13 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.min.js"
         integrity="sha384-QJHtvGhmr9XOIpI6YVutG+2QOK9T+ZnN4kzFN1RtK3zEFEIsxhlmWl5/YESvpZ13"
         crossorigin="anonymous"></script>
+    <script type="text/javascript">
+      // Enable tooltips for bootstrap
+      var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+      var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+      })
+    </script>
 </body>
 
 </html>

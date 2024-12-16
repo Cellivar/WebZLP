@@ -100,7 +100,7 @@ export enum MediaPrintMode {
 
 /** Percentage to backfeed after taking/cutting label, vs before printing the next. */
 export type BackfeedAfterTaken
-  = 'Disabled'
+  = 'disabled'
   | '0'
   | '10'
   | '20'

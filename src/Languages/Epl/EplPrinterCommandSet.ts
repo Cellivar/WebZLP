@@ -110,13 +110,8 @@ export class EplPrinterCommandSet extends Cmds.StringCommandSet {
         return this.setLabelToMarkMediaCommand(cmd as Cmds.SetLabelToMarkMediaCommand);
       case 'SetLabelToWebGapMedia':
         return this.setLabelToWebGapMediaCommand(cmd as Cmds.SetLabelToWebGapMediaCommand);
-
-      case 'SuppressFeedBackup':
-        // EPL uses an on/off style for form backup, it'll remain off until reenabled.
-        return 'JB' + '\r\n';
-      case 'EnableFeedBackup':
-        // Thus EPL needs an explicit command to re-enable.
-        return 'JF' + '\r\n';
+      case 'SetBackfeedAfterTaken':
+        return this.setBackfeedAfterTaken((cmd as Cmds.SetBackfeedAfterTakenMode).mode);
 
       case 'Offset':
         return this.applyOffset(cmd as Cmds.OffsetCommand, docState);
@@ -133,6 +128,19 @@ export class EplPrinterCommandSet extends Cmds.StringCommandSet {
 
       case 'Print':
         return this.printCommand(cmd as Cmds.PrintCommand);
+    }
+  }
+
+  private setBackfeedAfterTaken(
+    mode: Conf.BackfeedAfterTaken
+  ): string {
+    if (mode === 'disabled') {
+      // TODO: Does JC matter? It's only supported on 28X4
+      // Send JB first for universal support and JC after just in case?
+      return `JB\r\nJC\r\n`
+    } else {
+      // EPL doesn't support percentages so just turn it on.
+      return `JF` + '\r\n';
     }
   }
 

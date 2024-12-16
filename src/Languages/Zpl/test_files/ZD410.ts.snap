@@ -42,7 +42,7 @@
         "thermalPrintMode": 0,
       },
       "printerSettings": {
-        "backfeedAfterTaken": "Disabled",
+        "backfeedAfterTaken": "disabled",
       },
     },
   ],

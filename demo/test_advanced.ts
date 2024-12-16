@@ -90,6 +90,7 @@ interface ConfigModalForm extends HTMLCollection {
   modalLabelWidth     : HTMLInputElement
   modalMediaType      : HTMLSelectElement
   modalSpeed          : HTMLSelectElement
+  modalBackfeedPercent: HTMLSelectElement
   modalSubmit         : HTMLButtonElement
   modalWithAutosense  : HTMLInputElement
 }
@@ -236,13 +237,14 @@ class BasicLabelDesignerApp {
         break;
     }
 
-    (this.configModal.querySelector('#modalPrinterIndex')     as HTMLInputElement)!.value = config.serialNumber;
-    (this.configModal.querySelector('#modalPrinterIndexText') as HTMLSelectElement)!.textContent = printerIdx.toString();
-    (this.configModal.querySelector('#modalLabelWidth')       as HTMLSelectElement)!.value = config.mediaWidthInches.toString();
-    (this.configModal.querySelector('#modalLabelHeight')      as HTMLSelectElement)!.value = config.mediaLengthInches.toString();
-    (this.configModal.querySelector('#modalDarkness')         as HTMLSelectElement)!.value = config.darknessPercent.toString();
-    (this.configModal.querySelector('#modalLabelOffsetLeft')  as HTMLSelectElement)!.value = config.mediaPrintOriginOffsetDots.left.toString();
-    (this.configModal.querySelector('#modalLabelOffsetTop')   as HTMLSelectElement)!.value = config.mediaPrintOriginOffsetDots.top.toString();
+    (this.configModal.querySelector('#modalPrinterIndex') as HTMLInputElement)!.value = config.serialNumber;
+    (this.configModal.querySelector('#modalPrinterIndexText') as HTMLInputElement)!.textContent = printerIdx.toString();
+    (this.configModal.querySelector('#modalLabelWidth') as HTMLInputElement)!.value = config.mediaWidthInches.toString();
+    (this.configModal.querySelector('#modalLabelHeight') as HTMLInputElement)!.value = config.mediaLengthInches.toString();
+    (this.configModal.querySelector('#modalDarkness') as HTMLInputElement)!.value = config.darknessPercent.toString();
+    (this.configModal.querySelector('#modalLabelOffsetLeft') as HTMLInputElement)!.value = config.mediaPrintOriginOffsetDots.left.toString();
+    (this.configModal.querySelector('#modalLabelOffsetTop') as HTMLInputElement)!.value = config.mediaPrintOriginOffsetDots.top.toString();
+    (this.configModal.querySelector('#modalBackfeedPercent') as HTMLSelectElement)!.value = config.backfeedAfterTaken.toString();
     this.configModalHandle.show();
   }
 
@@ -462,6 +464,8 @@ class BasicLabelDesignerApp {
     const offsetLeft = parseInt(form.modalLabelOffsetLeft.value);
     const offsetTop = parseInt(form.modalLabelOffsetTop.value);
 
+    const backfeedAfterTaken = form.modalBackfeedPercent.value as WebLabel.BackfeedAfterTaken;
+
     // Construct the config document with the values from the form
     const configDoc = printer.getConfigDocument();
 
@@ -486,13 +490,15 @@ class BasicLabelDesignerApp {
       .setLabelPrintOriginOffsetCommand(offsetLeft, offsetTop)
       .setPrintSpeed(rawSpeed)
       .setDarknessConfig(darkness)
-      .setLabelDimensions(mediaWidthInches);
+      .setLabelDimensions(mediaWidthInches)
+      .setBackfeedAfterTakenMode(backfeedAfterTaken);
     const doc = autosense
       ? configDoc.autosenseLabelLength()
       : configDoc.finalize();
     // And send the whole shebang to the printer!
     await printer.sendDocument(doc);
 
+    form.modalWithAutosense.checked = false;
     form.modalSubmit.removeAttribute("disabled");
     form.modalCancel.removeAttribute("disabled");
     this.activePrinterIndex = printerIdx;

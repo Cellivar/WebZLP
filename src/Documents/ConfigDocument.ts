@@ -106,6 +106,10 @@ export class ConfigDocumentBuilder
   autosenseLabelLength() {
     return this.andThen(new Cmds.AutosenseLabelDimensionsCommand()).finalize();
   }
+  
+  setBackfeedAfterTakenMode(mode: Conf.BackfeedAfterTaken) {
+    return this.andThen(new Cmds.SetBackfeedAfterTakenMode(mode));
+  }
 
   setLabelDimensions(widthInInches: number, lengthInInches?: number, gapLengthInInches?: number) {
     this._doSave = true;
@@ -272,6 +276,9 @@ export interface IPrinterLabelConfigBuilder {
 
   /** Run the autosense operation to get label length. Must be last command. */
   autosenseLabelLength(): IDocument;
+
+  /** Set the backfeed behavior after cut/take of label. */
+  setBackfeedAfterTakenMode(mode: Conf.BackfeedAfterTaken): IConfigDocumentBuilder;
 
   /** Sets the media type to continuous (gapless) media. */
   setLabelMediaToContinuous(labelLengthInDots: number): IConfigDocumentBuilder;
