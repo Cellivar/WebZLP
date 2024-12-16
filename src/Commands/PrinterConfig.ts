@@ -32,5 +32,6 @@ export class PrinterConfig extends Conf.BasePrinterConfig {
     this._mediaLengthDots            = msg.printerMedia?.mediaLengthDots            ?? this._mediaLengthDots;
 
     this._backfeedAfterTaken = msg.printerSettings?.backfeedAfterTaken ?? this._backfeedAfterTaken;
+    this._feedButtonMode     = msg.printerSettings?.feedButtonMode     ?? this._feedButtonMode;
   }
 }

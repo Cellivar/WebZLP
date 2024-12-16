@@ -142,6 +142,9 @@ export function parseConfigResponse(
       case /^\d\d \d\d \d\d/.test(str):
         // 00 04 08          # Config settings N
         // TODO: Extract threshold values for sensors?
+        // 0: Backing transparent point
+        // 1: Set point
+        // 2: Label Transparent point
         //updateThresholds(str.trim(), update);
         break;
 
@@ -177,6 +180,10 @@ export function parseConfigResponse(
       // Available: 130559       # Total memory for Forms, Fonts, or Graphics
       case /^Cover:/.test(str):
       // Cover: T=118, C=129     # (T)reshold and (C)urrent Head Up (open) sensor.
+      case /^Date:/.test(str):
+      // Date: 10-05-94          # RTC Date
+      case /^Time:/.test(str):
+      // Time:01:00:00           # RTC Time
       case /^Image buffer size:/.test(str):
         // Image buffer size:0245K # Image buffer size in use
         break;
@@ -317,11 +324,7 @@ function updateHardwareOptions(str: string, msg: Cmds.ISettingUpdateMessage) {
   // Option:D,Ff         # Config settings M1
 
   // TODO: Other options
-  // Ff - Button tap to feed
-  // Fr - Button tap to reprint last
-  // Fi - Button ignored
   // S - ? Reverse (reflective) gap sensor
-  // P - ? Label dispenser sensor enabled
   // C{num} - ? Cut after every {num} batch
 
   // Presence of d or D indicates direct thermal printing, absence indicates transfer.
@@ -329,6 +332,8 @@ function updateHardwareOptions(str: string, msg: Cmds.ISettingUpdateMessage) {
 
   str.substring(7).split(',').forEach(o => {
     msg.printerMedia ??= {};
+    msg.printerSettings ??= {};
+
     switch (o.trim()) {
       case "d":
       case "D":
@@ -346,6 +351,19 @@ function updateHardwareOptions(str: string, msg: Cmds.ISettingUpdateMessage) {
       case "L":
         msg.printerMedia.mediaPrintMode = Conf.MediaPrintMode.peelWithButtonTap;
         break;
+      case 'Ff':
+        msg.printerSettings.feedButtonMode = 'feedBlank';
+        break;
+      case 'Fr':
+        msg.printerSettings.feedButtonMode = 'tapToReprint';
+        break;
+      case 'Fi':
+        msg.printerSettings.feedButtonMode = 'disabled';
+        break;
+    }
+    if (msg.printerMedia.mediaPrintMode === Conf.MediaPrintMode.peelWithButtonTap) {
+      // Special mode with special setting..
+      msg.printerSettings.feedButtonMode = 'tapToPrint';
     }
   });
 }

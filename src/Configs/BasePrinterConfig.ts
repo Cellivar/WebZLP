@@ -1,4 +1,4 @@
-import { MediaMediaGapDetectionMode, MediaPrintMode, PrintOrientation, PrintSpeed, PrintSpeedSettings, SpeedTable, ThermalPrintMode, type BackfeedAfterTaken, type Coordinate, type DarknessPercent, type IPrinterHardware, type IPrinterMedia, type IPrinterSettings } from "./ConfigurationTypes.js";
+import { MediaMediaGapDetectionMode, MediaPrintMode, PrintOrientation, PrintSpeed, PrintSpeedSettings, SpeedTable, ThermalPrintMode, type BackfeedAfterTaken, type Coordinate, type DarknessPercent, type FeedButtonMode, type IPrinterHardware, type IPrinterMedia, type IPrinterSettings } from "./ConfigurationTypes.js";
 
 /** Configured options for a printer */
 export abstract class BasePrinterConfig implements IPrinterHardware, IPrinterSettings, IPrinterMedia {
@@ -30,6 +30,9 @@ export abstract class BasePrinterConfig implements IPrinterHardware, IPrinterSet
 
   protected _backfeedAfterTaken: BackfeedAfterTaken = '90';
   get backfeedAfterTaken() { return this._backfeedAfterTaken; }
+
+  protected _feedButtonMode: FeedButtonMode = 'feedBlank';
+  get feedButtonMode() { return this._feedButtonMode; }
 
   protected _maxMediaDarkness = 15;
   get maxMediaDarkness() { return this._maxMediaDarkness; }

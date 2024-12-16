@@ -60,6 +60,13 @@ export enum ThermalPrintMode {
   transfer
 }
 
+/** Behavior of pressing the feed button on the printer. */
+export type FeedButtonMode
+  = 'disabled'
+  | 'feedBlank'
+  | 'tapToPrint'
+  | 'tapToReprint'
+
 /** Describes the way the medias are marked for the printer to detect separate medias. */
 export enum MediaMediaGapDetectionMode {
   /** Media is one continuous media with no gaps. Used with cutters usually. */
@@ -82,7 +89,7 @@ export enum MediaPrintMode {
   peel,
   /** Peel mode, but each media is fed to pre-peel a small portion. Helps some media types. ZPL only.*/
   peelWithPrePeel,
-  /** Peel mode, but printer waits for button tap between medias. */
+  /** Peel mode, but printer waits for button tap between media. */
   peelWithButtonTap,
   /** Media advances until web is over cutter. */
   cutter,
@@ -92,7 +99,7 @@ export enum MediaPrintMode {
   rewind,
   /** Media advances far enough for applicator device to grab. Printers with applicator ports only. */
   applicator,
-  /** Removes backfeed between RFID medias, improving throughput. RFID printers only. */
+  /** Removes backfeed between RFID media, improving throughput. RFID printers only. */
   rfid,
   /** Media is moved into a presentation position. ZPL only.*/
   kiosk
@@ -254,10 +261,14 @@ export interface IPrinterHardwareUpdate {
 export interface IPrinterSettings {
   /** What percentage of backfeed happens after cutting/taking label, vs before printing. */
   readonly backfeedAfterTaken: BackfeedAfterTaken;
+
+  /** The behavior when pressing the feed button on the printer. */
+  readonly feedButtonMode: FeedButtonMode;
 }
 
 export interface IPrinterSettingsUpdate {
   backfeedAfterTaken?: BackfeedAfterTaken;
+  feedButtonMode?: FeedButtonMode;
 }
 
 /** Printer options related to the media media being printed */
