@@ -138,27 +138,34 @@ function docToUpdate(
   doc: Document
 ): Cmds.ISettingUpdateMessage {
 
-  // Start by pulling basic info
   const update: Cmds.ISettingUpdateMessage = {
-    messageType: 'SettingUpdateMessage',
-    printerHardware: {
-      model: getXmlText(doc, 'MODEL') ?? 'UNKNOWN_ZPL',
-      firmware: getXmlText(doc, 'FIRMWARE-VERSION'),
-      speedTable: getSpeedTable(doc),
-      // ZPL rounds, multiplying by 25 gets us to 'inches' in their book.
-      // 8 DPM == 200 DPI, for example.
-      dpi: parseInt(getXmlText(doc, 'DOTS-PER-MM') ?? '8') * 25
-    },
-    printerMedia: {
-      mediaGapDetectMode: getMediaType(doc),
-      mediaPrintMode: getPrintMode(doc),
-      printOrientation: getPrintOrientation(doc),
-      speed: getSpeed(doc),
-      thermalPrintMode: getThermalPrintMode(doc)
-    }
-  }
+    messageType: 'SettingUpdateMessage'
+  };
 
-  addDarkness(update, doc);
+  // Start by pulling basic info
+  update.printerHardware = {
+    model: getXmlText(doc, 'MODEL') ?? 'UNKNOWN_ZPL',
+    firmware: getXmlText(doc, 'FIRMWARE-VERSION'),
+    speedTable: getSpeedTable(doc),
+    // ZPL rounds, multiplying by 25 gets us to 'inches' in their book.
+    // 8 DPM == 200 DPI, for example.
+    dpi: parseInt(getXmlText(doc, 'DOTS-PER-MM') ?? '8') * 25
+  };
+  update.printerMedia = {
+    mediaGapDetectMode: getMediaType(doc),
+    mediaPrintMode: getPrintMode(doc),
+    printOrientation: getPrintOrientation(doc),
+    speed: getSpeed(doc),
+    thermalPrintMode: getThermalPrintMode(doc)
+  };
+  update.printerSettings = {};
+
+  const dark = getDarkness(doc);
+  update.printerHardware.maxMediaDarkness = dark.maxDarkness;
+  update.printerMedia.darknessPercent = dark.currentDarkness;
+
+  update.printerSettings.backfeedAfterTaken = getBackfeedMode(doc);
+
   addLabelSize(update, doc);
 
   // TODO: more hardware options:
@@ -221,16 +228,16 @@ function getThermalPrintMode(doc: Document) {
     : Conf.ThermalPrintMode.transfer;
 }
 
-function addDarkness(update: Cmds.ISettingUpdateMessage, doc: Document) {
+function getDarkness(doc: Document) {
   // Pull the max darkness by grabbing the 'MAX' attribute from the element.
   // It's pretty much always 30.
   const maxDarkness = parseInt(doc.getElementsByTagName('MEDIA-DARKNESS')
     .item(0)?.getAttribute('MAX')?.valueOf() ?? "30");
-  update.printerHardware.maxMediaDarkness = maxDarkness;
 
-  const currentDarkness = parseInt(getXmlCurrent(doc, 'MEDIA-DARKNESS') ?? '15');
-  const rawDarkness = Math.ceil(currentDarkness * (100 / maxDarkness));
-  update.printerMedia.darknessPercent = Math.max(0, Math.min(rawDarkness, 99)) as Conf.DarknessPercent;
+  const rawDarkness = parseInt(getXmlCurrent(doc, 'MEDIA-DARKNESS') ?? '15');
+  const parseDarkness = Math.ceil(rawDarkness * (100 / maxDarkness));
+  const currentDarkness = Math.max(0, Math.min(parseDarkness, 99)) as Conf.DarknessPercent;
+  return { maxDarkness, currentDarkness }
 }
 
 function getSpeedTable(doc: Document) {
@@ -261,6 +268,25 @@ function getSpeedTable(doc: Document) {
   );
 }
 
+const backfeedTable: Map<string, Conf.BackfeedAfterTaken> = new Map([
+  ['BEFORE', '0'],
+  ['10%', '10'],
+  ['20%', '20'],
+  ['30%', '30'],
+  ['40%', '40'],
+  ['50%', '50'],
+  ['60%', '60'],
+  ['70%', '70'],
+  ['80%', '80'],
+  ['DEFAULT', '90'],
+  ['AFTER', '100'],
+  ['OFF', 'disabled'],
+]);
+
+function getBackfeedMode(doc: Document): Conf.BackfeedAfterTaken {
+  return backfeedTable.get(getXmlCurrent(doc, 'BACKFEED-PERCENT') ?? 'DEFAULT') ?? '90';
+}
+
 function getSpeed(doc: Document) {
   const printRate = parseInt(getXmlText(doc, 'PRINT-RATE') ?? '1');
   const slewRate = parseInt(getXmlText(doc, 'SLEW-RATE') ?? '1');
@@ -277,6 +303,9 @@ function getPrintOrientation(doc: Document) {
 }
 
 function addLabelSize(update: Cmds.ISettingUpdateMessage, doc: Document) {
+  update.printerMedia ??= {};
+  update.printerHardware ??= {};
+
   // ZPL printers may add or subtract a factory-set offset to label dimensions.
   // You tell it 200 dots wide it will store 204. No idea why. Round to a reasonable
   // step value to deal with this.

@@ -91,13 +91,12 @@ export type CommandType
   | "SetLabelToMarkMedia"
   | "SetPrintDirection"
   | "SetPrintSpeed"
+  | "SetBackfeedAfterTaken"
   // Document handling
   | "NewLabel"
   | "StartLabel"
   | "EndLabel"
   | "CutNow"
-  | "EnableFeedBackup"
-  | "SuppressFeedBackup"
   | "Print"
   // Content
   | "ClearImageBuffer"
@@ -167,18 +166,6 @@ export class CutNowCommand extends BasicCommand {
   constructor() { super(['actuatesCutter']); }
 }
 
-export class SuppressFeedBackupCommand extends BasicCommand {
-  name = 'Disable feed backup after printing label (be sure to re-enable!)';
-  type: CommandType = 'SuppressFeedBackup';
-  constructor() { super([]); }
-}
-
-export class EnableFeedBackupCommand extends BasicCommand {
-  name = 'Enable feed backup after printing label.';
-  type: CommandType = 'EnableFeedBackup';
-  constructor() { super([]); }
-}
-
 /** A command to clear the image buffer. */
 export class ClearImageBufferCommand extends BasicCommand {
   name = 'Clear image buffer';
@@ -220,6 +207,21 @@ export class SetDarknessCommand implements IPrinterCommand {
   ) {}
 
   effectFlags = new CommandEffectFlags(['altersConfig']);
+}
+
+export class SetBackfeedAfterTakenMode implements IPrinterCommand {
+  name = 'Set backfeed mode after label is taken';
+  type: CommandType = 'SetBackfeedAfterTaken';
+  toDisplay(): string {
+    if (this.mode === 'disabled') {
+      return 'Disable backfeed';
+    } else {
+      return `Set backfeed to ${this.mode}% after label cut/taken.`;
+    }
+  }
+  effectFlags = new CommandEffectFlags(['altersConfig']);
+
+  constructor(public readonly mode: Conf.BackfeedAfterTaken) { }
 }
 
 /** A command to set the direction a label prints, either upside down or not. */

@@ -46,14 +46,6 @@ export class LabelDocumentBuilder
     return this.andThen(new Cmds.EndLabel(), new Cmds.StartLabel());
   }
 
-  suppressFeedBackupForLabel(): ILabelDocumentBuilder {
-    return this.andThen(new Cmds.SuppressFeedBackupCommand());
-  }
-
-  reenableFeedBackup(): ILabelDocumentBuilder {
-    return this.andThen(new Cmds.EnableFeedBackupCommand());
-  }
-
   ///////////////////// OFFSET AND SPACING
 
   setOffset(horizontal: number, vertical?: number): ILabelDocumentBuilder {
@@ -146,12 +138,6 @@ export interface ILabelActionCommandBuilder {
 
   /** Begin a new label to be sent as a single batch. */
   startNewLabel(): ILabelDocumentBuilder;
-
-  /** Disable feed backup for this label. Be sure to re-enable at the end of the batch. */
-  suppressFeedBackupForLabel(): ILabelDocumentBuilder;
-
-  /** Re-enable feed backup for this and future labels. */
-  reenableFeedBackup(): ILabelDocumentBuilder;
 }
 
 export interface ILabelPositionCommandBuilder {

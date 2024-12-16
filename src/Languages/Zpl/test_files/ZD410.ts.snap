@@ -1,0 +1,50 @@
+{
+  "messageIncomplete": false,
+  "messageMatchedExpectedCommand": true,
+  "messages": [
+    {
+      "messageType": "SettingUpdateMessage",
+      "printerHardware": {
+        "dpi": 200,
+        "firmware": "V84.20.18Z",
+        "maxMediaDarkness": 30,
+        "maxMediaLengthDots": 7967,
+        "maxMediaWidthDots": 448,
+        "model": "ZD410",
+        "speedTable": SpeedTable {
+          "speedTable": Map {
+            0 => 0,
+            1 => 2,
+            1000 => 6,
+            4 => 2,
+            6 => 3,
+            8 => 4,
+            9 => 5,
+            10 => 6,
+          },
+        },
+      },
+      "printerMedia": {
+        "darknessPercent": 67,
+        "mediaGapDetectMode": 1,
+        "mediaLengthDots": 200,
+        "mediaPrintMode": 0,
+        "mediaPrintOriginOffsetDots": {
+          "left": 0,
+          "top": 0,
+        },
+        "mediaWidthDots": 400,
+        "printOrientation": 0,
+        "speed": PrintSpeedSettings {
+          "printSpeed": 10,
+          "slewSpeed": 10,
+        },
+        "thermalPrintMode": 0,
+      },
+      "printerSettings": {
+        "backfeedAfterTaken": "disabled",
+      },
+    },
+  ],
+  "remainder": "",
+}

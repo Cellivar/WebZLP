@@ -92,11 +92,9 @@ export type AwaitedCommand = {
 export interface ISettingUpdateMessage {
   messageType: 'SettingUpdateMessage';
 
-  printerHardware: Conf.IPrinterHardwareUpdate;
-  printerMedia: Conf.IPrinterMediaUpdate;
-
-  printerDistanceIn?: number;
-  headDistanceIn?: number;
+  printerHardware?: Conf.IPrinterHardwareUpdate;
+  printerMedia   ?: Conf.IPrinterMediaUpdate;
+  printerSettings?: Conf.IPrinterSettingsUpdate;
 }
 
 /** A status message sent by the printer. */

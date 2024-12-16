@@ -71,6 +71,9 @@ Cover: T=137, C=147
               },
               "thermalPrintMode": 0,
             },
+            "printerSettings": {
+              "backfeedAfterTaken": "100",
+            },
           },
         ]
       `);
@@ -79,7 +82,7 @@ Cover: T=137, C=147
     it('Read config 2', () => {
       const real_config_2 = `
 UKQ1935HLU       V4.70.1A
-S/N: 42A000000000
+S/N: 42A000000022
 Serial port:96,N,8,1
 Page Mode
 Image buffer size:0507K
@@ -108,7 +111,7 @@ Cover: T=144, C=167
               "maxMediaLengthDots": 2223,
               "maxMediaWidthDots": 832,
               "model": "LP2844",
-              "serialNumber": "42A000000000",
+              "serialNumber": "42A000000022",
               "speedTable": SpeedTable {
                 "speedTable": Map {
                   3 => 1,
@@ -138,6 +141,9 @@ Cover: T=144, C=167
               },
               "thermalPrintMode": 0,
             },
+            "printerSettings": {
+              "backfeedAfterTaken": "100",
+            },
           },
         ]
       `);
@@ -165,9 +171,7 @@ Cover: T=118, C=129
       expect(result.messages).toMatchInlineSnapshot(`
         [
           {
-            "headDistanceIn": 249392,
             "messageType": "SettingUpdateMessage",
-            "printerDistanceIn": 249392,
             "printerHardware": {
               "dpi": 203,
               "firmware": "V4.45",
@@ -205,6 +209,9 @@ Cover: T=118, C=129
               },
               "thermalPrintMode": 0,
             },
+            "printerSettings": {
+              "backfeedAfterTaken": "100",
+            },
           },
         ]
       `);
@@ -213,7 +220,7 @@ Cover: T=118, C=129
     it('Real config 4', () => {
       const real_config_4 = `
 UKQ1935HLU       V4.70.1A
-S/N: 42A000000000
+S/N: 42A000000044
 Serial port:96,N,8,1
 Page Mode
 Image buffer size:0245K
@@ -241,7 +248,7 @@ Cover: T=120, C=141`;
               "maxMediaLengthDots": 2223,
               "maxMediaWidthDots": 832,
               "model": "LP2844",
-              "serialNumber": "42A000000000",
+              "serialNumber": "42A000000044",
               "speedTable": SpeedTable {
                 "speedTable": Map {
                   3 => 1,
@@ -270,6 +277,9 @@ Cover: T=120, C=141`;
                 "slewSpeed": 7,
               },
               "thermalPrintMode": 0,
+            },
+            "printerSettings": {
+              "backfeedAfterTaken": "100",
             },
           },
         ]
@@ -334,6 +344,9 @@ oUs,t,u
                 "slewSpeed": 7,
               },
               "thermalPrintMode": 0,
+            },
+            "printerSettings": {
+              "backfeedAfterTaken": "100",
             },
           },
         ]

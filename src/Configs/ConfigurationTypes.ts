@@ -11,7 +11,7 @@ export interface Coordinate {
   top: number;
 }
 
-/** The orientation of a label as it comes out of the printer. */
+/** The orientation of a media as it comes out of the printer. */
 export enum PrintOrientation {
   /** Right-side up when the printer faces the user. */
   normal,
@@ -60,13 +60,13 @@ export enum ThermalPrintMode {
   transfer
 }
 
-/** Describes the way the labels are marked for the printer to detect separate labels. */
+/** Describes the way the medias are marked for the printer to detect separate medias. */
 export enum MediaMediaGapDetectionMode {
-  /** Media is one continuous label with no gaps. Used with cutters usually. */
+  /** Media is one continuous media with no gaps. Used with cutters usually. */
   continuous,
-  /** Media is opaque with gaps between labels that can be sensed by the printer. */
+  /** Media is opaque with gaps between medias that can be sensed by the printer. */
   webSensing,
-  /** Media has black marks indicating label spacing. */
+  /** Media has black marks indicating media spacing. */
   markSensing,
   /** Autodetect during calibration. G-series printers only. */
   autoDuringCalibration,
@@ -76,27 +76,42 @@ export enum MediaMediaGapDetectionMode {
 
 /** Printing behavior  */
 export enum MediaPrintMode {
-  /** Label advances so web is over tear bar, to be torn manually. */
+  /** Media advances so web is over tear bar, to be torn manually. */
   tearOff,
-  /** Label advances over Label Taken sensor. Printing pauses until label is removed. */
+  /** Media advances over Media Taken sensor. Printing pauses until media is removed. */
   peel,
-  /** Peel mode, but each label is fed to pre-peel a small portion. Helps some media types. ZPL only.*/
+  /** Peel mode, but each media is fed to pre-peel a small portion. Helps some media types. ZPL only.*/
   peelWithPrePeel,
-  /** Peel mode, but printer waits for button tap between labels. */
+  /** Peel mode, but printer waits for button tap between medias. */
   peelWithButtonTap,
-  /** Label advances until web is over cutter. */
+  /** Media advances until web is over cutter. */
   cutter,
   /** Cutter, but cut operation waits for separate command. ZPL only. */
   cutterWaitForCommand,
-  /** Label and liner are rewound on an external device. No backfeed motion. ZPL only. */
+  /** Media and liner are rewound on an external device. No backfeed motion. ZPL only. */
   rewind,
-  /** Label advances far enough for applicator device to grab. Printers with applicator ports only. */
+  /** Media advances far enough for applicator device to grab. Printers with applicator ports only. */
   applicator,
-  /** Removes backfeed between RFID labels, improving throughput. RFID printers only. */
+  /** Removes backfeed between RFID medias, improving throughput. RFID printers only. */
   rfid,
-  /** Label is moved into a presentation position. ZPL only.*/
+  /** Media is moved into a presentation position. ZPL only.*/
   kiosk
 }
+
+/** Percentage to backfeed after taking/cutting label, vs before printing the next. */
+export type BackfeedAfterTaken
+  = 'disabled'
+  | '0'
+  | '10'
+  | '20'
+  | '30'
+  | '40'
+  | '50'
+  | '60'
+  | '70'
+  | '80'
+  | '90'
+  | '100';
 
 /** Class for representing a printer's relationship between speeds and raw values */
 export class SpeedTable {
@@ -189,7 +204,7 @@ export class PrintSpeedSettings {
 
   /** Speed during printing media. */
   printSpeed: PrintSpeed;
-  /** Speed during feeding a blank label. ZPL only, same as media speed for EPL. */
+  /** Speed during feeding a blank media. ZPL only, same as media speed for EPL. */
   slewSpeed: PrintSpeed;
 }
 
@@ -235,40 +250,50 @@ export interface IPrinterHardwareUpdate {
   speedTable?: SpeedTable;
 }
 
-/** Printer options related to the label media being printed */
+/** Settings for printer behavior */
+export interface IPrinterSettings {
+  /** What percentage of backfeed happens after cutting/taking label, vs before printing. */
+  readonly backfeedAfterTaken: BackfeedAfterTaken;
+}
+
+export interface IPrinterSettingsUpdate {
+  backfeedAfterTaken?: BackfeedAfterTaken;
+}
+
+/** Printer options related to the media media being printed */
 export interface IPrinterMedia {
   /** How dark to print. 0 is blank, 99 is max darkness */
   darknessPercent: DarknessPercent;
-  /** Mode the printer uses to detect separate labels when printing. */
-  labelGapDetectMode: MediaMediaGapDetectionMode;
+  /** Mode the printer uses to detect separate medias when printing. */
+  mediaGapDetectMode: MediaMediaGapDetectionMode;
   /**
-   * The gap / mark length between labels. Mandatory for markSensing black line mode.
+   * The gap / mark length between medias. Mandatory for markSensing black line mode.
    * Media with webSensing gaps can use AutoSense to get this value.
    */
-  get labelGapInches(): number;
-  /** Label gap in dots */
-  labelGapDots: number;
-  /** The offset in inches from the normal location of the label gap or black line. Can be negative. */
-  get labelLineOffsetInches(): number;
-  /** The offset in dots from the normal location of the label gap or black line. Can be negative. */
-  labelLineOffsetDots: number;
-  /** The length of the label media, in inches. */
-  get labelLengthInches(): number;
-  /** The length of the label media, in dots. */
-  labelLengthDots: number;
-  /** The width of the label media, in inches. */
-  get labelWidthInches(): number;
-  /** The width of the label media, in dots. */
-  labelWidthDots: number;
+  get mediaGapInches(): number;
+  /** Media web gap in dots */
+  mediaGapDots: number;
+  /** The offset in inches from the normal location of the media gap or black line. Can be negative. */
+  get mediaLineOffsetInches(): number;
+  /** The offset in dots from the normal location of the media gap or black line. Can be negative. */
+  mediaLineOffsetDots: number;
+  /** The length of the media media, in inches. */
+  get mediaLengthInches(): number;
+  /** The length of the media media, in dots. */
+  mediaLengthDots: number;
+  /** The width of the media media, in inches. */
+  get mediaWidthInches(): number;
+  /** The width of the media media, in dots. */
+  mediaWidthDots: number;
 
   /** The offset of the printable area, from the top-left corner. */
-  labelPrintOriginOffsetDots: Coordinate;
+  mediaPrintOriginOffsetDots: Coordinate;
 
   /**
-   * Value to use for rounding read-from-config label sizes.
+   * Value to use for rounding read-from-config media sizes.
    *
-   * When reading the config from a printer the label width and length may be
-   * variable. When you set the label width to 4 inches it's translated into
+   * When reading the config from a printer the media width and length may be
+   * variable. When you set the media width to 4 inches it's translated into
    * dots, and then the printer adds a calculated offset to that. This offset
    * is unique per printer (so far as I have observed) and introduces noise.
    * This value rounds the returned value to the nearest fraction of an inch.
@@ -276,18 +301,18 @@ export interface IPrinterMedia {
    * For example, with a rounding step of 0.25 (the default) if the printer
    * returns a width 4.113 it will be rounded to 4.0
    */
-  labelDimensionRoundingStep: number;
+  mediaDimensionRoundingStep: number;
 
-  /** Label print speed settings */
+  /** Media print speed settings */
   speed: PrintSpeedSettings;
 
-  /** The label media thermal print mode. */
+  /** The media thermal print mode. */
   thermalPrintMode: ThermalPrintMode;
 
   /** The behavior of media after form printing. */
   mediaPrintMode: MediaPrintMode;
 
-  /** Whether the label prints right-side-up or upside-down. */
+  /** Whether the media prints right-side-up or upside-down. */
   printOrientation: PrintOrientation;
 }
 
@@ -299,7 +324,7 @@ export interface IPrinterMediaUpdate {
   mediaLengthDots?: number;
   mediaWidthDots?: number;
   mediaPrintOriginOffsetDots?: Coordinate;
-  labelDimensionRoundingStep?: number;
+  mediaDimensionRoundingStep?: number;
   thermalPrintMode?: ThermalPrintMode;
   mediaPrintMode?: MediaPrintMode;
   printOrientation?: PrintOrientation;
