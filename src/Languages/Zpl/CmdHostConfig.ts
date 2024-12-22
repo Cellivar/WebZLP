@@ -6,14 +6,19 @@ import * as Util from '../../Util/index.js';
 export class CmdHostConfig implements Cmds.IPrinterExtendedCommand {
   public static typeE = Symbol("CmdHostStatus");
   typeExtended = CmdHostConfig.typeE;
-  commandLanguageApplicability = Conf.PrinterCommandLanguage.epl;
+  commandLanguageApplicability = Conf.PrinterCommandLanguage.zpl;
   name = 'Get host config';
   type = "CustomCommand" as const;
   effectFlags = Cmds.AwaitsEffect;
   toDisplay() { return this.name; }
 
   constructor() { }
+}
 
+export const cmdHostConfigMapping: Cmds.IPrinterCommandMapping<string> = {
+  commandType: CmdHostConfig.typeE,
+  transpile: handleCmdHostConfig,
+  readMessage: parseCmdHostConfig,
 }
 
 export function handleCmdHostConfig(
@@ -21,7 +26,7 @@ export function handleCmdHostConfig(
   _docState: Cmds.TranspiledDocumentState,
   _commandSet: Cmds.CommandSet<string>
 ): string {
-  return '^HH\n';
+  return '^HH';
 }
 
 export function parseCmdHostConfig(
@@ -77,6 +82,7 @@ export function parseCmdHostConfig(
         console.debug('Unhandled line: ', str);
     }
 
+    // TODO LMAO
 
     // +21.0               DARKNESS
     // MEDIUM              DARKNESS SWITCH
@@ -146,8 +152,6 @@ export function parseCmdHostConfig(
     // 0                   MASS STORAGE COUNT
     // 0                   HID COUNT
     // OFF                 USB HOST LOCK OUT
-
-    // TODO LMAO
   });
 
   result.messages = [update];

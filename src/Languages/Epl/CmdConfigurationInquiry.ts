@@ -197,7 +197,6 @@ export function parseConfigResponse(
     }
   }
 
-
   result.messages.push(update);
   return result;
 }
@@ -235,23 +234,24 @@ function updateFormDimensions(str: string, msg: Cmds.ISettingUpdateMessage) {
     msg.printerMedia.mediaGapDetectMode = Conf.MediaMediaGapDetectionMode.markSensing;
     // Q123,B24[+/-156]
     msg.printerMedia.mediaLengthDots = Number(len.substring(1));
-    if (mark.indexOf('-') > 0) {
+    const markLine = mark.substring(1);
+    if (markLine.indexOf('-') > 0) {
       // Negative offset
-      const idx = mark.indexOf('-');
-      msg.printerMedia.mediaGapDots = Number(mark.substring(1, idx));
-      msg.printerMedia.mediaLineOffsetDots = Number(mark.substring(idx + 1)) * -1;
+      const idx = markLine.indexOf('-');
+      msg.printerMedia.mediaGapDots = Number(markLine.substring(0, idx));
+      msg.printerMedia.mediaLineOffsetDots = Number(markLine.substring(idx + 1)) * -1;
     }
-    else if (mark.indexOf('+') > 0) {
+    else if (markLine.indexOf('+') > 0) {
       // Positive offset.
-      const idx = mark.indexOf('+');
-      msg.printerMedia.mediaGapDots = Number(mark.substring(1, idx));
-      msg.printerMedia.mediaLineOffsetDots = Number(mark.substring(idx + 1));
+      const idx = markLine.indexOf('+');
+      msg.printerMedia.mediaGapDots = Number(markLine.substring(0, idx));
+      msg.printerMedia.mediaLineOffsetDots = Number(markLine.substring(idx + 1));
     } else {
       // No offset
-      msg.printerMedia.mediaGapDots = Number(mark.substring(1));
+      msg.printerMedia.mediaGapDots = Number(mark);
       msg.printerMedia.mediaLineOffsetDots = 0;
     }
-  } else if (mark.at(0)) {
+  } else if (mark.at(0) === '0' && mark.length === 1) {
     msg.printerMedia.mediaGapDetectMode = Conf.MediaMediaGapDetectionMode.continuous;
     // Q24,0
     // Form length is variable, the Q value is feed distance between forms.
@@ -265,11 +265,11 @@ function updateFormDimensions(str: string, msg: Cmds.ISettingUpdateMessage) {
     if (mark.indexOf('+') > 0) {
       // Only Positive offset allowed, if present.
       const idx = mark.indexOf('+');
-      msg.printerMedia.mediaGapDots = Number(mark.substring(1, idx));
+      msg.printerMedia.mediaGapDots = Number(mark.substring(0, idx));
       msg.printerMedia.mediaLineOffsetDots = Number(mark.substring(idx + 1));
     } else {
       // No offset
-      msg.printerMedia.mediaGapDots = Number(mark.substring(1));
+      msg.printerMedia.mediaGapDots = Number(mark);
       msg.printerMedia.mediaLineOffsetDots = 0;
     }
   }

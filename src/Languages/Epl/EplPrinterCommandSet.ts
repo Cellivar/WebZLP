@@ -2,142 +2,190 @@ import * as Util from '../../Util/index.js';
 import * as Conf from '../../Configs/index.js';
 import * as Cmds from '../../Commands/index.js';
 import { handleMessage } from './Messages.js';
-import { CmdErrorReporting, handleCmdErrorReporting } from './CmdErrorReporting.js';
+import { cmdErrorReportingMapping } from './CmdErrorReporting.js';
+import { getErrorMessage } from './ErrorMessage.js';
+import { parseConfigResponse } from './CmdConfigurationInquiry.js';
 
 /** Command set for communicating with an EPL II printer. */
 export class EplPrinterCommandSet extends Cmds.StringCommandSet {
   override get documentStartPrefix() { return '\r\n'; };
   override get documentEndSuffix() { return '\r\n'; };
 
-  // TODO: Method to add extended commands to the non-form list.
-  protected nonFormCommands: (symbol | Cmds.CommandType)[] = [
-    'AutosenseMediaDimensions',
-    'PrintConfiguration',
-    'QueryConfiguration',
-    'RebootPrinter',
-    'SetDarkness',
-    'StartLabel',
-    'CutNow',
-    'ClearImageBuffer',
-    'GetStatus',
-    'SaveCurrentConfiguration',
-    CmdErrorReporting.typeE
-  ];
-
   constructor(
-    extendedCommands: Array<Cmds.IPrinterExtendedCommandMapping<string>> = []
+    extendedCommands: Cmds.IPrinterCommandMapping<string>[] = []
   ) {
-    super(Conf.PrinterCommandLanguage.epl, extendedCommands);
+    super(
+      Conf.PrinterCommandLanguage.epl,
+      {
+        // Printer control
+        NoOp: { commandType: 'NoOp' },
+        CustomCommand: {
+          commandType: 'CustomCommand',
+          transpile: (c, d) => this.getExtendedCommand(c)(c, d, this)
+        },
+        Identify: {
+          commandType: 'Identify',
+          expand: () => [new Cmds.GetStatusCommand()],
+        },
+        RebootPrinter: {
+          commandType: 'RebootPrinter',
+          transpile: () => '^@\r\n',
+          formInclusionMode: Cmds.CommandFormInclusionMode.noForm,
+        },
+        Raw: {
+          commandType: 'Raw',
+          transpile: (c) => (c as Cmds.Raw).rawDocument,
+        },
+        GetStatus: {
+          commandType: 'GetStatus',
+          transpile: () => '\r\n^ee\r\n',
+          readMessage: getErrorMessage,
+          formInclusionMode: Cmds.CommandFormInclusionMode.noForm,
+        },
 
-    this.extendedCommandMap.set(CmdErrorReporting.typeE, handleCmdErrorReporting);
-  }
+        // Configuration
+        PrintConfiguration: {
+          commandType: 'PrintConfiguration',
+          transpile: () => `U\r\n`,
+          formInclusionMode: Cmds.CommandFormInclusionMode.noForm,
+        },
+        QueryConfiguration: {
+          commandType: 'QueryConfiguration',
+          transpile: () => 'UQ\r\n',
+          readMessage: parseConfigResponse,
+          formInclusionMode: Cmds.CommandFormInclusionMode.noForm,
+        },
+        SaveCurrentConfiguration: {
+          commandType: 'SaveCurrentConfiguration',
+          // EPL doesn't have an explicit save step.
+        },
+        AutosenseMediaDimensions: {
+          commandType: 'AutosenseMediaDimensions',
+          transpile: () => 'xa\r\n',
+          formInclusionMode: Cmds.CommandFormInclusionMode.noForm,
+        },
 
-  public override expandCommand(cmd: Cmds.IPrinterCommand): Cmds.IPrinterCommand[] {
-    switch (cmd.type) {
-      default:
-        return [];
-      case 'Identify':
-        return [new Cmds.GetStatusCommand()]
-      case 'NewLabel':
-        return [
-          new Cmds.EndLabel(),
-          new Cmds.StartLabel()
-        ]
-    }
+        SetDarkness: {
+          commandType: 'SetDarkness',
+          transpile: (c, d) => this.setDarknessCommand(c as Cmds.SetDarknessCommand, d),
+          formInclusionMode: Cmds.CommandFormInclusionMode.noForm,
+        },
+        SetLabelDimensions: {
+          commandType: 'SetLabelDimensions',
+          transpile: (c) => this.setLabelDimensionsCommand(c as Cmds.SetLabelDimensionsCommand),
+        },
+        SetLabelHome: {
+          commandType: 'SetLabelHome',
+          transpile: (c, d) => this.setLabelHomeCommand(c as Cmds.SetLabelHomeCommand, d),
+        },
+        SetLabelPrintOriginOffset: {
+          commandType: 'SetLabelPrintOriginOffset',
+          transpile: (c) => this.setLabelPrintOriginOffsetCommand(c as Cmds.SetLabelPrintOriginOffsetCommand),
+        },
+        SetMediaToContinuousMedia: {
+          commandType: 'SetMediaToContinuousMedia',
+          transpile: (c, d) => this.setLabelToContinuousMediaCommand(
+            c as Cmds.SetMediaToContinuousMediaCommand,
+            d.initialConfig,
+          ),
+          formInclusionMode: Cmds.CommandFormInclusionMode.noForm,
+        },
+        SetMediaToWebGapMedia: {
+          commandType: 'SetMediaToWebGapMedia',
+          transpile: (c, d) => this.setLabelToWebGapMediaCommand(
+            c as Cmds.SetMediaToWebGapMediaCommand,
+            d.initialConfig,
+          ),
+          formInclusionMode: Cmds.CommandFormInclusionMode.noForm,
+        },
+        SetMediaToMarkMedia: {
+          commandType: 'SetMediaToMarkMedia',
+          transpile: (c, d) => this.setLabelToMarkMediaCommand(
+            c as Cmds.SetMediaToMarkMediaCommand,
+            d.initialConfig,
+          ),
+          formInclusionMode: Cmds.CommandFormInclusionMode.noForm,
+        },
+        SetPrintDirection: {
+          commandType: 'SetPrintDirection',
+          transpile: (c) => this.setPrintDirectionCommand((c as Cmds.SetPrintDirectionCommand).upsideDown),
+        },
+        SetPrintSpeed: {
+          commandType: 'SetPrintSpeed',
+          transpile: (c, d) => this.setPrintSpeedCommand(c as Cmds.SetPrintSpeedCommand, d),
+          formInclusionMode: Cmds.CommandFormInclusionMode.noForm,
+        },
+        SetBackfeedAfterTaken: {
+          commandType: 'SetBackfeedAfterTaken',
+          transpile: (c) => this.setBackfeedAfterTaken((c as Cmds.SetBackfeedAfterTakenMode).mode),
+          formInclusionMode: Cmds.CommandFormInclusionMode.noForm,
+        },
+
+        // Media
+        NewLabel: {
+          commandType: 'NewLabel',
+          expand: () => [
+            new Cmds.EndLabel(),
+            new Cmds.StartLabel()
+          ],
+        },
+        StartLabel: {
+          commandType: 'StartLabel',
+          transpile: () => '\r\nN\r\n',
+          formInclusionMode: Cmds.CommandFormInclusionMode.noForm,
+        },
+        EndLabel: {
+          commandType: 'EndLabel',
+          // No specific command, prints should have happened.
+          transpile: () => '\r\n',
+        },
+        CutNow: {
+          commandType: 'CutNow',
+          transpile: () => 'C\r\n',
+          formInclusionMode: Cmds.CommandFormInclusionMode.noForm,
+        },
+        Print: {
+          commandType: 'Print',
+          transpile: (c) => this.printCommand(c as Cmds.PrintCommand),
+        },
+        ClearImageBuffer: {
+          commandType: 'ClearImageBuffer',
+          transpile: () => '\r\nN\r\n',
+          formInclusionMode: Cmds.CommandFormInclusionMode.noForm,
+        },
+
+        // Content
+        AddBox: {
+          commandType: 'AddBox',
+          transpile: (c, d) => this.addBoxCommand(c as Cmds.AddBoxCommand, d),
+        },
+        AddImage: {
+          commandType: 'AddImage',
+          transpile: (c, d) => this.addImageCommand(c as Cmds.AddImageCommand, d),
+        },
+        AddLine: {
+          commandType: 'AddLine',
+          transpile: (c, d) => this.addLineCommand(c as Cmds.AddLineCommand, d),
+        },
+        Offset: {
+          commandType: 'Offset',
+          transpile: (c, d) => {
+            Cmds.applyOffsetToDocState(c as Cmds.OffsetCommand, d);
+            return this.noop;
+          },
+        },
+      },
+      [
+        cmdErrorReportingMapping,
+        ...extendedCommands
+      ]);
   }
 
   public parseMessage<TReceived extends Conf.MessageArrayLike>(
     msg: TReceived,
     sentCommand?: Cmds.IPrinterCommand
   ): Cmds.IMessageHandlerResult<TReceived> {
-    return handleMessage(msg, sentCommand);
-  }
-
-  public transpileCommand(
-    cmd: Cmds.IPrinterCommand,
-    docState: Cmds.TranspiledDocumentState
-  ): string | Cmds.TranspileDocumentError {
-    switch (cmd.type) {
-      default:
-        Util.exhaustiveMatchGuard(cmd.type);
-        break;
-      case 'CustomCommand':
-        return this.getExtendedCommand(cmd)(cmd, docState, this);
-      case 'StartLabel':
-      case 'ClearImageBuffer':
-        return '\r\n' + 'N' + '\r\n';
-      case 'EndLabel':
-        // No specific command, prints should have happened.
-        return '\r\n';
-
-      case 'Identify':
-      case 'NewLabel':
-      case 'NoOp':
-        // Should have been compiled out at a higher step.
-        return this.noop;
-
-      case 'RebootPrinter':
-        return '^@' + '\r\n';
-      case 'QueryConfiguration':
-        return 'UQ' + '\r\n';
-      case 'PrintConfiguration':
-        return 'U' + '\r\n';
-      case 'SaveCurrentConfiguration':
-        // EPL doesn't have an explicit save step.
-        return this.noop;
-      case 'GetStatus':
-        // Referred to as 'return error' but really returns general status info.
-        return '\r\n' + '^ee' + '\r\n';
-
-      case 'SetPrintDirection':
-        return this.setPrintDirectionCommand((cmd as Cmds.SetPrintDirectionCommand).upsideDown);
-      case 'SetDarkness':
-        return this.setDarknessCommand(cmd as Cmds.SetDarknessCommand, docState);
-      case 'AutosenseMediaDimensions':
-        return 'xa' + '\r\n';
-      case 'SetPrintSpeed':
-        // EPL has no separate media slew speed setting.
-        return this.setPrintSpeedCommand(cmd as Cmds.SetPrintSpeedCommand, docState);
-      case 'SetLabelDimensions':
-        return this.setLabelDimensionsCommand(cmd as Cmds.SetLabelDimensionsCommand);
-      case 'SetLabelHome':
-        return this.setLabelHomeCommand(cmd as Cmds.SetLabelHomeCommand, docState);
-      case 'SetLabelPrintOriginOffset':
-        return this.setLabelPrintOriginOffsetCommand(cmd as Cmds.SetLabelPrintOriginOffsetCommand);
-      case 'SetMediaToContinuousMedia':
-        return this.setLabelToContinuousMediaCommand(
-          cmd as Cmds.SetMediaToContinuousMediaCommand,
-          docState.initialConfig,
-        );
-      case 'SetMediaToMarkMedia':
-        return this.setLabelToMarkMediaCommand(
-          cmd as Cmds.SetMediaToMarkMediaCommand,
-          docState.initialConfig,
-        );
-      case 'SetMediaToWebGapMedia':
-        return this.setLabelToWebGapMediaCommand(
-          cmd as Cmds.SetMediaToWebGapMediaCommand,
-          docState.initialConfig,
-        );
-      case 'SetBackfeedAfterTaken':
-        return this.setBackfeedAfterTaken((cmd as Cmds.SetBackfeedAfterTakenMode).mode);
-
-      case 'Offset':
-        return this.applyOffset(cmd as Cmds.OffsetCommand, docState);
-      case 'Raw':
-        return (cmd as Cmds.Raw).rawDocument;
-      case 'AddBox':
-        return this.addBoxCommand(cmd as Cmds.AddBoxCommand, docState);
-      case 'AddImage':
-        return this.addImageCommand(cmd as Cmds.AddImageCommand, docState);
-      case 'AddLine':
-        return this.addLineCommand(cmd as Cmds.AddLineCommand, docState);
-      case 'CutNow':
-        return 'C' + '\r\n';
-
-      case 'Print':
-        return this.printCommand(cmd as Cmds.PrintCommand);
-    }
+    return handleMessage(this, msg, sentCommand);
   }
 
   private setBackfeedAfterTaken(
@@ -149,7 +197,7 @@ export class EplPrinterCommandSet extends Cmds.StringCommandSet {
       return `JB\r\nJC\r\n`
     } else {
       // EPL doesn't support percentages so just turn it on.
-      return `JF` + '\r\n';
+      return `JF\r\n`;
     }
   }
 
@@ -199,10 +247,11 @@ export class EplPrinterCommandSet extends Cmds.StringCommandSet {
     cmd: Cmds.SetLabelHomeCommand,
     outDoc: Cmds.TranspiledDocumentState
   ): string {
-    return this.applyOffset(
+    Cmds.applyOffsetToDocState(
       new Cmds.OffsetCommand(cmd.offset.left, cmd.offset.top, true),
       outDoc
     );
+    return this.noop;
   }
 
   private setLabelPrintOriginOffsetCommand(

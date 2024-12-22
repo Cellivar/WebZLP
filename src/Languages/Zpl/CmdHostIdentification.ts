@@ -15,6 +15,13 @@ export class CmdHostIdentification implements Cmds.IPrinterExtendedCommand {
   constructor() {}
 }
 
+export const cmdHostIdentificationMapping: Cmds.IPrinterCommandMapping<string> = {
+  commandType: CmdHostIdentification.typeE,
+  transpile: handleCmdHostIdentification,
+  readMessage: parseCmdHostIdentification,
+  formInclusionMode: Cmds.CommandFormInclusionMode.noForm,
+}
+
 export function handleCmdHostIdentification(
   _cmd: Cmds.IPrinterCommand,
   _docState: Cmds.TranspiledDocumentState,

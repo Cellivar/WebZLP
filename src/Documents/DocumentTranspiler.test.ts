@@ -221,13 +221,19 @@ describe('DocumentTranspiler', () => {
                       "type": "CustomCommand",
                       "typeExtended": Symbol(CmdXmlQuery),
                     },
+                    CmdHostConfig {
+                      "commandLanguageApplicability": 2,
+                      "effectFlags": Set {
+                        "waitsForResponse",
+                      },
+                      "name": "Get host config",
+                      "type": "CustomCommand",
+                      "typeExtended": Symbol(CmdHostStatus),
+                    },
                   ],
                   "commands": "
 
-            ^XA
-            ^HZa
-
-            ^XZ
+            ^XA^HZa^HH^XZ
 
             ",
                 },
@@ -303,9 +309,7 @@ describe('DocumentTranspiler', () => {
                   "awaitedCommands": [],
                   "commands": "
 
-            ^XA
-            ^FD ^PQ1,0,0
-            ^XZ
+            ^XA^FD ^PQ1,0,0^XZ
 
             ",
                 },
@@ -346,9 +350,7 @@ describe('DocumentTranspiler', () => {
                   "awaitedCommands": [],
                   "commands": "
 
-            ^XA
-            ^FO0,0,^GB4,40,4,B,^FS^FO0,40,^GB1,20,1,B,^FS^FO1,60,^GB1,20,1,B,^FS^FO2,80,^GB1,20,1,B,^FS^FO3,100,^GB1,20,1,B,^FS^FO0,125,^GB1,8,1,B,^FS^FO1,133,^GB1,8,1,B,^FS^FO2,141,^GB1,8,1,B,^FS^FO3,149,^GB1,8,1,B,^FS^FO4,125,^GB1,8,1,B,^FS^FO5,133,^GB1,8,1,B,^FS^FO6,141,^GB1,8,1,B,^FS^FO7,149,^GB1,8,1,B,^FS^FD ^PQ1,0,0
-            ^XZ
+            ^XA^FO0,0,^GB4,40,4,B,^FS^FO0,40,^GB1,20,1,B,^FS^FO1,60,^GB1,20,1,B,^FS^FO2,80,^GB1,20,1,B,^FS^FO3,100,^GB1,20,1,B,^FS^FO0,125,^GB1,8,1,B,^FS^FO1,133,^GB1,8,1,B,^FS^FO2,141,^GB1,8,1,B,^FS^FO3,149,^GB1,8,1,B,^FS^FO4,125,^GB1,8,1,B,^FS^FO5,133,^GB1,8,1,B,^FS^FO6,141,^GB1,8,1,B,^FS^FO7,149,^GB1,8,1,B,^FS^FD ^PQ1,0,0^XZ
 
             ",
                 },

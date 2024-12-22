@@ -33,22 +33,28 @@ export class CmdXmlQuery implements Cmds.IPrinterExtendedCommand {
   constructor(public readonly query: CmdXmlQueryType = 'All') {}
 }
 
+export const cmdXmlQueryTypeMapping: Cmds.IPrinterCommandMapping<string> = {
+  commandType: CmdXmlQuery.typeE,
+  transpile: handleCmdXmlQuery,
+  readMessage: parseCmdXmlQuery,
+}
+
 export function handleCmdXmlQuery(
   cmd: Cmds.IPrinterCommand,
   _docState: Cmds.TranspiledDocumentState,
   _commandSet: Cmds.CommandSet<string>
 ): string {
   const command = cmd as CmdXmlQuery;
-  return `^HZ${queryToCmdArg[command.query]}\n`;
+  return `^HZ${queryToCmdArg[command.query]}`;
 }
 
-export function parseCmdXmlQueryResponse(
+export function parseCmdXmlQuery(
   msg: string,
   cmd: Cmds.IPrinterCommand
 ): Cmds.IMessageHandlerResult<string> {
   if (cmd.type !== "CustomCommand" || (cmd as CmdXmlQuery).typeExtended !== CmdXmlQuery.typeE) {
     throw new Cmds.MessageParsingError(
-      `Incorrect command '${cmd.name}' passed to parseCmdXmlQueryResponse, expected 'CmdXmlQuery' instead.`,
+      `Incorrect command '${cmd.name}' passed to parseCmdXmlQuery, expected 'CmdXmlQuery' instead.`,
       msg
     );
   }

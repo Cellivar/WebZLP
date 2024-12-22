@@ -140,10 +140,8 @@ function splitTransactionsAndForms(
     }
 
     // Record the command in the transpile buffer.
-    if (command.type !== "NoOp") {
-      currentTrans.commands.push(command);
-      command.effectFlags.forEach(f => currentForm.effects.add(f));
-    }
+    currentTrans.commands.push(command);
+    command.effectFlags.forEach(f => currentForm.effects.add(f));
 
     if (command.effectFlags.has("waitsForResponse")) {
       // This command expects the printer to provide feedback.

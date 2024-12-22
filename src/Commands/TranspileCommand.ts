@@ -1,7 +1,8 @@
 import * as Util from '../Util/index.js';
 import * as Conf from '../Configs/index.js';
-import * as Commands from './Commands.js';
 import type { PrinterConfig } from './PrinterConfig.js';
+import type { OffsetCommand } from './BasicCommands.js';
+import { CommandEffectFlags } from './Commands.js';
 
 /** Interface of document state effects carried between individual commands. */
 export interface TranspiledDocumentState {
@@ -20,8 +21,21 @@ export interface TranspiledDocumentState {
 
   characterSize: Conf.Coordinate;
 
-  commandEffectFlags: Commands.CommandEffectFlags;
+  commandEffectFlags: CommandEffectFlags;
 }
+
+  /** Apply an offset command to a document. */
+  export function applyOffsetToDocState(
+    cmd: OffsetCommand,
+    outDoc: TranspiledDocumentState
+  ) {
+    const newHoriz = cmd.absolute ? cmd.horizontal : outDoc.horizontalOffset + cmd.horizontal;
+    outDoc.horizontalOffset = newHoriz < 0 ? 0 : newHoriz;
+    if (cmd.vertical !== undefined) {
+      const newVert = cmd.absolute ? cmd.vertical : outDoc.verticalOffset + cmd.vertical;
+      outDoc.verticalOffset = newVert < 0 ? 0 : newVert;
+    }
+  }
 
 export function getNewTranspileState(config: PrinterConfig): TranspiledDocumentState {
   return {
@@ -38,7 +52,7 @@ export function getNewTranspileState(config: PrinterConfig): TranspiledDocumentS
       leftChars: 0,
       rightChars: 0
     },
-    commandEffectFlags: new Commands.CommandEffectFlags()
+    commandEffectFlags: new CommandEffectFlags()
   }
 }
 

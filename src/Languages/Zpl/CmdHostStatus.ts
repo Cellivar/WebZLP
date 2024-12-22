@@ -14,6 +14,13 @@ export class CmdHostStatus implements Cmds.IPrinterExtendedCommand {
   constructor() {}
 }
 
+export const cmdHostStatusMapping: Cmds.IPrinterCommandMapping<string> = {
+  commandType: CmdHostStatus.typeE,
+  transpile: handleCmdHostStatus,
+  readMessage: parseCmdHostStatus,
+  formInclusionMode: Cmds.CommandFormInclusionMode.noForm,
+}
+
 export function handleCmdHostStatus(
   _cmd: Cmds.IPrinterCommand,
   _docState: Cmds.TranspiledDocumentState,

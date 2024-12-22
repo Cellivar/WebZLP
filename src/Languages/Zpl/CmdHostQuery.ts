@@ -74,6 +74,13 @@ export class CmdHostQuery implements Cmds.IPrinterExtendedCommand {
   constructor(public readonly query: CmdHostQueryType) {}
 }
 
+export const cmdHostQueryMapping: Cmds.IPrinterCommandMapping<string> = {
+  commandType: CmdHostQuery.typeE,
+  transpile: handleCmdHostQuery,
+  readMessage: parseCmdHostQuery,
+  formInclusionMode: Cmds.CommandFormInclusionMode.noForm,
+}
+
 export function handleCmdHostQuery(
   cmd: Cmds.IPrinterCommand,
   docState: Cmds.TranspiledDocumentState,

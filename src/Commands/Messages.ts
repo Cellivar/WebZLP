@@ -1,7 +1,7 @@
 import * as Util from '../Util/index.js';
 import * as Conf from '../Configs/index.js';
 import type { IDeviceInformation } from "web-device-mux";
-import type { CommandType, IPrinterCommand, IPrinterExtendedCommand } from "./Commands.js";
+import type { IPrinterCommand } from "./Commands.js";
 import type { CommandSet } from './CommandSet.js';
 
 export type PrinterMessage
@@ -10,11 +10,6 @@ export type PrinterMessage
   | IErrorMessage
 
 export type MessageType = 'SettingUpdateMessage' | 'StatusMessage' | 'ErrorMessage'
-
-export type MessageHandlerDelegate<TMessage> = (
-  msg: TMessage,
-  sentCommand: IPrinterCommand
-) => IMessageHandlerResult<TMessage>;
 
 export interface MessageTransformer<TMessage extends Conf.MessageArrayLike> {
   transformerType: Conf.MessageArrayLikeType;
@@ -88,13 +83,17 @@ export type AwaitedCommand = {
   reject?: (reason?: unknown) => void,
 }
 
+type UpdateClass<Type> = {
+  -readonly [Property in keyof Type]?: Type[Property];
+};
+
 /** A printer settings message, describing printer configuration status. */
 export interface ISettingUpdateMessage {
   messageType: 'SettingUpdateMessage';
 
-  printerHardware?: Conf.IPrinterHardwareUpdate;
-  printerMedia   ?: Conf.IPrinterMediaUpdate;
-  printerSettings?: Conf.IPrinterSettingsUpdate;
+  printerHardware?: UpdateClass<Conf.IPrinterHardware>;
+  printerMedia   ?: UpdateClass<Conf.IPrinterMedia>;
+  printerSettings?: UpdateClass<Conf.IPrinterSettings>;
 }
 
 /** A status message sent by the printer. */
@@ -208,35 +207,6 @@ export class MessageParsingError extends Util.WebZlpError {
     super(message);
     this.receivedMessage = receivedMessage;
   }
-}
-
-export function getMessageHandler<TMessageType extends Conf.MessageArrayLike>(
-  handlerMap: Map<symbol | CommandType, MessageHandlerDelegate<TMessageType>>,
-  message: TMessageType,
-  sentCommand?: IPrinterCommand
-): IMessageHandlerResult<TMessageType> {
-  if (sentCommand === undefined) {
-    throw new MessageParsingError(
-      `Received a command reply message without 'sentCommand' being provided, can't handle this message.`,
-      message
-    );
-  }
-
-  // Since we know this is a command response and we have a command to check
-  // we can kick this out to a lookup function. That function will need to
-  // do the slicing for us as we don't know how long the message might be.
-  const cmdRef = sentCommand.type === 'CustomCommand'
-    ? (sentCommand as IPrinterExtendedCommand).typeExtended
-    : sentCommand.type;
-  const handler = handlerMap.get(cmdRef);
-  if (handler === undefined) {
-    throw new MessageParsingError(
-      `Command '${sentCommand.name}' has no message handler and should not have been awaited for this message. This is a bug in the library.`,
-      message
-    )
-  }
-
-  return handler(message, sentCommand);
 }
 
 export function deviceInfoToOptionsUpdate(deviceInfo: IDeviceInformation): ISettingUpdateMessage {

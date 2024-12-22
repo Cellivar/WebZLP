@@ -1,11 +1,91 @@
 import { expect, describe, it } from 'vitest';
 import { parseConfigResponse, tryGetModel } from './CmdConfigurationInquiry.js';
+import type { ISettingUpdateMessage } from '../../Commands/Messages.js';
+import { MediaMediaGapDetectionMode, PrintSpeed, ThermalPrintMode } from '../../Configs/ConfigurationTypes.js';
 
 describe("CmdConfigurationInquiry", () => {
   it('Rejects empty message', () => {
     const result = parseConfigResponse("", undefined!);
     expect(result.messages).toStrictEqual([]);
     expect(result.remainder).toStrictEqual("");
+  });
+
+  function getMsg(cfg: string): ISettingUpdateMessage {
+    const result = parseConfigResponse(`
+UKQ1935HLU       V4.70.1A
+${cfg}`, undefined!);
+    const msg = (result.messages[0] as ISettingUpdateMessage);
+    return msg;
+  }
+
+  describe('Individual config lines', () => {
+    it('Line A', () => {
+      const msg = getMsg("");
+      expect(msg.printerHardware?.firmware).toBe("V4.70.1A");
+      expect(msg.printerHardware?.model).toBe("LP2844");
+    });
+    it('S/N Line', () => {
+      const msg = getMsg("S/N: 42A000001234");
+      expect(msg.printerHardware?.serialNumber).toBe("42A000001234");
+    });
+    it('Line B wrong', () => {
+      const msg = `
+UKQ1935HLU       V4.70.1A
+Line Mode   `;
+      expect(() => parseConfigResponse(msg, undefined!)).toThrow();
+    });
+    // Line B is serial port, ignored.
+    // Line C is Page Mode, ignored.
+    // Line D is a test pattern when printed.
+    // Line E is image buffer size
+    // Line F Form memory
+    // Line G Graphics memory
+    // Line H Font memory
+    // Line I Total free memory
+    it('Line J', () => {
+      const msg = getMsg("I8,0,001 rY JF WY");
+      expect(msg.printerSettings?.backfeedAfterTaken).toBe('100');
+      const msg2 = getMsg("I8,0,001 rY JB WY");
+      expect(msg2.printerSettings?.backfeedAfterTaken).toBe('disabled');
+    });
+    it('Line K', () => {
+      const msg = getMsg("S4 D00 R0,0 ZT UN");
+      expect(msg.printerMedia?.speed).toMatchInlineSnapshot(`
+        PrintSpeedSettings {
+          "printSpeed": 7,
+          "slewSpeed": 7,
+        }
+      `);
+    });
+    it('Line L web sense media', () => {
+      const msg = getMsg("q832 Q1022,029+05");
+      expect(msg.printerMedia?.mediaGapDetectMode).toBe(MediaMediaGapDetectionMode.webSensing);
+      expect(msg.printerMedia?.mediaWidthDots).toBe(812);
+      expect(msg.printerMedia?.mediaLengthDots).toBe(1015);
+      expect(msg.printerMedia?.mediaGapDots).toBe(29);
+      expect(msg.printerMedia?.mediaLineOffsetDots).toBe(5);
+    });
+    it('Line L gapless media', () => {
+      const msg = getMsg("q328 Q163,0");
+      expect(msg.printerMedia?.mediaGapDetectMode).toBe(MediaMediaGapDetectionMode.continuous);
+      expect(msg.printerMedia?.mediaLengthDots).toBe(0);
+      expect(msg.printerMedia?.mediaGapDots).toBe(163);
+    });
+    it('Line L black line media', () => {
+      const msg = getMsg("q816 Q56,B189-4");
+      expect(msg.printerMedia?.mediaGapDetectMode).toBe(MediaMediaGapDetectionMode.markSensing);
+      expect(msg.printerMedia?.mediaLengthDots).toBe(50);
+      expect(msg.printerMedia?.mediaGapDots).toBe(189);
+      expect(msg.printerMedia?.mediaLineOffsetDots).toBe(-4);
+    });
+    it('Line M', () => {
+      const msg = getMsg("Option:d,Ff");
+      expect(msg.printerMedia?.thermalPrintMode).toBe(ThermalPrintMode.direct);
+    });
+    // Line N is autosense values
+    // Line O is cover sensor
+    // Line P is date and time
+    // Line Q is dump mode
   });
 
   describe('Real configs', () => {
@@ -57,8 +137,9 @@ Cover: T=137, C=147
             "printerMedia": {
               "darknessPercent": 40,
               "mediaGapDetectMode": 0,
-              "mediaGapDots": 0,
-              "mediaLengthDots": 152,
+              "mediaGapDots": 163,
+              "mediaLengthDots": 0,
+              "mediaLineOffsetDots": 0,
               "mediaPrintOriginOffsetDots": {
                 "left": 248,
                 "top": 0,
@@ -73,6 +154,7 @@ Cover: T=137, C=147
             },
             "printerSettings": {
               "backfeedAfterTaken": "100",
+              "feedButtonMode": "feedBlank",
             },
           },
         ]
@@ -129,6 +211,7 @@ Cover: T=144, C=167
               "mediaGapDetectMode": 1,
               "mediaGapDots": 25,
               "mediaLengthDots": 913,
+              "mediaLineOffsetDots": 0,
               "mediaPrintOriginOffsetDots": {
                 "left": 8,
                 "top": 0,
@@ -143,6 +226,7 @@ Cover: T=144, C=167
             },
             "printerSettings": {
               "backfeedAfterTaken": "100",
+              "feedButtonMode": "feedBlank",
             },
           },
         ]
@@ -197,6 +281,7 @@ Cover: T=118, C=129
               "mediaGapDetectMode": 1,
               "mediaGapDots": 24,
               "mediaLengthDots": 913,
+              "mediaLineOffsetDots": 0,
               "mediaPrintOriginOffsetDots": {
                 "left": 0,
                 "top": 0,
@@ -266,6 +351,7 @@ Cover: T=120, C=141`;
               "mediaGapDetectMode": 1,
               "mediaGapDots": 169,
               "mediaLengthDots": 50,
+              "mediaLineOffsetDots": 0,
               "mediaPrintOriginOffsetDots": {
                 "left": 104,
                 "top": 0,
@@ -280,6 +366,7 @@ Cover: T=120, C=141`;
             },
             "printerSettings": {
               "backfeedAfterTaken": "100",
+              "feedButtonMode": "feedBlank",
             },
           },
         ]
@@ -333,6 +420,7 @@ oUs,t,u
               "mediaGapDetectMode": 1,
               "mediaGapDots": 189,
               "mediaLengthDots": 50,
+              "mediaLineOffsetDots": 4,
               "mediaPrintOriginOffsetDots": {
                 "left": 8,
                 "top": 0,

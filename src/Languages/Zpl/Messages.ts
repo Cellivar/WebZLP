@@ -1,22 +1,11 @@
 import * as Conf from '../../Configs/index.js';
 import * as Cmds from '../../Commands/index.js';
-import { CmdXmlQuery, parseCmdXmlQueryResponse } from "./CmdXmlQuery.js";
-import { CmdHostIdentification, parseCmdHostIdentification } from './CmdHostIdentification.js';
-import { CmdHostQuery, parseCmdHostQuery } from './CmdHostQuery.js';
-import { CmdHostStatus, parseCmdHostStatus } from './CmdHostStatus.js';
-import { CmdHostConfig, parseCmdHostConfig } from './CmdHostConfig.js';
-
-const messageHandlerMap = new Map<symbol | Cmds.CommandType, Cmds.MessageHandlerDelegate<string>>([
-  [CmdXmlQuery.typeE, parseCmdXmlQueryResponse], // ~HZ command
-  [CmdHostIdentification.typeE, parseCmdHostIdentification], // ~HI command
-  [CmdHostQuery.typeE, parseCmdHostQuery], // ~HQ command
-  [CmdHostStatus.typeE, parseCmdHostStatus], // ~HS command
-  [CmdHostConfig.typeE, parseCmdHostConfig], // ^HH command
-]);
+import type { ZplPrinterCommandSet } from './ZplPrinterCommandSet.js';
 
 export function handleMessage<TReceived extends Conf.MessageArrayLike>(
+  cmdSet: ZplPrinterCommandSet,
   message: TReceived,
-  sentCommand?: Cmds.IPrinterCommand
+  sentCommand?: Cmds.IPrinterCommand,
 ): Cmds.IMessageHandlerResult<TReceived> {
   const result: Cmds.IMessageHandlerResult<TReceived> = {
     messageIncomplete: false,
@@ -75,7 +64,7 @@ export function handleMessage<TReceived extends Conf.MessageArrayLike>(
     default: {
       // Everything else needs to be fully interpreted, and we need to know the
       // command that was sent to trigger the message.
-      const handled = Cmds.getMessageHandler(messageHandlerMap, msg, sentCommand);
+      const handled = cmdSet.callMessageHandler(msg, sentCommand);
       result.messages.push(...handled.messages);
       result.messageIncomplete = handled.messageIncomplete;
       result.messageMatchedExpectedCommand = handled.messageMatchedExpectedCommand;
