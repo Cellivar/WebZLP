@@ -106,7 +106,8 @@ export function parseCmdXmlQuery(
     pivotIdx++;
   }
 
-  result.remainder = msg.substring(pivotIdx);
+  // Content before and after should be preserved
+  result.remainder = msg.substring(0, msg.indexOf('<?xml ')) + msg.substring(pivotIdx);
 
   // For reasons I do not understand printers will tend to send _one_ invalid
   // XML line and it looks like
@@ -118,7 +119,7 @@ export function parseCmdXmlQuery(
   // text with a fixed version instead.
   // TODO: Deeper investigation with more printers?
   const rawXml = msg
-    .substring(msg.indexOf('<?xml '), pivotIdx + 1)
+    .substring(msg.indexOf('<?xml '), pivotIdx)
     .replace(
       /^ ENUM='NONE, AUTO DETECT, TAG-IT, ICODE, PICO, ISO15693, EPC, UID'>/gim,
       "<RFID-TYPE ENUM='NONE, AUTO DETECT, TAG-IT, ICODE, PICO, ISO15693, EPC, UID'>"
@@ -131,7 +132,7 @@ export function parseCmdXmlQuery(
   const errorNode = xmlDoc.querySelector('parsererror');
   if (errorNode) {
     throw new Cmds.MessageParsingError(
-      `Error parsing message as XML: '${errorNode.tagName}'`,
+      `Error parsing message as XML: '${errorNode.textContent}'`,
       rawXml
     );
   }
