@@ -98,7 +98,8 @@ export function parseConfigResponse(
         update.printerHardware.serialNumber = str.substring(5).trim();
         break;
 
-      case str.startsWith("Serial port:"):
+      case /^Serial Port:/.test(str):
+      case /^Serial port:/.test(str):
         // Serial port:96,N,8,1    # Serial port config
         // TODO: Serial port settings and update
         //printerInfo.serialPort = str.substring(12).trim();
@@ -110,7 +111,7 @@ export function parseConfigResponse(
         break;
       }
 
-      case /^I\d,.+,\d\d\d r[YN]/.test(str): {
+      case /^I\d,.+,\d{3}/.test(str): {
         // I8,A,001 rY JF WY       # Config settings J
         updateSettingsLines(str.trim(), update);
         break;
@@ -176,6 +177,8 @@ export function parseConfigResponse(
       case /^Fmem[:\s]/.test(str):
       // Fmem:000.0K,060.9K avl  # Form storage
       // Fmem used: 0 (bytes)    # Form storage
+      case /^RAM size:/.test(str):
+      // RAM size: 2054496
       case /^Available:/.test(str):
       // Available: 130559       # Total memory for Forms, Fonts, or Graphics
       case /^Cover:/.test(str):

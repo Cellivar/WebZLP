@@ -65,6 +65,18 @@
         "width": 448,
         "length": 2223
       }
+    },
+    {
+      "modelName": "FDX ZP 500",
+      "modelHints": [
+        "FDX ZP 500"
+      ],
+      "dpi": 203,
+      "speedMap": "GK420",
+      "printArea": {
+        "width": 448,
+        "length": 2223
+      }
     }
   ],
   "speedMaps": {

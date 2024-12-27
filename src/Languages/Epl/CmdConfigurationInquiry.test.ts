@@ -440,6 +440,77 @@ oUs,t,u
         ]
       `);
     });
+
+    it('Real Config 6', () => {
+      const real_config_6 = `
+FDX ZP 500 (ZPL) ZSP-002281B
+S/N: 27J130201516
+HEAD    usage =       43,551"
+PRINTER usage =       43,551"
+Serial Port: 96,N,8,1
+Page Mode
+RAM size: 2054496
+Fmem used: 0 (bytes)
+Gmem used: 0
+Emem used: 0
+Available: 1516992
+I8,A,001 JF WY
+S3 D11 R000,000 ZB UN
+q832 Q1218,0 Ymax:5000 eR$,0
+Option:D,Ff
+oEv,w,x,y,z
+00 05 31`;
+      const result = parseConfigResponse(real_config_6, undefined!);
+      expect(result.messages).toMatchInlineSnapshot(`
+        [
+          {
+            "messageType": "SettingUpdateMessage",
+            "printerHardware": {
+              "dpi": 203,
+              "firmware": "ZSP-002281B",
+              "manufacturer": "Zebra Corporation",
+              "maxMediaDarkness": 15,
+              "maxMediaLengthDots": 2223,
+              "maxMediaWidthDots": 448,
+              "model": "FDX ZP 500",
+              "serialNumber": "27J130201516",
+              "speedTable": SpeedTable {
+                "speedTable": Map {
+                  4 => 2,
+                  6 => 3,
+                  8 => 4,
+                  9 => 5,
+                  1 => 2,
+                  1000 => 5,
+                  0 => 4,
+                },
+              },
+            },
+            "printerMedia": {
+              "darknessPercent": 74,
+              "mediaGapDetectMode": 0,
+              "mediaGapDots": 1218,
+              "mediaLengthDots": 0,
+              "mediaLineOffsetDots": 0,
+              "mediaPrintOriginOffsetDots": {
+                "left": 0,
+                "top": 0,
+              },
+              "mediaWidthDots": 812,
+              "printOrientation": 0,
+              "speed": PrintSpeedSettings {
+                "printSpeed": 6,
+                "slewSpeed": 6,
+              },
+              "thermalPrintMode": 0,
+            },
+            "printerSettings": {
+              "feedButtonMode": "feedBlank",
+            },
+          },
+        ]
+      `);
+    });
   });
 
   describe('tryGetModel', () => {
