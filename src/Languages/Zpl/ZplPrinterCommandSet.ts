@@ -8,6 +8,7 @@ import { cmdHostQueryMapping } from './CmdHostQuery.js';
 import { CmdHostStatus, cmdHostStatusMapping } from './CmdHostStatus.js';
 import { CmdHostConfig, cmdHostConfigMapping } from './CmdHostConfig.js';
 import { CmdConfigUpdate, cmdConfigUpdateMapping } from './CmdConfigUpdate.js';
+import { cmdSetBootAndCloseActionMapping } from './CmdSetBootAndCloseAction.js';
 
 /** Command set for communicating with a ZPL II printer. */
 export class ZplPrinterCommandSet extends Cmds.StringCommandSet {
@@ -76,7 +77,7 @@ export class ZplPrinterCommandSet extends Cmds.StringCommandSet {
         transpile: () => '~JC\n',
         formInclusionMode: Cmds.CommandFormInclusionMode.noForm,
       },
-      
+
       SetDarkness: {
         commandType: 'SetDarkness',
         transpile: (c, d) => this.setDarknessCommand(c as Cmds.SetDarknessCommand, d),
@@ -182,6 +183,7 @@ export class ZplPrinterCommandSet extends Cmds.StringCommandSet {
       cmdHostIdentificationMapping,
       cmdHostQueryMapping,
       cmdHostStatusMapping,
+      cmdSetBootAndCloseActionMapping,
       ...extendedCommands,
     ]
   );
