@@ -1,3 +1,4 @@
+/* eslint-disable no-fallthrough */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import * as Conf from '../../Configs/index.js';
 import * as Cmds from '../../Commands/index.js';
@@ -35,123 +36,150 @@ export function parseCmdHostConfig(
 ): Cmds.IMessageHandlerResult<string> {
   const result: Cmds.IMessageHandlerResult<string> = {
     messageIncomplete: false,
-    messageMatchedExpectedCommand: true,
+    messageMatchedExpectedCommand: false,
     messages: [],
-    remainder: "",
+    remainder: msg,
   }
-  // Each response should start with STX and end with ETX.
+  // Each response should start with STX and end with ETX. The ETX is the last
+  // character in the message, no CR/LF after it.
   const msgStart = msg.indexOf(Util.AsciiCodeStrings.STX);
-  const msgEnd = msg.indexOf(Util.AsciiCodeStrings.ETX);
+  const msgEnd   = msg.indexOf(Util.AsciiCodeStrings.ETX);
   if (msgStart === -1) {
     // Not the message we were looking for?
-    result.messageMatchedExpectedCommand = false;
-    result.remainder = msg;
     return result;
   }
   if (msgEnd === -1) {
     // Incomplete?
-    result.remainder = msg;
     result.messageIncomplete = true;
     return result;
   }
-  result.remainder = msg.substring(msgEnd + 3); // TODO: Make sure response includes CRLF.
+
+  // Other messages may have STX/ETX, make sure this is our config message.
   const response = msg.substring(msgStart + 1, msgEnd);
+  if (response.indexOf('ZPL MODE') === -1) {
+    return result;
+  }
+  result.messageMatchedExpectedCommand = true;
+
+  // Content before and after should be preserved.
+  result.remainder = msg.substring(0, msgStart) + msg.substring(msgEnd + 1);
 
   const update: Cmds.ISettingUpdateMessage = {
     messageType: 'SettingUpdateMessage' as const,
   }
   update.printerHardware ??= {};
-  update.printerMedia ??= {};
+  update.printerMedia    ??= {};
   update.printerSettings ??= {};
 
-  // Raw text from the printer contains \r\n, normalize to \n.
-  const lines = response
-    .replaceAll('\r', '')
+  response
     .split('\n')
-    .filter((i) => i);
+    .map((s) => {
+      // ZPL config lines are 40 chars long, indented 2 spaces and padded.
+      // For example:
+      //  TRANSMISSIVE        SENSOR SELECT
+      // 2 spaces indent, 20 spaces value, 18 spaces key
+      // We slice at 22 chars and construct a dictionary.
+      return {
+        key: s.substring(22).trim().toUpperCase(),
+        value: s.substring(0, 22).trim()
+      };
+    })
+    .forEach(l => {
+      switch (l.key) {
+        default:
+          console.debug('Unhandled line: ', l.key, l.value);
+          break;
 
-  lines.forEach(l => {
-    const str = l.trim();
-    switch (true) {
-      case /MEDIA TYPE$/.test(str):
-        if (str.startsWith('MARK')) {
-          update.printerMedia!.mediaGapDetectMode = Conf.MediaMediaGapDetectionMode.markSensing;
-        }
-        break;
-      default:
-        console.debug('Unhandled line: ', str);
-    }
+        case "MEDIA TYPE":
+          if (l.value.startsWith('MARK')) {
+            update.printerMedia!.mediaGapDetectMode = Conf.MediaMediaGapDetectionMode.markSensing;
+          } else if (l.value.startsWith('GAP')) {
+            update.printerMedia!.mediaGapDetectMode = Conf.MediaMediaGapDetectionMode.webSensing;
+          }
+          // TODO: Other modes!
+          break;
 
-    // TODO LMAO
+        case "SENSOR SELECT":
+          // This should be set automatically with MEDIA TYPE.
+          // TODO: Don't ignore this if it disagrees with MEDIA TYPE?
+          break;
 
-    // +21.0               DARKNESS
-    // MEDIUM              DARKNESS SWITCH
-    // 6.0 IPS             PRINT SPEED
-    // +000                TEAR OFF ADJUST
-    // TEAR OFF            PRINT MODE
-    // MARK                MEDIA TYPE
-    // REFLECTIVE          SENSOR SELECT
-    // 203                 PRINT WIDTH
-    // 2205                LABEL LENGTH
-    // 10.0IN   253MM      MAXIMUM LENGTH
-    // MAINT. OFF          EARLY WARNING
-    // CONNECTED           USB COMM.
-    // AUTO                SER COMM. MODE
-    // 9600                BAUD
-    // 8 BITS              DATA BITS
-    // NONE                PARITY
-    // XON/XOFF            HOST HANDSHAKE
-    // NONE                PROTOCOL
-    // NORMAL MODE         COMMUNICATIONS
-    // <~>  7EH            CONTROL PREFIX
-    // <^>  5EH            FORMAT PREFIX
-    // <,>  2CH            DELIMITER CHAR
-    // ZPL II              ZPL MODE
-    // INACTIVE            COMMAND OVERRIDE
-    // NO MOTION           MEDIA POWER UP
-    // FEED                HEAD CLOSE
-    // 10%                 BACKFEED
-    // +000                LABEL TOP
-    // +0000               LEFT POSITION
-    // DISABLED            REPRINT MODE
-    // 036                 WEB SENSOR
-    // 096                 MEDIA SENSOR
-    // 128                 TAKE LABEL
-    // 050                 MARK SENSOR
-    // 004                 MARK MED SENSOR
-    // 035                 TRANS GAIN
-    // 022                 TRANS LED
-    // 017                 MARK GAIN
-    // 100                 MARK LED
-    // DPCSWFXM            MODES ENABLED
-    // ........            MODES DISABLED
-    //  448 8/MM FULL      RESOLUTION
-    // 6.0                 LINK-OS VERSION
-    // V84.20.18Z <-       FIRMWARE
-    // 1.3                 XML SCHEMA
-    // 6.5.0 0.770         HARDWARE ID
-    // 8192k............R: RAM
-    // 65536k...........E: ONBOARD FLASH
-    // NONE                FORMAT CONVERT
-    // ENABLED             IDLE DISPLAY
-    // 12/16/24            RTC DATE
-    // 14:40               RTC TIME
-    // DISABLED            ZBI
-    // 2.1                 ZBI VERSION
-    // READY               ZBI STATUS
-    // 7,332 LABELS        NONRESET CNTR
-    // 7,332 LABELS        RESET CNTR1
-    // 7,332 LABELS        RESET CNTR2
-    // 12,555 IN           NONRESET CNTR
-    // 12,543 IN           RESET CNTR1
-    // 12,543 IN           RESET CNTR2
-    // 31,859 CM           NONRESET CNTR
-    // 31,859 CM           RESET CNTR1
-    // 31,859 CM           RESET CNTR2
-    // 003 WIRED           SLOT 1
-    // 0                   MASS STORAGE COUNT
-    // 0                   HID COUNT
-    // OFF                 USB HOST LOCK OUT
+        // Cases handled by XML.
+        // TODO: Handle them here too, eventually deprecate XML for performance?
+        case "FIRMWARE":
+        case "HARDWARE ID":
+        case "DARKNESS":
+        case "DARKNESS SWITCH":
+        case "PRINT SPEED":
+        case "TEAR OFF ADJUST":
+        case "PRINT MODE":
+        case "PRINT WIDTH":
+        case "LABEL LENGTH":
+        case "MAXIMUM LENGTH":
+        case "EARLY WARNING":
+        case "MEDIA POWER UP":
+        case "HEAD CLOSE":
+        case "BACKFEED":
+        case "LABEL TOP":
+        case "LEFT POSITION":
+        case "REPRINT MODE":
+        case "MODES ENABLED":
+        case "MODES DISABLED":
+        case "RESOLUTION":
+        // Sensor levels, also in XML
+        case "WEB SENSOR":
+        case "TRANS GAIN": // whos lives matter yo
+        case "TRANS LED":
+        case "MEDIA SENSOR":
+        case "TAKE LABEL":
+        case "MARK SENSOR":
+        case "MARK MED SENSOR":
+        case "MARK GAIN":
+        case "MARK LED":
+
+        // Time and counters, maybe useful?
+        case "RTC DATE":
+        case "RTC TIME":
+        // There is one nonresettable counter and two resettable ones
+        // like a car odometer and trip, haha.
+        // Unfortunately, they use the same key! You have to split by suffix.
+        // LABELS, IN, CM
+        case "NONRESET CNTR":
+        case "RESET CNTR1":
+        case "RESET CNTR2":
+
+        // Comm modes flags that might not be needed ever?
+        case "USB COMM.":
+        case "SER COMM. MODE":
+        case "BAUD":
+        case "DATA BITS":
+        case "PARITY":
+        case "HOST HANDSHAKE":
+        case "PROTOCOL":
+        case "COMMUNICATIONS":
+        case "LINK-OS VERSION":
+        case "SLOT 1":
+        case "MASS STORAGE COUNT":
+        case "HID COUNT":
+        case "USB HOST LOCK OUT":
+        case "XML SCHEMA":
+        case "IDLE DISPLAY":
+        case "FORMAT CONVERT":
+        case "ZBI":
+        case "ZBI VERSION":
+        case "ZBI STATUS":
+        case "RAM":
+        case "ONBOARD FLASH":
+
+        // TODO: Sanity check these, throw a fit if they're set differntly
+        case "CONTROL PREFIX":
+        case "FORMAT PREFIX":
+        case "DELIMITER CHAR":
+        case "ZPL MODE":
+        case "COMMAND OVERRIDE":
+          break;
+      }
+
   });
 
   result.messages = [update];
