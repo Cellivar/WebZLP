@@ -73,6 +73,11 @@
         // This is a utility lib we'll be using that makes it easier to use devices.
         import * as WebDevices from 'web-device-mux';
 
+        // We'll drop these into the Window object so we can play with them in
+        // the DevTools console if we want to.
+        window.WebLabel = WebLabel;
+        window.WebDevices = WebDevices;
+
         // For this demo we're going to make use of the USB printer manager
         // so it can take care of concerns like the USB connect and disconnect events.
 
