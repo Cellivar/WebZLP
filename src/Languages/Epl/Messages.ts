@@ -2,17 +2,12 @@ import * as Util from '../../Util/index.js';
 import * as Conf from '../../Configs/index.js';
 import * as Cmds from '../../Commands/index.js';
 import { getErrorMessage } from "./ErrorMessage.js";
-import { parseConfigResponse } from "./CmdConfigurationInquiry.js";
-
-const messageHandlerMap = new Map<symbol | Cmds.CommandType, Cmds.MessageHandlerDelegate<string>>([
-  ['GetStatus', getErrorMessage], // ^ee command
-  ['QueryConfiguration', parseConfigResponse], // UQ command
-]);
+import type { EplPrinterCommandSet } from './EplPrinterCommandSet.js';
 
 export function handleMessage<TReceived extends Conf.MessageArrayLike>(
+  cmdSet: EplPrinterCommandSet,
   message: TReceived,
-  sentCommand?: Cmds.IPrinterCommand,
-  handlerMap = messageHandlerMap
+  sentCommand?: Cmds.IPrinterCommand
 ): Cmds.IMessageHandlerResult<TReceived> {
   const result: Cmds.IMessageHandlerResult<TReceived> = {
     messageIncomplete: false,
@@ -39,6 +34,7 @@ export function handleMessage<TReceived extends Conf.MessageArrayLike>(
   if (firstByte === undefined) { return result; }
 
   switch (true) {
+    // TODO: Does this error reporting mode even work over USB? Maybe only serial?
     case (firstByte === Util.AsciiCodeStrings.ACK):
       // Different depending on error reporting mode:
       // Normal mode: either finished printing, or label taken when sensor enabled.
@@ -77,7 +73,7 @@ export function handleMessage<TReceived extends Conf.MessageArrayLike>(
       // Everything else needs to be fully interpreted as an ASCII message.
       // Command responses may be fixed or variable length, usually with an
       // indicator of how many to expect.
-      const handled = Cmds.getMessageHandler(handlerMap, msg, sentCommand);
+      const handled = cmdSet.callMessageHandler(msg, sentCommand);
       result.messages.push(...handled.messages);
       result.messageIncomplete = handled.messageIncomplete;
       result.messageMatchedExpectedCommand = handled.messageMatchedExpectedCommand;
@@ -88,12 +84,6 @@ export function handleMessage<TReceived extends Conf.MessageArrayLike>(
   }
 
   // Put the remainder message back into its native format.
-  if (typeof result.remainder === "string") {
-    result.remainder = Cmds.asString(remainder) as TReceived;
-  } else if (result.remainder instanceof Uint8Array) {
-    result.remainder = remainder as TReceived;
-  } else {
-    throw new Error("Unknown message type not implemented!");
-  }
+  result.remainder = Cmds.asTargetMessageType(remainder, message);
   return result;
 }

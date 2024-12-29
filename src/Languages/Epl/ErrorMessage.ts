@@ -1,4 +1,5 @@
-import * as Cmds from "../../Commands/index.js"
+import * as Util from "../../Util/index.js";
+import * as Cmds from "../../Commands/index.js";
 
 const errorCodeMap: Map<number, Cmds.ErrorState[]> = new Map<number, Cmds.ErrorState[]>([
   [0, []],
@@ -19,7 +20,7 @@ const errorCodeMap: Map<number, Cmds.ErrorState[]> = new Map<number, Cmds.ErrorS
   [14, [Cmds.ErrorState.MotorTooHot]],
   [15, [Cmds.ErrorState.BatteryLowWarning40Percent]],
   [16, [Cmds.ErrorState.BatteryLowLimit20Percent]],
-  
+
   [50, [Cmds.ErrorState.PrinterBusyProcessingPrintJob]],
 
   [80, [Cmds.ErrorState.UnknownError]],
@@ -43,7 +44,7 @@ export function getErrorMessage(
     remainder: msg,
   }
 
-  const {sliced, remainder } = Cmds.sliceToCRLF(msg);
+  const {sliced, remainder } = Util.sliceToCRLF(msg);
   result.remainder = remainder;
   const errorMsg: Cmds.IErrorMessage = {
     messageType: 'ErrorMessage',

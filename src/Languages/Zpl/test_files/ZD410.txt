@@ -1,0 +1,69 @@
+  +21.0               DARKNESS          
+  MEDIUM              DARKNESS SWITCH   
+  6.0 IPS             PRINT SPEED       
+  +000                TEAR OFF ADJUST   
+  TEAR OFF            PRINT MODE        
+  GAP/NOTCH           MEDIA TYPE        
+  TRANSMISSIVE        SENSOR SELECT     
+  400                 PRINT WIDTH       
+  2205                LABEL LENGTH      
+  2.0IN     50MM      MAXIMUM LENGTH    
+  MAINT. OFF          EARLY WARNING     
+  CONNECTED           USB COMM.         
+  AUTO                SER COMM. MODE    
+  9600                BAUD              
+  8 BITS              DATA BITS         
+  NONE                PARITY            
+  XON/XOFF            HOST HANDSHAKE    
+  NONE                PROTOCOL          
+  NORMAL MODE         COMMUNICATIONS    
+  <~>  7EH            CONTROL PREFIX    
+  <^>  5EH            FORMAT PREFIX     
+  <,>  2CH            DELIMITER CHAR    
+  ZPL II              ZPL MODE          
+  INACTIVE            COMMAND OVERRIDE  
+  NO MOTION           MEDIA POWER UP    
+  FEED                HEAD CLOSE        
+  10%                 BACKFEED          
+  +000                LABEL TOP         
+  +0000               LEFT POSITION     
+  DISABLED            REPRINT MODE      
+  036                 WEB SENSOR        
+  096                 MEDIA SENSOR      
+  128                 TAKE LABEL        
+  050                 MARK SENSOR       
+  004                 MARK MED SENSOR   
+  035                 TRANS GAIN        
+  022                 TRANS LED         
+  017                 MARK GAIN         
+  100                 MARK LED          
+  DPCSWFXM            MODES ENABLED     
+  ........            MODES DISABLED    
+   448 8/MM FULL      RESOLUTION        
+  6.0                 LINK-OS VERSION   
+  V84.20.18Z <-       FIRMWARE          
+  1.3                 XML SCHEMA        
+  6.5.0 0.770         HARDWARE ID       
+  8192k............R: RAM               
+  65536k...........E: ONBOARD FLASH     
+  NONE                FORMAT CONVERT    
+  ENABLED             IDLE DISPLAY      
+  12/29/24            RTC DATE          
+  01:20               RTC TIME          
+  DISABLED            ZBI               
+  2.1                 ZBI VERSION       
+  READY               ZBI STATUS        
+  7,332 LABELS        NONRESET CNTR     
+  7,332 LABELS        RESET CNTR1       
+  7,332 LABELS        RESET CNTR2       
+  12,557 IN           NONRESET CNTR     
+  12,544 IN           RESET CNTR1       
+  12,544 IN           RESET CNTR2       
+  31,863 CM           NONRESET CNTR     
+  31,863 CM           RESET CNTR1       
+  31,863 CM           RESET CNTR2       
+  003 WIRED           SLOT 1            
+  0                   MASS STORAGE COUNT
+  0                   HID COUNT         
+  OFF                 USB HOST LOCK OUT 
+

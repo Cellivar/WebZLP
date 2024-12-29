@@ -1,7 +1,7 @@
 import * as Conf from '../Configs/index.js';
 import * as Commands from './Commands.js';
 import { TranspileDocumentError, type TranspiledDocumentState } from "./TranspileCommand.js";
-import { RawMessageTransformer, StringMessageTransformer, type IMessageHandlerResult, type MessageTransformer } from './Messages.js';
+import { MessageParsingError, RawMessageTransformer, StringMessageTransformer, type IMessageHandlerResult, type MessageTransformer } from './Messages.js';
 
 /** How a command should be wrapped into a form, if at all */
 export enum CommandFormInclusionMode {
@@ -12,7 +12,7 @@ export enum CommandFormInclusionMode {
 }
 
 /** Describes a command set for a printer. */
-export interface CommandSet<TCmdType extends Conf.MessageArrayLike> {
+export interface CommandSet<TMsgType extends Conf.MessageArrayLike> {
 
   /** Parse a message object received from the printer. */
   parseMessage<TReceived extends Conf.MessageArrayLike>(
@@ -24,97 +24,138 @@ export interface CommandSet<TCmdType extends Conf.MessageArrayLike> {
   get commandLanguage(): Conf.PrinterCommandLanguage;
 
   /** Gets the prefix to start a new document. */
-  get documentStartPrefix(): TCmdType;
+  get documentStartPrefix(): TMsgType;
   /** Gets the suffix to end a document. */
-  get documentEndSuffix(): TCmdType;
+  get documentEndSuffix(): TMsgType;
 
   /** Get expanded commands for a given command, if applicable. */
   expandCommand(cmd: Commands.IPrinterCommand): Commands.IPrinterCommand[];
   /** Determine if a given command must appear outside of a form. */
   isCommandNonFormCommand(cmd: Commands.IPrinterCommand): boolean;
   /** Combine separate commands into one. */
-  combineCommands(...commands: TCmdType[]): TCmdType;
+  combineCommands(...commands: TMsgType[]): TMsgType;
 
   /** Transpile a single command, tracking its effects to a document. */
   transpileCommand(
     cmd: Commands.IPrinterCommand,
     docMetadata: TranspiledDocumentState
-  ): TCmdType | TranspileDocumentError;
+  ): TMsgType | TranspileDocumentError;
 }
 
 /** A method for transpiling a given command to its native command. */
-export type TranspileCommandDelegate<TOutput extends Conf.MessageArrayLike> = (
-  cmd: Commands.IPrinterCommand,
+export type TranspileCommandDelegate<
+  TCmd extends Commands.IPrinterCommand,
+  TMsgType extends Conf.MessageArrayLike
+> = (
+  cmd: TCmd,
   docState: TranspiledDocumentState,
-  commandSet: CommandSet<TOutput>
-) => TOutput | TranspileDocumentError;
+  commandSet: CommandSet<TMsgType>
+) => TMsgType | TranspileDocumentError;
 
-/** A manifest for a custom extended printer command. */
-export interface IPrinterExtendedCommandMapping<TOutput extends Conf.MessageArrayLike> {
-  extendedTypeSymbol: symbol,
-  delegate: TranspileCommandDelegate<TOutput>,
+/** A method for expanding one command into multiple other commands. */
+export type CommandExpandDelegate<TCmd extends Commands.IPrinterCommand> = (
+  cmd?: TCmd
+) => Commands.IPrinterCommand[];
+
+/** A method for handling a response message to a command. */
+export type MessageHandlerDelegate<TMsgType> = (
+  msg: TMsgType,
+  sentCommand: Commands.IPrinterCommand
+) => IMessageHandlerResult<TMsgType>;
+
+/** A manifest for a printer command's behavior. */
+export interface IPrinterCommandMapping<TMsgType extends Conf.MessageArrayLike> {
+  /** The printer command being mapped. */
+  commandType: Commands.CommandAnyType,
+  /** Method to transpile this command to its native command. */
+  transpile?: TranspileCommandDelegate<Commands.IPrinterCommand, TMsgType>,
+  /** Method to replace a command with multiple other commands. */
+  expand?: CommandExpandDelegate<Commands.IPrinterCommand>,
+  /** Method to handle a message from the device in response to this command. */
+  readMessage?: MessageHandlerDelegate<TMsgType>,
+  /** Compatibility of this command with being included in a form. Defaults to true. */
+  formInclusionMode?: CommandFormInclusionMode,
 }
 
-export abstract class PrinterCommandSet<TCmdType extends Conf.MessageArrayLike> implements CommandSet<TCmdType> {
+export abstract class PrinterCommandSet<TMsgType extends Conf.MessageArrayLike> implements CommandSet<TMsgType> {
   private cmdLanguage: Conf.PrinterCommandLanguage;
   get commandLanguage() {
     return this.cmdLanguage;
   }
 
-  protected abstract get noop(): TCmdType;
+  protected abstract get noop(): TMsgType;
 
-  protected messageTransformer: MessageTransformer<TCmdType>;
+  protected messageTransformer: MessageTransformer<TMsgType>;
 
-  /** List of commands which must not appear within a form, according to this language's rules */
-  protected abstract nonFormCommands: Array<symbol | Commands.CommandType>;
-
-  protected extendedCommandMap = new Map<symbol, TranspileCommandDelegate<TCmdType>>;
+  protected commandMap = new Map<Commands.CommandAnyType, IPrinterCommandMapping<TMsgType>>;
 
   protected constructor(
+    transformer        : MessageTransformer<TMsgType>,
     implementedLanguage: Conf.PrinterCommandLanguage,
-    transformer: MessageTransformer<TCmdType>,
-    extendedCommands: Array<IPrinterExtendedCommandMapping<TCmdType>> = []
+    basicCommands      : Record<Commands.CommandType, IPrinterCommandMapping<TMsgType>>,
+    extendedCommands   : IPrinterCommandMapping<TMsgType>[] = []
   ) {
     this.cmdLanguage = implementedLanguage;
     this.messageTransformer = transformer;
-    extendedCommands.forEach(c => this.extendedCommandMap.set(c.extendedTypeSymbol, c.delegate));
+    for (const cmdType of Commands.basicCommandTypes) {
+      this.commandMap.set(cmdType, basicCommands[cmdType]);
+    }
+    // Support overriding behaviors
+    extendedCommands.forEach(c => this.commandMap.set(c.commandType, c));
   }
 
   abstract parseMessage<TReceived extends Conf.MessageArrayLike>(msg: TReceived, sentCommand?: Commands.IPrinterCommand): IMessageHandlerResult<TReceived>;
-  abstract get documentStartPrefix(): TCmdType;
-  abstract get documentEndSuffix(): TCmdType;
-  abstract transpileCommand(cmd: Commands.IPrinterCommand, docMetadata: TranspiledDocumentState): TCmdType | TranspileDocumentError;
+  abstract get documentStartPrefix(): TMsgType;
+  abstract get documentEndSuffix(): TMsgType;
+
+  public transpileCommand(
+    cmd: Commands.IPrinterCommand,
+    docMetadata: TranspiledDocumentState
+  ): TMsgType | TranspileDocumentError{
+    const mappedCmd = this.getMappedCmd(cmd);
+    if (mappedCmd === undefined) {
+      return new TranspileDocumentError(`Command could not be mapped, is the command mapping correcT?`);
+    }
+    const handler = mappedCmd.transpile ?? (() => this.noop);
+    return handler(cmd, docMetadata, this);
+  }
+
+  protected getMappedCmd(cmd: Commands.IPrinterCommand) {
+    return this.commandMap.get(Commands.getCommandAnyType(cmd));
+  }
 
   public isCommandNonFormCommand(cmd: Commands.IPrinterCommand): boolean {
-    return this.nonFormCommands.includes(
-      cmd.type === 'CustomCommand'
-        ? (cmd as Commands.IPrinterExtendedCommand).typeExtended
-        : cmd.type
-    );
+    return this.getMappedCmd(cmd)?.formInclusionMode === CommandFormInclusionMode.noForm;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  public expandCommand(_cmd: Commands.IPrinterCommand): Commands.IPrinterCommand[] {
-    // To be overridden in languages that need to.
-    return [];
+  public expandCommand(cmd: Commands.IPrinterCommand): Commands.IPrinterCommand[] {
+    return (this.getMappedCmd(cmd)?.expand ?? (() => []))(cmd);
   }
 
-  public combineCommands(...commands: TCmdType[]) {
+  public combineCommands(...commands: TMsgType[]) {
     return this.messageTransformer.combineMessages(...commands);
   }
 
-  /** Apply an offset command to a document. */
-  protected applyOffset(
-    cmd: Commands.OffsetCommand,
-    outDoc: TranspiledDocumentState
+  public callMessageHandler(
+    message: TMsgType,
+    sentCommand?: Commands.IPrinterCommand
   ) {
-    const newHoriz = cmd.absolute ? cmd.horizontal : outDoc.horizontalOffset + cmd.horizontal;
-    outDoc.horizontalOffset = newHoriz < 0 ? 0 : newHoriz;
-    if (cmd.vertical !== undefined) {
-      const newVert = cmd.absolute ? cmd.vertical : outDoc.verticalOffset + cmd.vertical;
-      outDoc.verticalOffset = newVert < 0 ? 0 : newVert;
+    if (sentCommand === undefined) {
+      throw new MessageParsingError(
+        `Received a command reply message without 'sentCommand' being provided, can't handle this message.`,
+        message
+      );
     }
-    return this.noop;
+
+    const handler = this.getMappedCmd(sentCommand)?.readMessage;
+    if (handler === undefined) {
+      throw new MessageParsingError(
+        `Command '${sentCommand.name}' has no message handler and should not have been awaited for this message. This is a bug in the library.`,
+        message
+      )
+    }
+
+    return handler(message, sentCommand);
   }
 
   protected getExtendedCommand(
@@ -127,43 +168,65 @@ export abstract class PrinterCommandSet<TCmdType extends Conf.MessageArrayLike> 
       )
     }
 
-    const cmdHandler = this.extendedCommandMap.get(lookup);
+    const handler = this.getMappedCmd(cmd)?.transpile;
 
-    if (cmdHandler === undefined) {
+    if (handler === undefined) {
       throw new TranspileDocumentError(
         `Unknown command '${cmd.constructor.name}' was not found in the command map for ${this.commandLanguage} command language. If you're trying to implement a custom command check the documentation for correctly adding mappings.`
       );
     }
-    return cmdHandler;
+    return handler;
   }
 }
 
 export abstract class RawCommandSet extends PrinterCommandSet<Uint8Array> {
 
-  private readonly _noop = new Uint8Array();
+  protected static readonly _noop = new Uint8Array();
   public get noop() {
-    return this._noop;
+    return RawCommandSet._noop;
+  }
+
+  protected static noOpMapping: IPrinterCommandMapping<Uint8Array> = {
+    commandType: 'NoOp',
+    transpile: () => RawCommandSet._noop,
   }
 
   protected constructor(
     implementedLanguage: Conf.PrinterCommandLanguage,
-    extendedCommands: Array<IPrinterExtendedCommandMapping<Uint8Array>> = []
+    basicCommands      : Record<Commands.CommandType,  IPrinterCommandMapping<Uint8Array>>,
+    extendedCommands   : IPrinterCommandMapping<Uint8Array>[] = []
   ) {
-    super(implementedLanguage, new RawMessageTransformer(), extendedCommands);
+    super(
+      new RawMessageTransformer(),
+      implementedLanguage,
+      basicCommands,
+      extendedCommands
+    );
   }
 }
 
 export abstract class StringCommandSet extends PrinterCommandSet<string> {
 
-  private readonly _noop = "";
-  protected get noop() {
-    return this._noop;
+  protected static readonly _noop = "";
+  public get noop() {
+    return StringCommandSet._noop;
+  }
+
+  protected static noOpMapping: IPrinterCommandMapping<string> = {
+    commandType: 'NoOp',
+    transpile: () => StringCommandSet._noop,
   }
 
   protected constructor(
     implementedLanguage: Conf.PrinterCommandLanguage,
-    extendedCommands: Array<IPrinterExtendedCommandMapping<string>> = []
+    basicCommands      : Record<Commands.CommandType,  IPrinterCommandMapping<string>>,
+    extendedCommands   : IPrinterCommandMapping<string>[] = []
   ) {
-    super(implementedLanguage, new StringMessageTransformer(), extendedCommands);
+    super(
+      new StringMessageTransformer(),
+      implementedLanguage,
+      basicCommands,
+      extendedCommands
+    );
   }
 }

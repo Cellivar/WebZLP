@@ -1,7 +1,7 @@
 import * as Util from '../Util/index.js';
 import * as Conf from '../Configs/index.js';
 import type { IDeviceInformation } from "web-device-mux";
-import type { CommandType, IPrinterCommand, IPrinterExtendedCommand } from "./Commands.js";
+import type { IPrinterCommand } from "./Commands.js";
 import type { CommandSet } from './CommandSet.js';
 
 export type PrinterMessage
@@ -10,11 +10,6 @@ export type PrinterMessage
   | IErrorMessage
 
 export type MessageType = 'SettingUpdateMessage' | 'StatusMessage' | 'ErrorMessage'
-
-export type MessageHandlerDelegate<TMessage> = (
-  msg: TMessage,
-  sentCommand: IPrinterCommand
-) => IMessageHandlerResult<TMessage>;
 
 export interface MessageTransformer<TMessage extends Conf.MessageArrayLike> {
   transformerType: Conf.MessageArrayLikeType;
@@ -81,6 +76,19 @@ export function asString(commands: Conf.MessageArrayLike): string {
   }
 }
 
+export function asTargetMessageType<TMessage extends Conf.MessageArrayLike>(
+  msg: Conf.MessageArrayLike,
+  targetType: TMessage,
+): TMessage {
+  if (typeof targetType === "string") {
+    return asString(msg) as TMessage;
+  } else if (targetType instanceof Uint8Array) {
+    return asUint8Array(msg) as TMessage;
+  } else {
+    throw new Error("Unknown message type not implemented!");
+  }
+}
+
 export type AwaitedCommand = {
   cmd: IPrinterCommand,
   promise: Promise<boolean>,
@@ -88,13 +96,17 @@ export type AwaitedCommand = {
   reject?: (reason?: unknown) => void,
 }
 
+type UpdateClass<Type> = {
+  -readonly [Property in keyof Type]?: Type[Property];
+};
+
 /** A printer settings message, describing printer configuration status. */
 export interface ISettingUpdateMessage {
   messageType: 'SettingUpdateMessage';
 
-  printerHardware?: Conf.IPrinterHardwareUpdate;
-  printerMedia   ?: Conf.IPrinterMediaUpdate;
-  printerSettings?: Conf.IPrinterSettingsUpdate;
+  printerHardware?: UpdateClass<Conf.IPrinterHardware>;
+  printerMedia   ?: UpdateClass<Conf.IPrinterMedia>;
+  printerSettings?: UpdateClass<Conf.IPrinterSettings>;
 }
 
 /** A status message sent by the printer. */
@@ -210,35 +222,6 @@ export class MessageParsingError extends Util.WebZlpError {
   }
 }
 
-export function getMessageHandler<TMessageType extends Conf.MessageArrayLike>(
-  handlerMap: Map<symbol | CommandType, MessageHandlerDelegate<TMessageType>>,
-  message: TMessageType,
-  sentCommand?: IPrinterCommand
-): IMessageHandlerResult<TMessageType> {
-  if (sentCommand === undefined) {
-    throw new MessageParsingError(
-      `Received a command reply message without 'sentCommand' being provided, can't handle this message.`,
-      message
-    );
-  }
-
-  // Since we know this is a command response and we have a command to check
-  // we can kick this out to a lookup function. That function will need to
-  // do the slicing for us as we don't know how long the message might be.
-  const cmdRef = sentCommand.type === 'CustomCommand'
-    ? (sentCommand as IPrinterExtendedCommand).typeExtended
-    : sentCommand.type;
-  const handler = handlerMap.get(cmdRef);
-  if (handler === undefined) {
-    throw new MessageParsingError(
-      `Command '${sentCommand.name}' has no message handler and should not have been awaited for this message. This is a bug in the library.`,
-      message
-    )
-  }
-
-  return handler(message, sentCommand);
-}
-
 export function deviceInfoToOptionsUpdate(deviceInfo: IDeviceInformation): ISettingUpdateMessage {
   return {
     messageType: 'SettingUpdateMessage',
@@ -303,56 +286,4 @@ export async function parseRaw<TInput extends Conf.MessageArrayLike>(
   } while (incomplete === false && remainderMsg.length > 0 && remainderCommands.length > 0)
 
   return { remainderMsg, remainderCommands, messages }
-}
-
-/**
- * Slice an array from the start to the first LF character, returning both pieces.
- *
- * If no LF character is found sliced will have a length of 0.
- *
- * CR characters are not removed if present!
- */
-export function sliceToNewline(msg: Uint8Array): {
-  sliced: Uint8Array,
-  remainder: Uint8Array,
-} {
-  const idx = msg.indexOf(Util.AsciiCodeNumbers.LF);
-  if (idx === -1) {
-    return {
-      sliced: new Uint8Array(),
-      remainder: msg
-    }
-  }
-
-  return {
-    sliced: msg.slice(0, idx + 1),
-    remainder: msg.slice(idx + 1),
-  };
-}
-
-/** Slice a string from the start to the first CRLF or LF, returning both pieces. */
-export function sliceToCRLF(msg: string): {
-  sliced: string,
-  remainder: string,
-} {
-  const cr = msg.indexOf('\r\n');
-  if (cr !== -1) {
-    return {
-      sliced: msg.substring(0, cr),
-      remainder: msg.substring(cr + 2)
-    }
-  }
-
-  const lf = msg.indexOf('\n');
-  if (lf !== -1) {
-    return {
-      sliced: msg.substring(0, lf),
-      remainder: msg.substring(lf + 1)
-    }
-  }
-
-  return {
-    sliced: "",
-    remainder: msg
-  }
 }

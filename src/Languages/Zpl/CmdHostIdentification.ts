@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
+import * as Util from "../../Util/index.js";
 import * as Conf from '../../Configs/index.js';
 import * as Cmds from '../../Commands/index.js';
 import { AsciiCodeStrings } from '../../Util/ASCII.js';
@@ -15,6 +16,13 @@ export class CmdHostIdentification implements Cmds.IPrinterExtendedCommand {
   constructor() {}
 }
 
+export const cmdHostIdentificationMapping: Cmds.IPrinterCommandMapping<string> = {
+  commandType: CmdHostIdentification.typeE,
+  transpile: handleCmdHostIdentification,
+  readMessage: parseCmdHostIdentification,
+  formInclusionMode: Cmds.CommandFormInclusionMode.noForm,
+}
+
 export function handleCmdHostIdentification(
   _cmd: Cmds.IPrinterCommand,
   _docState: Cmds.TranspiledDocumentState,
@@ -29,41 +37,44 @@ export function parseCmdHostIdentification(
 ): Cmds.IMessageHandlerResult<string> {
   const result: Cmds.IMessageHandlerResult<string> = {
     messageIncomplete: false,
-    messageMatchedExpectedCommand: true,
+    messageMatchedExpectedCommand: false,
     messages: [],
-    remainder: "",
+    remainder: msg,
   }
-  const {sliced, remainder} = Cmds.sliceToCRLF(msg);
-  result.remainder = remainder;
-  if (sliced.length === 0) {
+  // Each line is wrapped in an STX_ETX\r\n pattern. Make sure there's one there
+  const msgStart = msg.indexOf(Util.AsciiCodeStrings.STX);
+  if (msgStart === -1) {
+    // Not the message we were looking for?
     return result;
   }
-  // Response format is a single line starting with STX and ends with ETX\r\n.
-  if (sliced.at(0) !== AsciiCodeStrings.STX || sliced.at(-1) !== AsciiCodeStrings.ETX) {
-    result.remainder = msg;
-    result.messageMatchedExpectedCommand = false;
-    return result;
-  }
+  // This should be the first line, which we can validate.
+  const line1Maybe = msg.substring(msgStart);
+
+  const {sliced, remainder} = Util.sliceToCRLF(line1Maybe);
 
   // Message format is documented as:
   // XXXXXX,V1.0.0,dpm,000KB,X
   // My LP2844-Z looks like this
   // LP2844-Z,V45.11.7Z   ,8,8192KB
-  // TThe second field should have a consistent pattern.
+  // The second field should have a consistent pattern.
   // ASSUMPTION: Min 4 fields always?
 
   // Several other commands have STX<data>>ETX patterns too.
-  // Firmware versions should (?) always start with /^V\d+\./ to disambiguate.
+  if (sliced.at(0) !== AsciiCodeStrings.STX
+    || sliced.at(-1) !== AsciiCodeStrings.ETX) {
+    return result;
+  }
+
   const line = sliced.split(',');
 
+  // Firmware versions should (?) always start with /^V\d+\./ to disambiguate.
   if (line.length < 4 || !/^V\d+\./.test(line.at(1) ?? '')) {
-    // Not our message!
-    result.remainder = msg;
-    result.messageMatchedExpectedCommand = false;
     return result;
   }
 
   // Okay this is our message.
+  result.messageMatchedExpectedCommand = true;
+  result.remainder = msg.substring(0, msgStart) + remainder;
 
   // The ZPL docs speak of a mysterious 5th field which my printers don't have.
   // "recognizable options"

@@ -104,9 +104,9 @@ export class ConfigDocumentBuilder
   ///////////////////// ALTER LABEL CONFIG
 
   autosenseLabelLength() {
-    return this.andThen(new Cmds.AutosenseLabelDimensionsCommand()).finalize();
+    return this.andThen(new Cmds.AutosenseMediaDimensionsCommand()).finalize();
   }
-  
+
   setBackfeedAfterTakenMode(mode: Conf.BackfeedAfterTaken) {
     return this.andThen(new Cmds.SetBackfeedAfterTakenMode(mode));
   }
@@ -148,11 +148,17 @@ export class ConfigDocumentBuilder
     );
   }
 
-  setLabelMediaToContinuous(labelLengthInInches: number): IConfigDocumentBuilder {
+  setLabelMediaToContinuous(
+    mediaLengthInInches: number,
+    formGapInInches: number = 0,
+  ): IConfigDocumentBuilder {
     this._doSave = true;
     const dpi = this._config.dpi;
     return this.andThen(
-      new Cmds.SetLabelToContinuousMediaCommand(dpi * labelLengthInInches)
+      new Cmds.SetMediaToContinuousMediaCommand(
+        dpi * mediaLengthInInches,
+        dpi * formGapInInches
+      )
     );
   }
 
@@ -163,7 +169,7 @@ export class ConfigDocumentBuilder
     this._doSave = true;
     const dpi = this._config.dpi;
     return this.andThen(
-      new Cmds.SetLabelToWebGapMediaCommand(
+      new Cmds.SetMediaToWebGapMediaCommand(
         labelLengthInInches * dpi,
         labelGapInInches * dpi
       )
@@ -178,7 +184,7 @@ export class ConfigDocumentBuilder
     this._doSave = true;
     const dpi = this._config.dpi;
     return this.andThen(
-      new Cmds.SetLabelToMarkMediaCommand(
+      new Cmds.SetMediaToMarkMediaCommand(
         labelLengthInInches * dpi,
         blackLineThicknessInInches * dpi,
         blackLineOffsetInInches * dpi

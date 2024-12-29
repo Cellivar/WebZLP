@@ -23,6 +23,12 @@ export class CmdErrorReporting implements Cmds.IPrinterExtendedCommand {
   constructor(public readonly mode: CmdErrorReportingMode) {}
 }
 
+export const cmdErrorReportingMapping: Cmds.IPrinterCommandMapping<string> = {
+  commandType: CmdErrorReporting.typeE,
+  transpile: handleCmdErrorReporting,
+  formInclusionMode: Cmds.CommandFormInclusionMode.noForm,
+}
+
 export function handleCmdErrorReporting(
   cmd: Cmds.IPrinterCommand,
   _docState: Cmds.TranspiledDocumentState,

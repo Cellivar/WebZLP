@@ -259,7 +259,7 @@ export class LabelPrinter<TChannelType extends Conf.MessageArrayLike> extends Ev
       Conf.PrinterCommandLanguage.cpcl
     ];
 
-    const doc = { commands: [new Cmds.GetStatusCommand()]} as Docs.IDocument
+    const doc = { commands: [new Cmds.IdentifyDeviceCommand()]} as Docs.IDocument
     const awaitedTimeoutOriginal = this._awaitedCommandTimeoutMS;
 
     // For each language, we send the appropriate command to try and get the
@@ -276,7 +276,7 @@ export class LabelPrinter<TChannelType extends Conf.MessageArrayLike> extends Ev
       // to the query we made. Sending a status query will be an awaited command
       // and the message parser will make sure it's a valid response to what we
       // asked. If we time out waiting for the response we move on to the next.
-      this._awaitedCommandTimeoutMS = 1000;
+      this._awaitedCommandTimeoutMS = 1500;
       this._commandSet = set;
 
       try {

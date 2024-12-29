@@ -33,22 +33,28 @@ export class CmdXmlQuery implements Cmds.IPrinterExtendedCommand {
   constructor(public readonly query: CmdXmlQueryType = 'All') {}
 }
 
+export const cmdXmlQueryTypeMapping: Cmds.IPrinterCommandMapping<string> = {
+  commandType: CmdXmlQuery.typeE,
+  transpile: handleCmdXmlQuery,
+  readMessage: parseCmdXmlQuery,
+}
+
 export function handleCmdXmlQuery(
   cmd: Cmds.IPrinterCommand,
   _docState: Cmds.TranspiledDocumentState,
   _commandSet: Cmds.CommandSet<string>
 ): string {
   const command = cmd as CmdXmlQuery;
-  return `^HZ${queryToCmdArg[command.query]}\n`;
+  return `^HZ${queryToCmdArg[command.query]}`;
 }
 
-export function parseCmdXmlQueryResponse(
+export function parseCmdXmlQuery(
   msg: string,
   cmd: Cmds.IPrinterCommand
 ): Cmds.IMessageHandlerResult<string> {
   if (cmd.type !== "CustomCommand" || (cmd as CmdXmlQuery).typeExtended !== CmdXmlQuery.typeE) {
     throw new Cmds.MessageParsingError(
-      `Incorrect command '${cmd.name}' passed to parseCmdXmlQueryResponse, expected 'CmdXmlQuery' instead.`,
+      `Incorrect command '${cmd.name}' passed to parseCmdXmlQuery, expected 'CmdXmlQuery' instead.`,
       msg
     );
   }
@@ -100,7 +106,8 @@ export function parseCmdXmlQueryResponse(
     pivotIdx++;
   }
 
-  result.remainder = msg.substring(pivotIdx);
+  // Content before and after should be preserved
+  result.remainder = msg.substring(0, msg.indexOf('<?xml ')) + msg.substring(pivotIdx);
 
   // For reasons I do not understand printers will tend to send _one_ invalid
   // XML line and it looks like
@@ -112,7 +119,7 @@ export function parseCmdXmlQueryResponse(
   // text with a fixed version instead.
   // TODO: Deeper investigation with more printers?
   const rawXml = msg
-    .substring(msg.indexOf('<?xml '), pivotIdx + 1)
+    .substring(msg.indexOf('<?xml '), pivotIdx)
     .replace(
       /^ ENUM='NONE, AUTO DETECT, TAG-IT, ICODE, PICO, ISO15693, EPC, UID'>/gim,
       "<RFID-TYPE ENUM='NONE, AUTO DETECT, TAG-IT, ICODE, PICO, ISO15693, EPC, UID'>"
@@ -125,7 +132,7 @@ export function parseCmdXmlQueryResponse(
   const errorNode = xmlDoc.querySelector('parsererror');
   if (errorNode) {
     throw new Cmds.MessageParsingError(
-      `Error parsing message as XML: '${errorNode.tagName}'`,
+      `Error parsing message as XML: '${errorNode.textContent}'`,
       rawXml
     );
   }

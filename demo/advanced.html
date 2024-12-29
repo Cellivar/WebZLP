@@ -186,22 +186,29 @@
               // Printers themselves also have events, let's show an alert on errors.
               const printer = detail.device;
               printer.addEventListener('reportedError', ({ detail: msg }) => {
-                // Error messages may indicate no error, we can ignore those.
-                if (msg.errors.has(WebLabel.ErrorState.NoError)) { return; }
+                const alertId = `alert-printererror-${printer.printerSerial}`;
+                // Hide any existing alerts for this printer
+                const existingAlerts = document.getElementById('printerAlertSpace')?.querySelectorAll(`.${alertId}`) ?? [];
+                existingAlerts.forEach((a: Element) => bootstrap.Alert.getInstance(a)?.close());
+
+                // Error messages are also status messages, such as indicating no problem.
+                if (msg.errors.size === 0 || msg.errors.has(WebLabel.ErrorState.NoError)) { return; }
 
                 const alertWrapper = document.createElement('div');
+                alertWrapper.classList.add("alert", "alert-warning", "alert-dismissible", "fade", "show", alertId);
+                alertWrapper.id = alertId;
+                alertWrapper.role = "alert";
                 alertWrapper.innerHTML = `
-                  <div class="alert alert-warning alert-dismissible fade show alert-printererror" role="alert">
-                      <h4>Printer <strong>${printer.printerSerial}</strong> has an error</h4>
-                      <p>${JSON.stringify(msg, null, 2)}</p>
-                      <hr>
-                      <p>Fix the issue, then dismiss this alert to check the status again.</p>
-                      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                  </div>`
+                  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                  <h4>Printer <strong>${printer.printerSerial}</strong> has an error</h4>
+                  <p><ul>${Array.from(msg.errors).map(e => `<li>${e}`)}</ul></p>
+                  <hr>
+                  <p>Fix the issue, then dismiss this alert to check the status again.</p>`;
                 document.getElementById('printerAlertSpace')?.appendChild(alertWrapper);
+                new bootstrap.Alert(alertWrapper);
 
                 // and even go one layer deeper!
-                alertWrapper.firstElementChild!.addEventListener('closed.bs.alert', () => {
+                alertWrapper.addEventListener('closed.bs.alert', () => {
                   printer.sendDocument(WebLabel.ReadyToPrintDocuments.printerStatusDocument);
                 });
               });
