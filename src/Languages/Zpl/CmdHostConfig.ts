@@ -103,6 +103,11 @@ export function parseCmdHostConfig(
           // This should be set automatically with MEDIA TYPE.
           // TODO: Don't ignore this if it disagrees with MEDIA TYPE?
           break;
+        case "SENSOR TYPE":
+          // This is not a synonym, it has unique values. It still should be set
+          // automatically and shows up on my older LP2844-Z units.
+          // TODO: Don't ignore this if it disagrees with MEDIA TYPE
+          break;
 
         // Cases handled by XML.
         // TODO: Handle them here too, eventually deprecate XML for performance?
@@ -111,8 +116,15 @@ export function parseCmdHostConfig(
         case "DARKNESS":
         case "DARKNESS SWITCH":
         case "PRINT SPEED":
+
+        case "CONFIGURATION": // CUSTOMIZED, older?
+
         case "TEAR OFF ADJUST":
+        case "TEAR OFF": // Older synonym
+
+        case "PRINT METHOD": // DIRECT-THERMAL, older?
         case "PRINT MODE":
+        case "PRINT  WIDTH": // Older has two spaces?
         case "PRINT WIDTH":
         case "LABEL LENGTH":
         case "MAXIMUM LENGTH":
@@ -126,16 +138,23 @@ export function parseCmdHostConfig(
         case "MODES ENABLED":
         case "MODES DISABLED":
         case "RESOLUTION":
-        // Sensor levels, also in XML
+        // Sensor levels, also in XML. These have synonyms
+        // in old config formats
         case "WEB SENSOR":
+        case "WEB S.": // older synonym
         case "TRANS GAIN": // whos lives matter yo
         case "TRANS LED":
         case "MEDIA SENSOR":
+        case "MEDIA S.": // older synonym
         case "TAKE LABEL":
         case "MARK SENSOR":
+        case "MARK S.": // older synonym
         case "MARK MED SENSOR":
+        case "MARK MED S.": // older synonym
         case "MARK GAIN":
         case "MARK LED":
+        case "MEDIA LED":
+        case "RIBBON LED":
 
         // Time and counters, maybe useful?
         case "RTC DATE":
@@ -170,6 +189,11 @@ export function parseCmdHostConfig(
         case "ZBI STATUS":
         case "RAM":
         case "ONBOARD FLASH":
+        case "PARALLEL COMM.":
+        case "SERIAL COMM.":
+        case "NETWORK ID":
+        case "TWINAX/COAX ID":
+        case "ZEBRA NET II":
 
         // TODO: Sanity check these, throw a fit if they're set differntly
         case "CONTROL PREFIX":
@@ -185,3 +209,4 @@ export function parseCmdHostConfig(
   result.messages = [update];
   return result
 }
+
