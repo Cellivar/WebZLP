@@ -75,13 +75,7 @@ export function handleMessage<TReceived extends Conf.MessageArrayLike>(
   }
 
   // Put the remainder message back into its native format.
-  if (typeof result.remainder === "string") {
-    result.remainder = Cmds.asString(remainder) as TReceived;
-  } else if (result.remainder instanceof Uint8Array) {
-    result.remainder = remainder as TReceived;
-  } else {
-    throw new Error("Unknown message type not implemented!");
-  }
+  result.remainder = Cmds.asTargetMessageType(remainder, message);
   return result;
 }
 

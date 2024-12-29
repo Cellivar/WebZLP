@@ -76,6 +76,19 @@ export function asString(commands: Conf.MessageArrayLike): string {
   }
 }
 
+export function asTargetMessageType<TMessage extends Conf.MessageArrayLike>(
+  msg: Conf.MessageArrayLike,
+  targetType: TMessage,
+): TMessage {
+  if (typeof targetType === "string") {
+    return asString(msg) as TMessage;
+  } else if (targetType instanceof Uint8Array) {
+    return asUint8Array(msg) as TMessage;
+  } else {
+    throw new Error("Unknown message type not implemented!");
+  }
+}
+
 export type AwaitedCommand = {
   cmd: IPrinterCommand,
   promise: Promise<boolean>,
@@ -273,56 +286,4 @@ export async function parseRaw<TInput extends Conf.MessageArrayLike>(
   } while (incomplete === false && remainderMsg.length > 0 && remainderCommands.length > 0)
 
   return { remainderMsg, remainderCommands, messages }
-}
-
-/**
- * Slice an array from the start to the first LF character, returning both pieces.
- *
- * If no LF character is found sliced will have a length of 0.
- *
- * CR characters are not removed if present!
- */
-export function sliceToNewline(msg: Uint8Array): {
-  sliced: Uint8Array,
-  remainder: Uint8Array,
-} {
-  const idx = msg.indexOf(Util.AsciiCodeNumbers.LF);
-  if (idx === -1) {
-    return {
-      sliced: new Uint8Array(),
-      remainder: msg
-    }
-  }
-
-  return {
-    sliced: msg.slice(0, idx + 1),
-    remainder: msg.slice(idx + 1),
-  };
-}
-
-/** Slice a string from the start to the first CRLF or LF, returning both pieces. */
-export function sliceToCRLF(msg: string): {
-  sliced: string,
-  remainder: string,
-} {
-  const cr = msg.indexOf('\r\n');
-  if (cr !== -1) {
-    return {
-      sliced: msg.substring(0, cr),
-      remainder: msg.substring(cr + 2)
-    }
-  }
-
-  const lf = msg.indexOf('\n');
-  if (lf !== -1) {
-    return {
-      sliced: msg.substring(0, lf),
-      remainder: msg.substring(lf + 1)
-    }
-  }
-
-  return {
-    sliced: "",
-    remainder: msg
-  }
 }

@@ -20,7 +20,7 @@ export function numberInRange(
   str: string,
   min?: number,
   max?: number) {
-  if (!/^\d+$/.test(str)) {
+  if (!/^[+-]?\d+$/.test(str)) {
     return;
   }
   const val = Number(str);

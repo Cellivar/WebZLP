@@ -34,6 +34,7 @@ export function handleMessage<TReceived extends Conf.MessageArrayLike>(
   if (firstByte === undefined) { return result; }
 
   switch (true) {
+    // TODO: Does this error reporting mode even work over USB? Maybe only serial?
     case (firstByte === Util.AsciiCodeStrings.ACK):
       // Different depending on error reporting mode:
       // Normal mode: either finished printing, or label taken when sensor enabled.
@@ -83,12 +84,6 @@ export function handleMessage<TReceived extends Conf.MessageArrayLike>(
   }
 
   // Put the remainder message back into its native format.
-  if (typeof result.remainder === "string") {
-    result.remainder = Cmds.asString(remainder) as TReceived;
-  } else if (result.remainder instanceof Uint8Array) {
-    result.remainder = remainder as TReceived;
-  } else {
-    throw new Error("Unknown message type not implemented!");
-  }
+  result.remainder = Cmds.asTargetMessageType(remainder, message);
   return result;
 }

@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
+import * as Util from "../../Util/index.js";
 import * as Conf from '../../Configs/index.js';
 import * as Cmds from '../../Commands/index.js';
 import { AsciiCodeStrings } from '../../Util/ASCII.js';
@@ -40,7 +41,7 @@ export function parseCmdHostIdentification(
     messages: [],
     remainder: "",
   }
-  const {sliced, remainder} = Cmds.sliceToCRLF(msg);
+  const {sliced, remainder} = Util.sliceToCRLF(msg);
   result.remainder = remainder;
   if (sliced.length === 0) {
     return result;
