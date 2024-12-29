@@ -703,16 +703,18 @@
                   <div class="col">
                     <label for="modalLabelWidth" class="form-label">Media Width</label>
                     <div class="input-group mb-3">
-                      <input id="modalLabelWidth" type="text" class="form-control" placeholder="2.25"
-                        aria-label="Width" required pattern="\d+\.*\d*">
+                      <input id="modalLabelWidth" type="text" class="form-control" placeholder="1.23"
+                        aria-label="Width" required pattern="\d+\.*\d*"
+                        data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="top" title="">
                       <span id="modalLabelWidthText" class="input-group-text">in</span>
                     </div>
                   </div>
                   <div class="col">
                     <label for="modalLabelHeight" class="form-label">Media Length</label>
                     <div class="input-group mb-3">
-                      <input id="modalLabelHeight" type="text" class="form-control" placeholder="2.25"
-                        aria-label="Height" required pattern="\d+\.*\d*">
+                      <input id="modalLabelHeight" type="text" class="form-control" placeholder="1.23"
+                        aria-label="Height" required pattern="\d+\.*\d*"
+                        data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="top" title="Auto-Calibrate will override this.">
                       <span id="modalLabelHeightText" class="input-group-text">in</span>
                     </div>
                   </div>
@@ -732,7 +734,8 @@
                     <label for="modalLabelOffsetLeft" class="form-label">Left Offset</label>
                     <div class="input-group mb-3">
                       <input id="modalLabelOffsetLeft" type="text" class="form-control" placeholder="0"
-                        aria-label="Width" required pattern="-?\d+">
+                        aria-label="Width" required pattern="-?\d+"
+                        data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="right" title="Default is correct for configured width.">
                       <span class="input-group-text">dots</span>
                     </div>
                   </div>
@@ -765,7 +768,9 @@
                     <label for="modalDarkness" class="col-sm-5 col-form-label">Darkness</label>
                     <div class="col-sm-7">
                       <div class="input-group col-sm-7">
-                        <input type="number" min="1" max="99" id="modalDarkness" class="form-control" aria-label="Darkness"/>
+                        <input type="number" min="1" max="99" id="modalDarkness" class="form-control" aria-label="Darkness"
+                        data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="right" title="Use the lowest setting with consistent results.<br>Higher values wear the head faster."
+                        />
                         <span class="input-group-text">%</span>
                       </div>
                     </div>
@@ -773,7 +778,9 @@
                   <div class="col row mb-3">
                     <label for="modalSpeed" class="col-sm-5 col-form-label">Speed</label>
                     <div class="col-sm-7">
-                      <select id="modalSpeed" class="form-select" aria-label="Speed">
+                      <select id="modalSpeed" class="form-select" aria-label="Speed"
+                      data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="right" title="Printing faster needs darker printing.<br>Lower darkness if you get sticking.<br>Test the combinations for best results."
+                      >
                         <option value="3">1.5 ips</option>
                         <option value="4">2 ips</option>
                         <option value="5">2.5 ips</option>
