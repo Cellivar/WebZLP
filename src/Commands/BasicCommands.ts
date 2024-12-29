@@ -35,6 +35,12 @@ export class PrintCommand implements IPrinterBasicCommand {
   effectFlags = new CommandEffectFlags(['feedsPaper']);
 }
 
+export class IdentifyDeviceCommand extends BasicCommand {
+  name = 'Identify device';
+  type: CommandTypeBasic = 'Identify';
+  constructor() { super(); }
+}
+
 export class NoOp extends BasicCommand {
   name = 'No operation placeholder';
   type: CommandTypeBasic = 'NoOp';
