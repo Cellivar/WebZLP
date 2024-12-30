@@ -150,6 +150,7 @@
 
         // The rest of this demo is an example of a basic label generator app.
 
+        // Get some bookkeeping out of the way..
         // First we create an interface to describe our settings form.
         interface ConfigModalForm extends HTMLCollection {
           modalCancel         : HTMLButtonElement
@@ -163,6 +164,39 @@
           modalBackfeedPercent: HTMLSelectElement
           modalSubmit         : HTMLButtonElement
           modalWithAutosense  : HTMLInputElement
+        }
+
+        // A function to find and hide any alerts for a given alert ID.
+        function hideAlerts(alertId: string) {
+          const existingAlerts = document.getElementById('printerAlertSpace')?.querySelectorAll(`.${alertId}`) ?? [];
+          existingAlerts.forEach((a: Element) => { a.remove(); });
+        }
+
+        // A function to make it easier to show alerts
+        function showAlert(
+          level: 'warning' | 'danger',
+          alertId: string,
+          titleHtml: string,
+          bodyHtml: string,
+          closedCallback = () => {}
+        ) {
+          hideAlerts(alertId);
+
+          // Create the bootstrap alert div with the provided content
+          const alertWrapper = document.createElement('div');
+          alertWrapper.classList.add("alert", `alert-${level}`, "alert-dismissible", "fade", "show", alertId);
+          alertWrapper.id = alertId;
+          alertWrapper.role = "alert";
+          alertWrapper.innerHTML = `
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            <h4>${titleHtml}</h4>
+            ${bodyHtml}`;
+
+          // Add it to the document and activate it
+          document.getElementById('printerAlertSpace')?.appendChild(alertWrapper);
+          new bootstrap.Alert(alertWrapper);
+
+          alertWrapper.addEventListener('closed.bs.alert', closedCallback);
         }
 
         // The app's logic is wrapped in a class just for ease of reading.
@@ -191,31 +225,26 @@
               // Printers themselves also have events, let's show an alert on errors.
               const printer = detail.device;
               printer.addEventListener('reportedError', ({ detail: msg }) => {
+                // Use the same ID so there's only one error message per printer.
                 const alertId = `alert-printererror-${printer.printerSerial}`;
-                // Hide any existing alerts for this printer
-                const existingAlerts = document.getElementById('printerAlertSpace')?.querySelectorAll(`.${alertId}`) ?? [];
-                existingAlerts.forEach((a: Element) => bootstrap.Alert.getInstance(a)?.close());
+                hideAlerts(alertId);
 
                 // Error messages are also status messages, such as indicating no problem.
                 if (msg.errors.size === 0 || msg.errors.has(WebLabel.ErrorState.NoError)) { return; }
 
-                const alertWrapper = document.createElement('div');
-                alertWrapper.classList.add("alert", "alert-warning", "alert-dismissible", "fade", "show", alertId);
-                alertWrapper.id = alertId;
-                alertWrapper.role = "alert";
-                alertWrapper.innerHTML = `
-                  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                  <h4>Printer <strong>${printer.printerSerial}</strong> has an error</h4>
-                  <p><ul>${Array.from(msg.errors).map(e => `<li>${e}`)}</ul></p>
+                showAlert(
+                  // Show a warning for this printer
+                  'warning',
+                  alertId,
+                  `Printer <strong>${printer.printerSerial}</strong> has an error`,
+                  // There can be multiple errors, just show their raw values. A better
+                  // application would use these for good messages!
+                  `<p><ul>${Array.from(msg.errors).map(e => `<li>${e}`)}</ul></p>
                   <hr>
-                  <p>Fix the issue, then dismiss this alert to check the status again.</p>`;
-                document.getElementById('printerAlertSpace')?.appendChild(alertWrapper);
-                new bootstrap.Alert(alertWrapper);
-
-                // and even go one layer deeper!
-                alertWrapper.addEventListener('closed.bs.alert', () => {
-                  printer.sendDocument(WebLabel.ReadyToPrintDocuments.printerStatusDocument);
-                });
+                  <p>Fix the issue, then dismiss this alert to check the status again.</p>`,
+                  // And when the alert is dismissed, check the status again!
+                  () => printer.sendDocument(WebLabel.ReadyToPrintDocuments.printerStatusDocument)
+                );
               });
             });
             this.manager.addEventListener('disconnectedDevice', () => {
@@ -603,7 +632,27 @@
         window.label_app = app;
 
         // Now we'll fire the reconnect since our UI is wired up.
-        await printerMgr.forceReconnect();
+        try {
+          await printerMgr.forceReconnect();
+        } catch (e) {
+          if (e instanceof WebDevices.DriverAccessDeniedError) {
+            // This happens when the operating system didn't let Chrome connect.
+            // Usually either another tab is open talking to the device, or the driver
+            // is already loaded by another application.
+            showAlert(
+              'danger',
+              'alert-printer-comm-error',
+              `Operating system refused device access`,
+              `<p>This usually happens for one of these reasons:
+              <ul>
+              <li>Another browser tab is already connected.
+              <li>Another application loaded a driver to talk to the device.
+              <li>You're on Windows and need to replace the driver.
+              </ul>
+              Fix the issue and re-connect to the device.</p>`
+            );
+          }
+        }
 
         // We're done here. Bring in the dancing lobsters.
 
