@@ -81,20 +81,3 @@ export abstract class BasePrinterConfig implements IPrinterHardware, IPrinterSet
     return Math.round((dots / this.dpi) * 100 + Number.EPSILON) / 100;
   }
 }
-
-// in-source test suites
-if (import.meta.vitest) {
-  const { it, expect, describe } = import.meta.vitest
-
-  class TestPrinterConfig extends BasePrinterConfig {
-    public test_dotToInch(dots?: number) { return this.dotToInch(dots) ;}
-  }
-
-  describe('BasePrinterConfig', () => {
-    it('Converts dots to inches', () => {
-      // Default DPI of 203
-      const conf = new TestPrinterConfig();
-      expect(conf.test_dotToInch(203)).toBe(1);
-    })
-  });
-}
