@@ -1,0 +1,51 @@
+  46A000000000                          
+  +27                 DARKNESS          
+  +000                TEAR OFF          
+  TEAR OFF            PRINT MODE        
+  NON-CONTINUOUS      MEDIA TYPE        
+  MARK                SENSOR TYPE       
+  DIRECT-THERMAL      PRINT METHOD      
+  025 0/8 MM          PRINT  WIDTH      
+  0235                LABEL LENGTH      
+  22.0IN   557MM      MAXIMUM LENGTH    
+  CONNECTED           USB COMM.         
+  PARALLEL            PARALLEL COMM.    
+  RS232               SERIAL COMM.      
+  9600                BAUD              
+  8 BITS              DATA BITS         
+  NONE                PARITY            
+  XON/XOFF            HOST HANDSHAKE    
+  NONE                PROTOCOL          
+  000                 NETWORK ID        
+  NORMAL MODE         COMMUNICATIONS    
+  <~>  7EH            CONTROL PREFIX    
+  <^>  5EH            FORMAT PREFIX     
+  <,>  2CH            DELIMITER CHAR    
+  ZPL II              ZPL MODE          
+  NO MOTION           MEDIA POWER UP    
+  NO MOTION           HEAD CLOSE        
+  DEFAULT             BACKFEED          
+  +000                LABEL TOP         
+  +0000               LEFT POSITION     
+  038                 WEB S.            
+  046                 MEDIA S.          
+  046                 MARK S.           
+  027                 MARK MED S.       
+  034                 MEDIA LED         
+  000                 RIBBON LED        
+  043                 MARK LED          
+  CS                  MODES ENABLED     
+  ..                  MODES DISABLED    
+  832 8/MM FULL       RESOLUTION        
+  V45.11.6ZH    <-    FIRMWARE          
+  V22.0.0.42          HARDWARE ID       
+  CUSTOMIZED          CONFIGURATION     
+  8192.............R: RAM               
+  2816.............E: ONBOARD FLASH     
+  NONE                FORMAT CONVERT    
+                      TWINAX/COAX ID    
+  FW VERSION          IDLE DISPLAY      
+  05/05/37            RTC DATE          
+  00:00               RTC TIME          
+  NONE                ZEBRA NET II      
+

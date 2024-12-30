@@ -105,15 +105,21 @@ export function parseCmdHostConfig(
           // Empty key??
           break;
 
-        case "MEDIA TYPE":
-          if (l.value.startsWith('MARK')) {
-            update.printerMedia!.mediaGapDetectMode = Conf.MediaMediaGapDetectionMode.markSensing;
-          } else if (l.value.startsWith('GAP')) {
-            update.printerMedia!.mediaGapDetectMode = Conf.MediaMediaGapDetectionMode.webSensing;
+        case "MEDIA TYPE": {
+          switch (l.value) {
+            case "MARK":
+              update.printerMedia!.mediaGapDetectMode = Conf.MediaMediaGapDetectionMode.markSensing;
+              break;
+            case "CONTINUOUS":
+              update.printerMedia!.mediaGapDetectMode = Conf.MediaMediaGapDetectionMode.continuous;
+              break;
+            case "GAP/NOTCH":
+            case "NON-CONTINUOUS":
+              update.printerMedia!.mediaGapDetectMode = Conf.MediaMediaGapDetectionMode.webSensing;
+              break;
           }
-          // TODO: Other modes!
           break;
-
+        }
         case "SENSOR SELECT":
           // This should be set automatically with MEDIA TYPE.
           // TODO: Don't ignore this if it disagrees with MEDIA TYPE?

@@ -1,49 +1,49 @@
 <?xml version='1.0'?>
 <ZEBRA-ELTRON-PERSONALITY>
     <DEFINITIONS>
-        <MODEL>ZD410</MODEL>
-        <FIRMWARE-VERSION>V84.20.18Z</FIRMWARE-VERSION>
-        <LINK-OS-VERSION>6.0</LINK-OS-VERSION>
+        <MODEL>ZD411</MODEL>
+        <FIRMWARE-VERSION>V93.21.17Z</FIRMWARE-VERSION>
+        <LINK-OS-VERSION>6.7</LINK-OS-VERSION>
         <XML-SCHEMA-VERSION>1.3</XML-SCHEMA-VERSION>
-        <PLUG-AND-PLAY-VALUE>MANUFACTURER:Zebra Technologies ;COMMAND SET:ZPL;MODEL:ZTC ZD410-203dpi
+        <PLUG-AND-PLAY-VALUE>MANUFACTURER:Zebra Technologies ;COMMAND SET:ZPL;MODEL:ZTC ZD411-203dpi
             ZPL;CLASS:PRINTER;OPTIONS:XML;</PLUG-AND-PLAY-VALUE>
-        <ZBI></ZBI>
+        <ZBI>DISABLED</ZBI>
         <DOTS-PER-MM>8</DOTS-PER-MM>
         <DOTS-PER-DOTROW>448</DOTS-PER-DOTROW>
         <PHYSICAL-MEMORY>
             <TYPE ENUM='R, E, B, A'>R</TYPE>
-            <SIZE>8388608</SIZE>
-            <AVAILABLE>8365056</AVAILABLE>
+            <SIZE>8372224</SIZE>
+            <AVAILABLE>7569408</AVAILABLE>
         </PHYSICAL-MEMORY>
         <PHYSICAL-MEMORY>
             <TYPE ENUM='R, E, B, A'>E</TYPE>
             <SIZE>67108864</SIZE>
-            <AVAILABLE>66939392</AVAILABLE>
+            <AVAILABLE>63160320</AVAILABLE>
         </PHYSICAL-MEMORY>
         <OPTIONS>
             <CUTTER BOOL='Y,N'>N</CUTTER>
             <LINER-TAKEUP BOOL='Y,N'>N</LINER-TAKEUP>
             <VALUE-PEEL-REWIND BOOL='Y,N'>N</VALUE-PEEL-REWIND>
             <APPLICATOR BOOL='Y,N'>N</APPLICATOR>
-            <PEEL BOOL='Y,N'>Y</PEEL>
+            <PEEL BOOL='Y,N'>N</PEEL>
         </OPTIONS>
         <WIRELESS-PRINTSERVER>
             <PRODUCT-NAME>ZebraNet Wireless PS</PRODUCT-NAME>
-            <PRINTSERVER-FIRMWARE-VERSION>V84.20.18Z</PRINTSERVER-FIRMWARE-VERSION>
+            <PRINTSERVER-FIRMWARE-VERSION>V93.21.17Z</PRINTSERVER-FIRMWARE-VERSION>
             <PRODUCT-NUMBER>79071</PRODUCT-NUMBER>
             <MFG-ID>H</MFG-ID>
             <CARD-ID>H</CARD-ID>
-            <CARD-FIRMWARE></CARD-FIRMWARE>
-            <MAC-ADDRESS></MAC-ADDRESS>
+            <CARD-FIRMWARE>00.00.00</CARD-FIRMWARE>
+            <MAC-ADDRESS>00:00:00:00:00:00</MAC-ADDRESS>
             <DATE-CODE>0161A</DATE-CODE>
             <PRINTER-STATUS>Online</PRINTER-STATUS>
-            <CONNECTED-TO>ZTC ZD410-203dpi ,</CONNECTED-TO>
+            <CONNECTED-TO>ZTC ZD411-203dpi ,</CONNECTED-TO>
             <BIDI-STATUS-ENABLED>Y</BIDI-STATUS-ENABLED>
-            <SYSTEM-UPTIME>00 days 00 hours 00 mins 13 secs</SYSTEM-UPTIME>
+            <SYSTEM-UPTIME>00 days 00 hours 00 mins 11 secs</SYSTEM-UPTIME>
         </WIRELESS-PRINTSERVER>
     </DEFINITIONS>
     <SAVED-SETTINGS>
-        <NAME>50J193302798</NAME>
+        <NAME>DFJ231800500</NAME>
         <DESCRIPTION></DESCRIPTION>
         <MEDIA-DARKNESS MIN='0.0' MAX='30.0'>
             <CURRENT>21.0</CURRENT>
@@ -57,7 +57,7 @@
         </TEAR-OFF-POSITION>
         <PRINT-MODE>
             <MODE
-                ENUM='REWIND, TEAR OFF, PEEL OFF, CUTTER, DELAYED CUT, APPLICATOR, LINERLESS-P, LINERLESS-R, LINERLESS-T, LINERLESS CUT, LINRLESS DLY CUT, '>
+                ENUM='REWIND, TEAR OFF, PEEL OFF, CUTTER, DELAYED CUT, APPLICATOR, LINERLESS-P, LINERLESS-R, LINERLESS-T, LINERLESS CUT, LINRLESS DLY CUT, STREAM'>
                 <CURRENT>TEAR OFF</CURRENT>
                 <STORED>TEAR OFF</STORED>
                 <DEFAULT>TEAR OFF</DEFAULT>
@@ -74,8 +74,8 @@
             <DEFAULT>DIRECT-THERMAL</DEFAULT>
         </MEDIA-TYPE>
         <PRINT-WIDTH MIN='2' MAX='448'>
-            <CURRENT>400</CURRENT>
-            <STORED>400</STORED>
+            <CURRENT>200</CURRENT>
+            <STORED>200</STORED>
             <DEFAULT>448</DEFAULT>
         </PRINT-WIDTH>
         <EARLY-WARNING-MEDIA BOOL='Y,N'>
@@ -185,8 +185,8 @@
             </HEAD-CLOSE>
         </MEDIA-FEED>
         <BACKFEED-PERCENT ENUM='BEFORE, 10%, 20%, 30%, 40%, 50%, 60%, 70%, 80%, DEFAULT, AFTER, OFF'>
-            <CURRENT>10%</CURRENT>
-            <STORED>10%</STORED>
+            <CURRENT>DEFAULT</CURRENT>
+            <STORED>DEFAULT</STORED>
             <DEFAULT>DEFAULT</DEFAULT>
         </BACKFEED-PERCENT>
         <LABEL-TOP MIN='-120' MAX='120'>
@@ -196,13 +196,13 @@
         </LABEL-TOP>
         <CALIBRATION-VALUES>
             <CALIBRATED-LABEL-LENGTH MIN='0' MAX='7967'>
-                <CURRENT>212</CURRENT>
-                <STORED>212</STORED>
+                <CURRENT>2217</CURRENT>
+                <STORED>2217</STORED>
                 <DEFAULT>1225</DEFAULT>
             </CALIBRATED-LABEL-LENGTH>
             <WEB-SENSOR MIN='0' MAX='100'>
-                <CURRENT>36</CURRENT>
-                <STORED>36</STORED>
+                <CURRENT>53</CURRENT>
+                <STORED>53</STORED>
                 <DEFAULT>20</DEFAULT>
             </WEB-SENSOR>
             <MEDIA-SENSOR MIN='0' MAX='100'>
@@ -211,13 +211,13 @@
                 <DEFAULT>24</DEFAULT>
             </MEDIA-SENSOR>
             <RIBBON-SENSOR MIN='0' MAX='100'>
-                <CURRENT>75</CURRENT>
-                <STORED>75</STORED>
-                <DEFAULT>75</DEFAULT>
+                <CURRENT>67</CURRENT>
+                <STORED>67</STORED>
+                <DEFAULT>67</DEFAULT>
             </RIBBON-SENSOR>
             <MARK-SENSOR MIN='0' MAX='100'>
-                <CURRENT>50</CURRENT>
-                <STORED>50</STORED>
+                <CURRENT>70</CURRENT>
+                <STORED>70</STORED>
                 <DEFAULT>27</DEFAULT>
             </MARK-SENSOR>
             <MARK-MEDIA-SENSOR MIN='0' MAX='100'>
@@ -226,23 +226,23 @@
                 <DEFAULT>27</DEFAULT>
             </MARK-MEDIA-SENSOR>
             <TRANSMISSIVE-GAIN MIN='0' MAX='255'>
-                <CURRENT>35</CURRENT>
-                <STORED>35</STORED>
+                <CURRENT>40</CURRENT>
+                <STORED>40</STORED>
                 <DEFAULT>128</DEFAULT>
             </TRANSMISSIVE-GAIN>
             <TRANSMISSIVE-LED MIN='0' MAX='100'>
-                <CURRENT>22</CURRENT>
-                <STORED>22</STORED>
+                <CURRENT>28</CURRENT>
+                <STORED>28</STORED>
                 <DEFAULT>50</DEFAULT>
             </TRANSMISSIVE-LED>
             <RIBBON-GAIN MIN='0' MAX='255'>
-                <CURRENT>40</CURRENT>
-                <STORED>40</STORED>
-                <DEFAULT>40</DEFAULT>
+                <CURRENT>0</CURRENT>
+                <STORED>0</STORED>
+                <DEFAULT>0</DEFAULT>
             </RIBBON-GAIN>
             <MARK-GAIN MIN='0' MAX='255'>
-                <CURRENT>17</CURRENT>
-                <STORED>17</STORED>
+                <CURRENT>64</CURRENT>
+                <STORED>64</STORED>
                 <DEFAULT>128</DEFAULT>
             </MARK-GAIN>
         </CALIBRATION-VALUES>
@@ -327,8 +327,8 @@
             <DEFAULT>1234</DEFAULT>
         </PASSWORD>
         <MAX-LABEL-LENGTH MIN='0' MAX='7967'>
-            <CURRENT>500</CURRENT>
-            <STORED>500</STORED>
+            <CURRENT>4500</CURRENT>
+            <STORED>4500</STORED>
             <DEFAULT>3048</DEFAULT>
         </MAX-LABEL-LENGTH>
         <VERIFIER-PORT ENUM='OFF, VER-RPRNT ERR, VER-THRUPUT'>
@@ -370,16 +370,42 @@
         </PRINTER-SLEEP>
         <UNSOLICITED-MESSAGES>
             <CURRENT>
+                <MESSAGE>
+                    <CONDITION
+                        ENUM='ALL MESSAGES, PAPER OUT, RIBBON OUT, HEAD TOO HOT, HEAD COLD, HEAD OPEN, SUPPLY TOO HOT, RIBBON IN, REWIND, CUTTER JAMMED, PRINTER PAUSED, PQ JOB COMPLETED, LABEL READY, HEAD ELEMENT BAD, BASIC RUNTIME, BASIC FORCED, POWER ON, CLEAN PRINTHEAD, MEDIA LOW, RIBBON LOW, REPLACE HEAD, BATTERY LOW, RFID ERROR, MOTOR OVERTEMP, PRINTHEAD SHUTDOWN, COLD START, SGD SET, SHUTTING DOWN, RESTARTING, NO READER PRESENT, THERMISTOR FAULT, INVALID HEAD, COUNTRY CODE ERROR, PMCU DOWNLOAD, RIBBON AUTH ERROR, ODOMETER TRIGGERED, COUNTRY CODE, BATTERY MISSING, MEDIA CARTRIDGE, MEDIA CARTRIDGE LOAD FAILURE, MEDIA CARTRIDGE EJECT FAILURE, MEDIA CARTRIDGE FORCED EJECT, CLEANING MODE, CSR AVAILABLE, RIBBON TENSION, COVER OPEN'>
+                        COLD START</CONDITION>
+                    <DESTINATION
+                        ENUM='SERIAL, PARALLEL, E-MAIL, TCP, UDP, SNMP, USB, HTTP-POST, BLUETOOTH, SDK, MQTT'>
+                        SNMP</DESTINATION>
+                    <SET BOOL='Y,N'>Y</SET>
+                    <CLEAR BOOL='Y,N'>N</CLEAR>
+                    <DESTINATION-DATA>255.255.255.255</DESTINATION-DATA>
+                    <PORT MIN='0' MAX='65535'>162</PORT>
+                    <SGD-NAME></SGD-NAME>
+                </MESSAGE>
             </CURRENT>
             <STORED>
+                <MESSAGE>
+                    <CONDITION
+                        ENUM='ALL MESSAGES, PAPER OUT, RIBBON OUT, HEAD TOO HOT, HEAD COLD, HEAD OPEN, SUPPLY TOO HOT, RIBBON IN, REWIND, CUTTER JAMMED, PRINTER PAUSED, PQ JOB COMPLETED, LABEL READY, HEAD ELEMENT BAD, BASIC RUNTIME, BASIC FORCED, POWER ON, CLEAN PRINTHEAD, MEDIA LOW, RIBBON LOW, REPLACE HEAD, BATTERY LOW, RFID ERROR, MOTOR OVERTEMP, PRINTHEAD SHUTDOWN, COLD START, SGD SET, SHUTTING DOWN, RESTARTING, NO READER PRESENT, THERMISTOR FAULT, INVALID HEAD, COUNTRY CODE ERROR, PMCU DOWNLOAD, RIBBON AUTH ERROR, ODOMETER TRIGGERED, COUNTRY CODE, BATTERY MISSING, MEDIA CARTRIDGE, MEDIA CARTRIDGE LOAD FAILURE, MEDIA CARTRIDGE EJECT FAILURE, MEDIA CARTRIDGE FORCED EJECT, CLEANING MODE, CSR AVAILABLE, RIBBON TENSION, COVER OPEN'>
+                        COLD START</CONDITION>
+                    <DESTINATION
+                        ENUM='SERIAL, PARALLEL, E-MAIL, TCP, UDP, SNMP, USB, HTTP-POST, BLUETOOTH, SDK, MQTT'>
+                        SNMP</DESTINATION>
+                    <SET BOOL='Y,N'>Y</SET>
+                    <CLEAR BOOL='Y,N'>N</CLEAR>
+                    <DESTINATION-DATA>255.255.255.255</DESTINATION-DATA>
+                    <PORT MIN='0' MAX='65535'>162</PORT>
+                    <SGD-NAME></SGD-NAME>
+                </MESSAGE>
             </STORED>
         </UNSOLICITED-MESSAGES>
         <WIRELESS-PRINTSERVER>
             <WIRELESS-SETTINGS>
                 <ESSID>
                     <CURRENT></CURRENT>
-                    <STORED>*</STORED>
-                    <DEFAULT></DEFAULT>
+                    <STORED></STORED>
+                    <DEFAULT>*</DEFAULT>
                 </ESSID>
                 <OPERATING-MODE ENUM='AD-HOC, INFRASTRUCTURE'>
                     <CURRENT>INFRASTRUCTURE</CURRENT>
@@ -387,29 +413,29 @@
                     <DEFAULT>INFRASTRUCTURE</DEFAULT>
                 </OPERATING-MODE>
                 <PREAMBLE ENUM='LONG, SHORT'>
-                    <CURRENT>SHORT</CURRENT>
-                    <STORED>SHORT</STORED>
-                    <DEFAULT>SHORT</DEFAULT>
+                    <CURRENT>LONG</CURRENT>
+                    <STORED>LONG</STORED>
+                    <DEFAULT>LONG</DEFAULT>
                 </PREAMBLE>
                 <WLAN-PULSE-ENABLED BOOL='ON,OFF'>
+                    <CURRENT>ON</CURRENT>
+                    <STORED>ON</STORED>
+                    <DEFAULT>ON</DEFAULT>
+                </WLAN-PULSE-ENABLED>
+                <WLAN-PULSE-RATE MIN='5' MAX='300'>
+                    <CURRENT>15</CURRENT>
+                    <STORED>15</STORED>
+                    <DEFAULT>15</DEFAULT>
+                </WLAN-PULSE-RATE>
+                <WLAN-INTERNATIONAL-MODE ENUM='OFF, ON, AUTO'>
                     <CURRENT>OFF</CURRENT>
                     <STORED>OFF</STORED>
                     <DEFAULT>OFF</DEFAULT>
-                </WLAN-PULSE-ENABLED>
-                <WLAN-PULSE-RATE MIN='5' MAX='300'>
-                    <CURRENT>0</CURRENT>
-                    <STORED>0</STORED>
-                    <DEFAULT>0</DEFAULT>
-                </WLAN-PULSE-RATE>
-                <WLAN-INTERNATIONAL-MODE ENUM='OFF, ON, AUTO'>
-                    <CURRENT></CURRENT>
-                    <STORED></STORED>
-                    <DEFAULT></DEFAULT>
                 </WLAN-INTERNATIONAL-MODE>
                 <WLAN-CHANNEL-MASK>
-                    <CURRENT>0</CURRENT>
-                    <STORED>0</STORED>
-                    <DEFAULT>0</DEFAULT>
+                    <CURRENT>FFFF</CURRENT>
+                    <STORED>FFFF</STORED>
+                    <DEFAULT>FFFF</DEFAULT>
                 </WLAN-CHANNEL-MASK>
                 <KERBEROS-USERNAME>
                     <CURRENT></CURRENT>
@@ -422,14 +448,14 @@
                     <DEFAULT>*****</DEFAULT>
                 </KERBEROS-PASSWORD>
                 <KERBEROS-REALM>
-                    <CURRENT></CURRENT>
-                    <STORED></STORED>
-                    <DEFAULT></DEFAULT>
+                    <CURRENT>kerberos</CURRENT>
+                    <STORED>kerberos</STORED>
+                    <DEFAULT>kerberos</DEFAULT>
                 </KERBEROS-REALM>
                 <KERBEROS-KDC>
-                    <CURRENT></CURRENT>
-                    <STORED></STORED>
-                    <DEFAULT></DEFAULT>
+                    <CURRENT>krbtgt</CURRENT>
+                    <STORED>krbtgt</STORED>
+                    <DEFAULT>krbtgt</DEFAULT>
                 </KERBEROS-KDC>
                 <WLAN-USERNAME>
                     <CURRENT></CURRENT>
@@ -448,9 +474,9 @@
                 </WPA-PRE-SHARED-KEY>
                 <WLAN-SECURITY
                     ENUM='INVALID MODE, NONE, EAP-TLS, EAP-TTLS, EAP-FAST, PEAP, LEAP, WPA PSK, WPA EAP-TLS, WPA EAP-TTLS, WPA EAP-FAST, WPA PEAP, WPA LEAP'>
-                    <CURRENT></CURRENT>
+                    <CURRENT>NONE</CURRENT>
                     <STORED></STORED>
-                    <DEFAULT></DEFAULT>
+                    <DEFAULT>NONE</DEFAULT>
                 </WLAN-SECURITY>
                 <PRIVATE-KEY>
                     <CURRENT>*****</CURRENT>
@@ -458,14 +484,14 @@
                     <DEFAULT>*****</DEFAULT>
                 </PRIVATE-KEY>
                 <REGION-CODE>
-                    <CURRENT></CURRENT>
-                    <STORED></STORED>
-                    <DEFAULT></DEFAULT>
+                    <CURRENT>not available</CURRENT>
+                    <STORED>not available</STORED>
+                    <DEFAULT>not available</DEFAULT>
                 </REGION-CODE>
                 <COUNTRY-CODE>
-                    <CURRENT></CURRENT>
-                    <STORED></STORED>
-                    <DEFAULT></DEFAULT>
+                    <CURRENT>no region code</CURRENT>
+                    <STORED>no region code</STORED>
+                    <DEFAULT>no region code</DEFAULT>
                 </COUNTRY-CODE>
             </WIRELESS-SETTINGS>
         </WIRELESS-PRINTSERVER>
@@ -492,35 +518,35 @@
             <ENABLE BOOL='Y,N'>N</ENABLE>
             <PRINTER-RESET-REQUIRED BOOL='Y,N'>N</PRINTER-RESET-REQUIRED>
             <LOGGING>
-                <MAX-ENTRIES></MAX-ENTRIES>
+                <MAX-ENTRIES>500</MAX-ENTRIES>
             </LOGGING>
             <IP>
                 <CONN1>
                     <LOCATION><![CDATA[]]></LOCATION>
-                    <RETRY-INTERVAL></RETRY-INTERVAL>
+                    <RETRY-INTERVAL>10</RETRY-INTERVAL>
                     <PROXY><![CDATA[]]></PROXY>
-                    <MAXIMUM-SIMULTANEOUS-CONNECTIONS></MAXIMUM-SIMULTANEOUS-CONNECTIONS>
+                    <MAXIMUM-SIMULTANEOUS-CONNECTIONS>10</MAXIMUM-SIMULTANEOUS-CONNECTIONS>
                     <AUTHENTICATION>
                         <ENTRIES><![CDATA[]]></ENTRIES>
                     </AUTHENTICATION>
                     <TEST>
-                        <LOCATION><![CDATA[]]></LOCATION>
-                        <TEST-ON></TEST-ON>
-                        <RETRY-INTERVAL></RETRY-INTERVAL>
+                        <LOCATION><![CDATA[http://www.zebra.com/apps/linktest]]></LOCATION>
+                        <TEST-ON>failure</TEST-ON>
+                        <RETRY-INTERVAL>900</RETRY-INTERVAL>
                     </TEST>
                 </CONN1>
                 <CONN2>
                     <LOCATION><![CDATA[]]></LOCATION>
-                    <RETRY-INTERVAL></RETRY-INTERVAL>
+                    <RETRY-INTERVAL>10</RETRY-INTERVAL>
                     <PROXY><![CDATA[]]></PROXY>
-                    <MAXIMUM-SIMULTANEOUS-CONNECTIONS></MAXIMUM-SIMULTANEOUS-CONNECTIONS>
+                    <MAXIMUM-SIMULTANEOUS-CONNECTIONS>10</MAXIMUM-SIMULTANEOUS-CONNECTIONS>
                     <AUTHENTICATION>
                         <ENTRIES><![CDATA[]]></ENTRIES>
                     </AUTHENTICATION>
                     <TEST>
-                        <LOCATION><![CDATA[]]></LOCATION>
-                        <TEST-ON></TEST-ON>
-                        <RETRY-INTERVAL></RETRY-INTERVAL>
+                        <LOCATION><![CDATA[http://www.zebra.com/apps/linktest]]></LOCATION>
+                        <TEST-ON>failure</TEST-ON>
+                        <RETRY-INTERVAL>900</RETRY-INTERVAL>
                     </TEST>
                 </CONN2>
             </IP>
@@ -532,13 +558,13 @@
                 <LOG-TRACKED>
 <![CDATA[]]></LOG-TRACKED>
                 <MAX-LOG-ENTRIES>
-                </MAX-LOG-ENTRIES>
+                    100</MAX-LOG-ENTRIES>
             </TRACKED_SETTINGS>
             <HTTP>
                 <PROXY>
 <![CDATA[]]></PROXY>
                 <LOG-MAX-ENTRIES>
-                </LOG-MAX-ENTRIES>
+                    500</LOG-MAX-ENTRIES>
                 <AUTHENTICATION-ENTRIES>
 <![CDATA[]]></AUTHENTICATION-ENTRIES>
             </HTTP>
@@ -547,112 +573,112 @@
     <INTERFACES>
         <NETWORK>
             <ACTIVE-NETWORK-INTERFACE ENUM='Wireless, External Wired, UNKNOWN, Internal Wired'>
-                VER-THRUPUT</ACTIVE-NETWORK-INTERFACE>
+                UNKNOWN</ACTIVE-NETWORK-INTERFACE>
             <NETWORK-SETTINGS-DIRTY BOOL='Y,N'>N</NETWORK-SETTINGS-DIRTY>
             <NETWORK-COMMON>
                 <PROTOCOLS>
                     <TCP>
-                        <ENABLED BOOL='Y,N'>N</ENABLED>
+                        <ENABLED BOOL='Y,N'>Y</ENABLED>
                     </TCP>
                     <FTP>
-                        <ENABLED BOOL='Y,N'>N</ENABLED>
+                        <ENABLED BOOL='Y,N'>Y</ENABLED>
                     </FTP>
                     <LPD>
-                        <ENABLED BOOL='Y,N'>N</ENABLED>
+                        <ENABLED BOOL='Y,N'>Y</ENABLED>
                     </LPD>
                     <MAIL>
-                        <PS_DOMAIN></PS_DOMAIN>
+                        <PS_DOMAIN>ZBRPrintServer.com</PS_DOMAIN>
                         <SMTP>
-                            <ENABLED BOOL='Y,N'>N</ENABLED>
-                            <SMTP-SERVER-ADDRESS></SMTP-SERVER-ADDRESS>
+                            <ENABLED BOOL='Y,N'>Y</ENABLED>
+                            <SMTP-SERVER-ADDRESS>0.0.0.0</SMTP-SERVER-ADDRESS>
                         </SMTP>
                         <POP3>
-                            <ENABLED BOOL='Y,N'>N</ENABLED>
-                            <POP3-SERVER-ADDRESS></POP3-SERVER-ADDRESS>
+                            <ENABLED BOOL='Y,N'>Y</ENABLED>
+                            <POP3-SERVER-ADDRESS>0.0.0.0</POP3-SERVER-ADDRESS>
                             <USER-NAME></USER-NAME>
                             <PASSWORD>*****</PASSWORD>
-                            <POLLING-INTERVAL>0</POLLING-INTERVAL>
+                            <POLLING-INTERVAL>240</POLLING-INTERVAL>
                         </POP3>
                     </MAIL>
                     <TELNET>
                         <ENABLED BOOL='Y,N'>N</ENABLED>
                     </TELNET>
                     <UDP>
-                        <ENABLED BOOL='Y,N'>N</ENABLED>
+                        <ENABLED BOOL='Y,N'>Y</ENABLED>
                         <UDP-DISCOVERY-PORT>4201</UDP-DISCOVERY-PORT>
                     </UDP>
                     <HTTP>
-                        <ENABLED BOOL='Y,N'>N</ENABLED>
+                        <ENABLED BOOL='Y,N'>Y</ENABLED>
                         <HTTP-PORT>0</HTTP-PORT>
                     </HTTP>
                     <SNMP>
-                        <ENABLED BOOL='Y,N'>N</ENABLED>
-                        <GET-COMMUNITY-NAME></GET-COMMUNITY-NAME>
+                        <ENABLED BOOL='Y,N'>Y</ENABLED>
+                        <GET-COMMUNITY-NAME>public</GET-COMMUNITY-NAME>
                         <SET-COMMUNITY-NAME>*****</SET-COMMUNITY-NAME>
-                        <TRAP-COMMUNITY-NAME></TRAP-COMMUNITY-NAME>
+                        <TRAP-COMMUNITY-NAME>public</TRAP-COMMUNITY-NAME>
                     </SNMP>
                 </PROTOCOLS>
             </NETWORK-COMMON>
             <NETWORK-INTERFACE-SPECIFIC>
                 <GENERAL>
                     <MAC-ADDRESS>
-                        <INTERNAL-WIRED></INTERNAL-WIRED>
-                        <WIRELESS></WIRELESS>
+                        <INTERNAL-WIRED>60:95:32:01:EB:B0</INTERNAL-WIRED>
+                        <WIRELESS>00:00:00:00:00:00</WIRELESS>
                     </MAC-ADDRESS>
                 </GENERAL>
                 <TCP>
                     <IP-ADDRESS>
-                        <INTERNAL-WIRED></INTERNAL-WIRED>
-                        <WIRELESS></WIRELESS>
+                        <INTERNAL-WIRED>0.0.0.0</INTERNAL-WIRED>
+                        <WIRELESS>0.0.0.0</WIRELESS>
                     </IP-ADDRESS>
                     <SUBNET-MASK>
-                        <INTERNAL-WIRED></INTERNAL-WIRED>
-                        <WIRELESS></WIRELESS>
+                        <INTERNAL-WIRED>255.255.255.0</INTERNAL-WIRED>
+                        <WIRELESS>255.255.255.0</WIRELESS>
                     </SUBNET-MASK>
                     <DEFAULT-GATEWAY>
-                        <INTERNAL-WIRED></INTERNAL-WIRED>
-                        <WIRELESS></WIRELESS>
+                        <INTERNAL-WIRED>0.0.0.0</INTERNAL-WIRED>
+                        <WIRELESS>0.0.0.0</WIRELESS>
                     </DEFAULT-GATEWAY>
                     <IP-PROTOCOL
                         ENUM='ALL, GLEANING ONLY, RARP, BOOTP, DHCP, DHCP AND BOOTP, PERMANENT'>
-                        <INTERNAL-WIRED></INTERNAL-WIRED>
-                        <WIRELESS></WIRELESS>
+                        <INTERNAL-WIRED>ALL</INTERNAL-WIRED>
+                        <WIRELESS>ALL</WIRELESS>
                     </IP-PROTOCOL>
                     <DEFAULT-ADDRESS-ENABLED BOOL='YES,NO'>
                         <INTERNAL-WIRED>YES</INTERNAL-WIRED>
                         <WIRELESS>YES</WIRELESS>
                     </DEFAULT-ADDRESS-ENABLED>
                     <TIMEOUT-CHECKING-ENABLED BOOL='YES,NO'>
-                        <INTERNAL-WIRED>NO</INTERNAL-WIRED>
-                        <WIRELESS>NO</WIRELESS>
+                        <INTERNAL-WIRED>YES</INTERNAL-WIRED>
+                        <WIRELESS>YES</WIRELESS>
                     </TIMEOUT-CHECKING-ENABLED>
                     <TIMEOUT-CHECKING-VALUE>
-                        <INTERNAL-WIRED>0</INTERNAL-WIRED>
-                        <WIRELESS>0</WIRELESS>
+                        <INTERNAL-WIRED>300</INTERNAL-WIRED>
+                        <WIRELESS>300</WIRELESS>
                     </TIMEOUT-CHECKING-VALUE>
                     <ARP-INTERVAL>
                         <INTERNAL-WIRED>0</INTERNAL-WIRED>
                         <WIRELESS>0</WIRELESS>
                     </ARP-INTERVAL>
                     <BASE-RAW-PORT-NUMBER>
-                        <INTERNAL-WIRED>0</INTERNAL-WIRED>
-                        <WIRELESS>0</WIRELESS>
+                        <INTERNAL-WIRED>6101</INTERNAL-WIRED>
+                        <WIRELESS>6101</WIRELESS>
                     </BASE-RAW-PORT-NUMBER>
                     <BASE-RAW-PORT-NUMBER-ALTERNATE>
-                        <INTERNAL-WIRED>0</INTERNAL-WIRED>
-                        <WIRELESS>0</WIRELESS>
+                        <INTERNAL-WIRED>9100</INTERNAL-WIRED>
+                        <WIRELESS>9100</WIRELESS>
                     </BASE-RAW-PORT-NUMBER-ALTERNATE>
                     <BASE-JSON-CONFIG-PORT-NUMBER>
-                        <INTERNAL-WIRED>0</INTERNAL-WIRED>
-                        <WIRELESS>0</WIRELESS>
+                        <INTERNAL-WIRED>9200</INTERNAL-WIRED>
+                        <WIRELESS>9200</WIRELESS>
                     </BASE-JSON-CONFIG-PORT-NUMBER>
                     <WINS-ADDRESSING-PERMANENT BOOL='YES,NO'>
                         <INTERNAL-WIRED>NO</INTERNAL-WIRED>
                         <WIRELESS>NO</WIRELESS>
                     </WINS-ADDRESSING-PERMANENT>
                     <WINS-ADDRESS>
-                        <INTERNAL-WIRED></INTERNAL-WIRED>
-                        <WIRELESS></WIRELESS>
+                        <INTERNAL-WIRED>0.0.0.0</INTERNAL-WIRED>
+                        <WIRELESS>0.0.0.0</WIRELESS>
                     </WINS-ADDRESS>
                 </TCP>
                 <DHCP-CLIENT-ID-SETTINGS>
@@ -661,28 +687,28 @@
                         <WIRELESS>NO</WIRELESS>
                     </ENABLED>
                     <TYPE ENUM='STRING, MAC ADDRESS, HEX'>
-                        <INTERNAL-WIRED>STRING</INTERNAL-WIRED>
-                        <WIRELESS>STRING</WIRELESS>
+                        <INTERNAL-WIRED>MAC ADDRESS</INTERNAL-WIRED>
+                        <WIRELESS>MAC ADDRESS</WIRELESS>
                     </TYPE>
                     <PREFIX>
                         <INTERNAL-WIRED></INTERNAL-WIRED>
                         <WIRELESS></WIRELESS>
                     </PREFIX>
                     <SUFFIX>
-                        <INTERNAL-WIRED></INTERNAL-WIRED>
-                        <WIRELESS></WIRELESS>
+                        <INTERNAL-WIRED>60953201EBB0</INTERNAL-WIRED>
+                        <WIRELESS>000000000000</WIRELESS>
                     </SUFFIX>
                 </DHCP-CLIENT-ID-SETTINGS>
             </NETWORK-INTERFACE-SPECIFIC>
         </NETWORK>
         <BLUETOOTH>
-            <FIRMWARE></FIRMWARE>
-            <DATE></DATE>
-            <DISCOVERABLE BOOL='Y,N'>Y</DISCOVERABLE>
-            <RADIO-VERSION>4.0</RADIO-VERSION>
+            <FIRMWARE>7.0.1.0</FIRMWARE>
+            <DATE>02/05/2020</DATE>
+            <DISCOVERABLE BOOL='Y,N'>N</DISCOVERABLE>
+            <RADIO-VERSION>5.1</RADIO-VERSION>
             <ENABLED BOOL='Y,N'>Y</ENABLED>
-            <MAC-ADDRESS>50:51:A9:FA:E4:3E</MAC-ADDRESS>
-            <FRIENDLY-NAME>50J193302798</FRIENDLY-NAME>
+            <MAC-ADDRESS>60:95:32:01:CE:93</MAC-ADDRESS>
+            <FRIENDLY-NAME>DFJ231800500</FRIENDLY-NAME>
             <CONNECTED BOOL='Y,N'>N</CONNECTED>
             <MIN-SECURITY-MODE>1</MIN-SECURITY-MODE>
             <CONN-SECURITY-MODE>nc</CONN-SECURITY-MODE>
@@ -692,7 +718,7 @@
         <CODE-VALIDATION BOOL='Y,N'>N</CODE-VALIDATION>
         <REPRINT-AFTER-ERROR BOOL='Y,N'>Y</REPRINT-AFTER-ERROR>
         <MODE-UNITS ENUM='DOTS, INCHES, MILLIMETERS'>DOTS</MODE-UNITS>
-        <LABEL-LENGTH MIN='0' MAX='7967'>212</LABEL-LENGTH>
+        <LABEL-LENGTH MIN='0' MAX='7967'>2217</LABEL-LENGTH>
         <LABEL-REVERSE BOOL='Y,N'>N</LABEL-REVERSE>
         <LABEL-SHIFT MIN='-9999' MAX='9999'>0</LABEL-SHIFT>
         <LABEL-HOME>
@@ -724,9 +750,9 @@
         <TOTAL-LABELS-IN-BATCH>0</TOTAL-LABELS-IN-BATCH>
         <LABELS-REMAINING-IN-BATCH>0</LABELS-REMAINING-IN-BATCH>
         <PRINTHEAD-TEMP>
-            <OVERTEMP-THRESHOLD>75</OVERTEMP-THRESHOLD>
+            <OVERTEMP-THRESHOLD>70</OVERTEMP-THRESHOLD>
             <UNDERTEMP-THRESHOLD>5</UNDERTEMP-THRESHOLD>
-            <CURRENT>19</CURRENT>
+            <CURRENT>22</CURRENT>
         </PRINTHEAD-TEMP>
         <HEAD-ELEMENT-STATUS>
             <FAILED BOOL='Y,N'>N</FAILED>
@@ -756,48 +782,40 @@
         <PARTIAL-FORMAT-IN-PROGRESS BOOL='Y,N'>N</PARTIAL-FORMAT-IN-PROGRESS>
         <PAUSE BOOL='Y,N'>N</PAUSE>
         <PAPER-OUT BOOL='Y,N'>N</PAPER-OUT>
-        <RIBBON-OUT BOOL='Y,N'>N</RIBBON-OUT>
         <PRINTER-COUNTER>
             <COUNTER1>
-                <INCHES>12569</INCHES>
-                <CENTIMETERS>31925</CENTIMETERS>
-                <LABELS>7336</LABELS>
+                <INCHES>136</INCHES>
+                <CENTIMETERS>346</CENTIMETERS>
+                <LABELS>10</LABELS>
             </COUNTER1>
             <COUNTER2>
-                <INCHES>12569</INCHES>
-                <CENTIMETERS>31925</CENTIMETERS>
-                <LABELS>7336</LABELS>
+                <INCHES>136</INCHES>
+                <CENTIMETERS>346</CENTIMETERS>
+                <LABELS>10</LABELS>
             </COUNTER2>
             <NON-RESET-COUNTER>
-                <INCHES>12581</INCHES>
-                <CENTIMETERS>31925</CENTIMETERS>
-                <LABELS>7336</LABELS>
+                <INCHES>136</INCHES>
+                <CENTIMETERS>346</CENTIMETERS>
+                <LABELS>10</LABELS>
             </NON-RESET-COUNTER>
         </PRINTER-COUNTER>
         <MEDIA-REPLACED>0</MEDIA-REPLACED>
         <RIBBON-REPLACED>0</RIBBON-REPLACED>
-        <HEAD-CLEANED>12569</HEAD-CLEANED>
+        <HEAD-CLEANED>136</HEAD-CLEANED>
         <CLOCK>
             <DATE>
                 20241230</DATE>
             <TIME>
-                11:12:27</TIME>
+                10:18:09</TIME>
         </CLOCK>
-        <SENSOR-SELECT>TRANSMISSIVE</SENSOR-SELECT>
+        <SENSOR-SELECT>REFLECTIVE</SENSOR-SELECT>
     </STATUS>
     <OBJECT-LIST>
         <OBJECT MEMORY-LOCATION='Z:' TYPE='TTF' FORMAT='ZPL' SIZE='125904' PROTECTED='Y'>0</OBJECT>
         <OBJECT MEMORY-LOCATION='Z:' TYPE='FNT' FORMAT='ZPL' SIZE='6839' PROTECTED='Y'>A</OBJECT>
-        <OBJECT MEMORY-LOCATION='Z:' TYPE='NRD' FORMAT='ZPL' SIZE='5178' PROTECTED='Y'>ALERTCFG</OBJECT>
+        <OBJECT MEMORY-LOCATION='Z:' TYPE='NRD' FORMAT='ZPL' SIZE='5877' PROTECTED='Y'>ALERTCFG</OBJECT>
         <OBJECT MEMORY-LOCATION='Z:' TYPE='BAR' FORMAT='ZPL' SIZE='0' PROTECTED='Y'>AZTEC</OBJECT>
         <OBJECT MEMORY-LOCATION='Z:' TYPE='FNT' FORMAT='ZPL' SIZE='7746' PROTECTED='Y'>B</OBJECT>
-        <OBJECT MEMORY-LOCATION='Z:' TYPE='BMP' FORMAT='ZPL' SIZE='478' PROTECTED='Y'>BATTERY52</OBJECT>
-        <OBJECT MEMORY-LOCATION='Z:' TYPE='WML' FORMAT='ZPL' SIZE='3730' PROTECTED='Y'>BATTERYCOLOR</OBJECT>
-        <OBJECT MEMORY-LOCATION='Z:' TYPE='BMP' FORMAT='ZPL' SIZE='230454' PROTECTED='Y'>BLUEBCK</OBJECT>
-        <OBJECT MEMORY-LOCATION='Z:' TYPE='BMP' FORMAT='ZPL' SIZE='230454' PROTECTED='Y'>BLUEBCKDARK</OBJECT>
-        <OBJECT MEMORY-LOCATION='Z:' TYPE='BMP' FORMAT='ZPL' SIZE='480' PROTECTED='Y'>BLUETOOTH52</OBJECT>
-        <OBJECT MEMORY-LOCATION='Z:' TYPE='WML' FORMAT='ZPL' SIZE='9367' PROTECTED='Y'>
-            BLUETOOTHCOLOR</OBJECT>
         <OBJECT MEMORY-LOCATION='Z:' TYPE='PCX' FORMAT='ZPL' SIZE='884' PROTECTED='Y'>BTSYMBOL</OBJECT>
         <OBJECT MEMORY-LOCATION='Z:' TYPE='BAR' FORMAT='ZPL' SIZE='0' PROTECTED='Y'>CODABAR</OBJECT>
         <OBJECT MEMORY-LOCATION='Z:' TYPE='BAR' FORMAT='ZPL' SIZE='0' PROTECTED='Y'>CODABLK</OBJECT>
@@ -807,9 +825,6 @@
         <OBJECT MEMORY-LOCATION='Z:' TYPE='BAR' FORMAT='ZPL' SIZE='0' PROTECTED='Y'>CODE49</OBJECT>
         <OBJECT MEMORY-LOCATION='Z:' TYPE='BAR' FORMAT='ZPL' SIZE='0' PROTECTED='Y'>CODE93</OBJECT>
         <OBJECT MEMORY-LOCATION='Z:' TYPE='FNT' FORMAT='ZPL' SIZE='10648' PROTECTED='Y'>D</OBJECT>
-        <OBJECT MEMORY-LOCATION='Z:' TYPE='WML' FORMAT='ZPL' SIZE='3183' PROTECTED='Y'>DISPLYQRCOLOR</OBJECT>
-        <OBJECT MEMORY-LOCATION='Z:' TYPE='BMP' FORMAT='ZPL' SIZE='166' PROTECTED='Y'>
-            DOWN_ARROW_COLOR</OBJECT>
         <OBJECT MEMORY-LOCATION='Z:' TYPE='FNT' FORMAT='ZPL' SIZE='15691' PROTECTED='Y'>E12</OBJECT>
         <OBJECT MEMORY-LOCATION='Z:' TYPE='FNT' FORMAT='ZPL' SIZE='47056' PROTECTED='Y'>E24</OBJECT>
         <OBJECT MEMORY-LOCATION='Z:' TYPE='FNT' FORMAT='ZPL' SIZE='8520' PROTECTED='Y'>E6</OBJECT>
@@ -832,23 +847,27 @@
         <OBJECT MEMORY-LOCATION='Z:' TYPE='FNT' FORMAT='ZPL' SIZE='13275' PROTECTED='Y'>F</OBJECT>
         <OBJECT MEMORY-LOCATION='Z:' TYPE='ZPL' FORMAT='ZPL' SIZE='10420' PROTECTED='Y'>
             FIRSTDOTLOCATION</OBJECT>
+        <OBJECT MEMORY-LOCATION='Z:' TYPE='FNT' FORMAT='ZPL' SIZE='5901' PROTECTED='Y'>FONT0</OBJECT>
+        <OBJECT MEMORY-LOCATION='Z:' TYPE='FNT' FORMAT='ZPL' SIZE='7134' PROTECTED='Y'>FONT1</OBJECT>
+        <OBJECT MEMORY-LOCATION='Z:' TYPE='FNT' FORMAT='ZPL' SIZE='11484' PROTECTED='Y'>FONT2</OBJECT>
+        <OBJECT MEMORY-LOCATION='Z:' TYPE='FNT' FORMAT='ZPL' SIZE='10804' PROTECTED='Y'>FONT3</OBJECT>
+        <OBJECT MEMORY-LOCATION='Z:' TYPE='FNT' FORMAT='ZPL' SIZE='15676' PROTECTED='Y'>FONT4</OBJECT>
+        <OBJECT MEMORY-LOCATION='Z:' TYPE='FNT' FORMAT='ZPL' SIZE='19852' PROTECTED='Y'>FONT5</OBJECT>
+        <OBJECT MEMORY-LOCATION='Z:' TYPE='FNT' FORMAT='ZPL' SIZE='27508' PROTECTED='Y'>FONT6</OBJECT>
+        <OBJECT MEMORY-LOCATION='Z:' TYPE='FNT' FORMAT='ZPL' SIZE='11252' PROTECTED='Y'>FONT7</OBJECT>
+        <OBJECT MEMORY-LOCATION='Z:' TYPE='FNT' FORMAT='ZPL' SIZE='6412' PROTECTED='Y'>FONT8</OBJECT>
         <OBJECT MEMORY-LOCATION='Z:' TYPE='FNT' FORMAT='ZPL' SIZE='49663' PROTECTED='Y'>G</OBJECT>
         <OBJECT MEMORY-LOCATION='Z:' TYPE='FNT' FORMAT='ZPL' SIZE='5470' PROTECTED='Y'>GS</OBJECT>
         <OBJECT MEMORY-LOCATION='Z:' TYPE='FNT' FORMAT='ZPL' SIZE='11536' PROTECTED='Y'>H12</OBJECT>
         <OBJECT MEMORY-LOCATION='Z:' TYPE='FNT' FORMAT='ZPL' SIZE='30436' PROTECTED='Y'>H24</OBJECT>
         <OBJECT MEMORY-LOCATION='Z:' TYPE='FNT' FORMAT='ZPL' SIZE='7247' PROTECTED='Y'>H6</OBJECT>
         <OBJECT MEMORY-LOCATION='Z:' TYPE='FNT' FORMAT='ZPL' SIZE='7825' PROTECTED='Y'>H8</OBJECT>
-        <OBJECT MEMORY-LOCATION='Z:' TYPE='WML' FORMAT='ZPL' SIZE='3900' PROTECTED='Y'>HOMEMENUCOLOR</OBJECT>
         <OBJECT MEMORY-LOCATION='Z:' TYPE='BAR' FORMAT='ZPL' SIZE='0' PROTECTED='Y'>I2OF5</OBJECT>
         <OBJECT MEMORY-LOCATION='Z:' TYPE='BAR' FORMAT='ZPL' SIZE='0' PROTECTED='Y'>IDMATRIX</OBJECT>
         <OBJECT MEMORY-LOCATION='Z:' TYPE='ZPL' FORMAT='ZPL' SIZE='9524' PROTECTED='Y'>
             IMAGECOMPRESSION</OBJECT>
         <OBJECT MEMORY-LOCATION='Z:' TYPE='BAR' FORMAT='ZPL' SIZE='0' PROTECTED='Y'>IND2OF5</OBJECT>
-        <OBJECT MEMORY-LOCATION='Z:' TYPE='WML' FORMAT='ZPL' SIZE='5331' PROTECTED='Y'>INDEXCOLOR</OBJECT>
         <OBJECT MEMORY-LOCATION='Z:' TYPE='BMP' FORMAT='ZPL' SIZE='400' PROTECTED='Y'>LANGUAGE</OBJECT>
-        <OBJECT MEMORY-LOCATION='Z:' TYPE='BMP' FORMAT='ZPL' SIZE='480' PROTECTED='Y'>LANGUAGE52</OBJECT>
-        <OBJECT MEMORY-LOCATION='Z:' TYPE='WML' FORMAT='ZPL' SIZE='14652' PROTECTED='Y'>
-            LANGUAGECOLOR</OBJECT>
         <OBJECT MEMORY-LOCATION='Z:' TYPE='FNT' FORMAT='ZPL' SIZE='10820' PROTECTED='Y'>LMU</OBJECT>
         <OBJECT MEMORY-LOCATION='Z:' TYPE='FNT' FORMAT='ZPL' SIZE='11640' PROTECTED='Y'>LMV</OBJECT>
         <OBJECT MEMORY-LOCATION='Z:' TYPE='FNT' FORMAT='ZPL' SIZE='11640' PROTECTED='Y'>LMW</OBJECT>
@@ -858,47 +877,29 @@
         <OBJECT MEMORY-LOCATION='Z:' TYPE='BAR' FORMAT='ZPL' SIZE='0' PROTECTED='Y'>LOGMARS</OBJECT>
         <OBJECT MEMORY-LOCATION='Z:' TYPE='PNG' FORMAT='ZPL' SIZE='20154' PROTECTED='Y'>LOGO</OBJECT>
         <OBJECT MEMORY-LOCATION='Z:' TYPE='BAR' FORMAT='ZPL' SIZE='0' PROTECTED='Y'>MAXICODE</OBJECT>
-        <OBJECT MEMORY-LOCATION='Z:' TYPE='TXT' FORMAT='ZPL' SIZE='45500' PROTECTED='Y'>MIB200</OBJECT>
+        <OBJECT MEMORY-LOCATION='Z:' TYPE='TXT' FORMAT='ZPL' SIZE='45319' PROTECTED='Y'>MIB200</OBJECT>
         <OBJECT MEMORY-LOCATION='Z:' TYPE='BAR' FORMAT='ZPL' SIZE='0' PROTECTED='Y'>MICROPDF</OBJECT>
-        <OBJECT MEMORY-LOCATION='Z:' TYPE='FNT' FORMAT='ZPL' SIZE='5570' PROTECTED='Y'>MONOBD15</OBJECT>
         <OBJECT MEMORY-LOCATION='Z:' TYPE='BAR' FORMAT='ZPL' SIZE='0' PROTECTED='Y'>MSICODE</OBJECT>
         <OBJECT MEMORY-LOCATION='Z:' TYPE='BMP' FORMAT='ZPL' SIZE='400' PROTECTED='Y'>NETWORK</OBJECT>
-        <OBJECT MEMORY-LOCATION='Z:' TYPE='BMP' FORMAT='ZPL' SIZE='480' PROTECTED='Y'>NETWORK52</OBJECT>
-        <OBJECT MEMORY-LOCATION='Z:' TYPE='WML' FORMAT='ZPL' SIZE='37871' PROTECTED='Y'>NETWORKCOLOR</OBJECT>
-        <OBJECT MEMORY-LOCATION='Z:' TYPE='FNT' FORMAT='ZPL' SIZE='566518' PROTECTED='Y'>NJ26WGL4</OBJECT>
-        <OBJECT MEMORY-LOCATION='Z:' TYPE='FNT' FORMAT='ZPL' SIZE='1081154' PROTECTED='Y'>NK26WGL4</OBJECT>
-        <OBJECT MEMORY-LOCATION='Z:' TYPE='FNT' FORMAT='ZPL' SIZE='2025530' PROTECTED='Y'>NS26WGL4</OBJECT>
-        <OBJECT MEMORY-LOCATION='Z:' TYPE='FNT' FORMAT='ZPL' SIZE='1351834' PROTECTED='Y'>NT26WGL4</OBJECT>
         <OBJECT MEMORY-LOCATION='Z:' TYPE='BMP' FORMAT='ZPL' SIZE='58' PROTECTED='Y'>ONEDOT</OBJECT>
         <OBJECT MEMORY-LOCATION='Z:' TYPE='FNT' FORMAT='ZPL' SIZE='116' PROTECTED='Y'>P</OBJECT>
-        <OBJECT MEMORY-LOCATION='Z:' TYPE='WML' FORMAT='ZPL' SIZE='1304' PROTECTED='Y'>PASSWORD</OBJECT>
-        <OBJECT MEMORY-LOCATION='Z:' TYPE='WML' FORMAT='ZPL' SIZE='1668' PROTECTED='Y'>PASSWORDCOLOR</OBJECT>
         <OBJECT MEMORY-LOCATION='Z:' TYPE='BAR' FORMAT='ZPL' SIZE='0' PROTECTED='Y'>PDF417</OBJECT>
         <OBJECT MEMORY-LOCATION='Z:' TYPE='BAR' FORMAT='ZPL' SIZE='0' PROTECTED='Y'>PLANETCD</OBJECT>
         <OBJECT MEMORY-LOCATION='Z:' TYPE='BAR' FORMAT='ZPL' SIZE='0' PROTECTED='Y'>PLESSEY</OBJECT>
         <OBJECT MEMORY-LOCATION='Z:' TYPE='BMP' FORMAT='ZPL' SIZE='400' PROTECTED='Y'>PORTS</OBJECT>
-        <OBJECT MEMORY-LOCATION='Z:' TYPE='BMP' FORMAT='ZPL' SIZE='480' PROTECTED='Y'>PORTS52</OBJECT>
-        <OBJECT MEMORY-LOCATION='Z:' TYPE='WML' FORMAT='ZPL' SIZE='8371' PROTECTED='Y'>PORTSCOLOR</OBJECT>
         <OBJECT MEMORY-LOCATION='Z:' TYPE='BAR' FORMAT='ZPL' SIZE='0' PROTECTED='Y'>POSTNET</OBJECT>
         <OBJECT MEMORY-LOCATION='Z:' TYPE='FNT' FORMAT='ZPL' SIZE='116' PROTECTED='Y'>Q</OBJECT>
-        <OBJECT MEMORY-LOCATION='Z:' TYPE='WML' FORMAT='ZPL' SIZE='3855' PROTECTED='Y'>QCKCNTDOCOLOR</OBJECT>
-        <OBJECT MEMORY-LOCATION='Z:' TYPE='WML' FORMAT='ZPL' SIZE='2704' PROTECTED='Y'>QCKCNTMKCOLOR</OBJECT>
-        <OBJECT MEMORY-LOCATION='Z:' TYPE='BMP' FORMAT='ZPL' SIZE='230454' PROTECTED='Y'>QRBCKCOLOR</OBJECT>
         <OBJECT MEMORY-LOCATION='Z:' TYPE='BAR' FORMAT='ZPL' SIZE='0' PROTECTED='Y'>QRCODE</OBJECT>
         <OBJECT MEMORY-LOCATION='Z:' TYPE='FNT' FORMAT='ZPL' SIZE='116' PROTECTED='Y'>R</OBJECT>
-        <OBJECT MEMORY-LOCATION='Z:' TYPE='NRD' FORMAT='ZPL' SIZE='357267' PROTECTED='Y'>REGDB</OBJECT>
-        <OBJECT MEMORY-LOCATION='Z:' TYPE='NRD' FORMAT='ZPL' SIZE='3' PROTECTED='Y'>REPRINT</OBJECT>
+        <OBJECT MEMORY-LOCATION='Z:' TYPE='NRD' FORMAT='ZPL' SIZE='531266' PROTECTED='Y'>REGDB</OBJECT>
         <OBJECT MEMORY-LOCATION='Z:' TYPE='NRD' FORMAT='ZPL' SIZE='3' PROTECTED='Y'>RESETNET</OBJECT>
+        <OBJECT MEMORY-LOCATION='Z:' TYPE='XML' FORMAT='ZPL' SIZE='38416' PROTECTED='Y'>RFIDRCPE</OBJECT>
+        <OBJECT MEMORY-LOCATION='Z:' TYPE='NRD' FORMAT='ZPL' SIZE='92431' PROTECTED='Y'>RFID_HOP</OBJECT>
         <OBJECT MEMORY-LOCATION='Z:' TYPE='BAR' FORMAT='ZPL' SIZE='0' PROTECTED='Y'>RSS</OBJECT>
         <OBJECT MEMORY-LOCATION='Z:' TYPE='FNT' FORMAT='ZPL' SIZE='116' PROTECTED='Y'>S</OBJECT>
         <OBJECT MEMORY-LOCATION='Z:' TYPE='BAR' FORMAT='ZPL' SIZE='0' PROTECTED='Y'>S2OF5</OBJECT>
         <OBJECT MEMORY-LOCATION='Z:' TYPE='BMP' FORMAT='ZPL' SIZE='400' PROTECTED='Y'>SENSORS</OBJECT>
-        <OBJECT MEMORY-LOCATION='Z:' TYPE='BMP' FORMAT='ZPL' SIZE='480' PROTECTED='Y'>SENSORS52</OBJECT>
-        <OBJECT MEMORY-LOCATION='Z:' TYPE='WML' FORMAT='ZPL' SIZE='12115' PROTECTED='Y'>SENSORSCOLOR</OBJECT>
         <OBJECT MEMORY-LOCATION='Z:' TYPE='BMP' FORMAT='ZPL' SIZE='400' PROTECTED='Y'>SETTINGS</OBJECT>
-        <OBJECT MEMORY-LOCATION='Z:' TYPE='BMP' FORMAT='ZPL' SIZE='480' PROTECTED='Y'>SETTINGS52</OBJECT>
-        <OBJECT MEMORY-LOCATION='Z:' TYPE='WML' FORMAT='ZPL' SIZE='20825' PROTECTED='Y'>
-            SETTINGSCOLOR</OBJECT>
         <OBJECT MEMORY-LOCATION='Z:' TYPE='BMP' FORMAT='ZPL' SIZE='128' PROTECTED='Y'>
             SIGNAL_STRENGTH_0_BAR_ICON</OBJECT>
         <OBJECT MEMORY-LOCATION='Z:' TYPE='BMP' FORMAT='ZPL' SIZE='128' PROTECTED='Y'>
@@ -909,25 +910,96 @@
             SIGNAL_STRENGTH_3_BAR_ICON</OBJECT>
         <OBJECT MEMORY-LOCATION='Z:' TYPE='BMP' FORMAT='ZPL' SIZE='128' PROTECTED='Y'>
             SIGNAL_STRENGTH_4_BAR_ICON</OBJECT>
-        <OBJECT MEMORY-LOCATION='Z:' TYPE='BMP' FORMAT='ZPL' SIZE='310' PROTECTED='Y'>
-            SPACE10COLORLONG</OBJECT>
-        <OBJECT MEMORY-LOCATION='Z:' TYPE='BMP' FORMAT='ZPL' SIZE='222' PROTECTED='Y'>SPACE20COLOR</OBJECT>
-        <OBJECT MEMORY-LOCATION='Z:' TYPE='BMP' FORMAT='ZPL' SIZE='222' PROTECTED='Y'>SPACE23COLOR</OBJECT>
         <OBJECT MEMORY-LOCATION='Z:' TYPE='FNT' FORMAT='ZPL' SIZE='116' PROTECTED='Y'>T</OBJECT>
+        <OBJECT MEMORY-LOCATION='Z:' TYPE='FNT' FORMAT='ZPL' SIZE='7532' PROTECTED='Y'>T0000</OBJECT>
+        <OBJECT MEMORY-LOCATION='Z:' TYPE='FNT' FORMAT='ZPL' SIZE='8044' PROTECTED='Y'>T0001</OBJECT>
+        <OBJECT MEMORY-LOCATION='Z:' TYPE='FNT' FORMAT='ZPL' SIZE='12376' PROTECTED='Y'>T0002</OBJECT>
+        <OBJECT MEMORY-LOCATION='Z:' TYPE='FNT' FORMAT='ZPL' SIZE='7532' PROTECTED='Y'>T0007</OBJECT>
+        <OBJECT MEMORY-LOCATION='Z:' TYPE='FNT' FORMAT='ZPL' SIZE='116' PROTECTED='Y'>T0020</OBJECT>
+        <OBJECT MEMORY-LOCATION='Z:' TYPE='FNT' FORMAT='ZPL' SIZE='116' PROTECTED='Y'>T0021</OBJECT>
+        <OBJECT MEMORY-LOCATION='Z:' TYPE='FNT' FORMAT='ZPL' SIZE='116' PROTECTED='Y'>T0022</OBJECT>
+        <OBJECT MEMORY-LOCATION='Z:' TYPE='FNT' FORMAT='ZPL' SIZE='27436' PROTECTED='Y'>T0023</OBJECT>
+        <OBJECT MEMORY-LOCATION='Z:' TYPE='FNT' FORMAT='ZPL' SIZE='25048' PROTECTED='Y'>T0024</OBJECT>
+        <OBJECT MEMORY-LOCATION='Z:' TYPE='TTF' FORMAT='ZPL' SIZE='92552' PROTECTED='Y'>T0025</OBJECT>
+        <OBJECT MEMORY-LOCATION='Z:' TYPE='TTF' FORMAT='ZPL' SIZE='96400' PROTECTED='Y'>T0026</OBJECT>
+        <OBJECT MEMORY-LOCATION='Z:' TYPE='TTF' FORMAT='ZPL' SIZE='121260' PROTECTED='Y'>T0028</OBJECT>
+        <OBJECT MEMORY-LOCATION='Z:' TYPE='FNT' FORMAT='ZPL' SIZE='116' PROTECTED='Y'>T0030</OBJECT>
+        <OBJECT MEMORY-LOCATION='Z:' TYPE='FNT' FORMAT='ZPL' SIZE='116' PROTECTED='Y'>T0031</OBJECT>
+        <OBJECT MEMORY-LOCATION='Z:' TYPE='FNT' FORMAT='ZPL' SIZE='116' PROTECTED='Y'>T0032</OBJECT>
+        <OBJECT MEMORY-LOCATION='Z:' TYPE='FNT' FORMAT='ZPL' SIZE='116' PROTECTED='Y'>T0033</OBJECT>
+        <OBJECT MEMORY-LOCATION='Z:' TYPE='FNT' FORMAT='ZPL' SIZE='116' PROTECTED='Y'>T0034</OBJECT>
+        <OBJECT MEMORY-LOCATION='Z:' TYPE='FNT' FORMAT='ZPL' SIZE='116' PROTECTED='Y'>T0035</OBJECT>
+        <OBJECT MEMORY-LOCATION='Z:' TYPE='FNT' FORMAT='ZPL' SIZE='116' PROTECTED='Y'>T0036</OBJECT>
+        <OBJECT MEMORY-LOCATION='Z:' TYPE='FNT' FORMAT='ZPL' SIZE='116' PROTECTED='Y'>T0037</OBJECT>
+        <OBJECT MEMORY-LOCATION='Z:' TYPE='FNT' FORMAT='ZPL' SIZE='116' PROTECTED='Y'>T0038</OBJECT>
+        <OBJECT MEMORY-LOCATION='Z:' TYPE='FNT' FORMAT='ZPL' SIZE='116' PROTECTED='Y'>T0039</OBJECT>
+        <OBJECT MEMORY-LOCATION='Z:' TYPE='FNT' FORMAT='ZPL' SIZE='116' PROTECTED='Y'>T0040</OBJECT>
+        <OBJECT MEMORY-LOCATION='Z:' TYPE='FNT' FORMAT='ZPL' SIZE='116' PROTECTED='Y'>T0041</OBJECT>
+        <OBJECT MEMORY-LOCATION='Z:' TYPE='TTF' FORMAT='ZPL' SIZE='169188' PROTECTED='Y'>T0061</OBJECT>
+        <OBJECT MEMORY-LOCATION='Z:' TYPE='TTF' FORMAT='ZPL' SIZE='129380' PROTECTED='Y'>T0062</OBJECT>
+        <OBJECT MEMORY-LOCATION='Z:' TYPE='TTF' FORMAT='ZPL' SIZE='664972' PROTECTED='Y'>T0067</OBJECT>
         <OBJECT MEMORY-LOCATION='Z:' TYPE='BAR' FORMAT='ZPL' SIZE='0' PROTECTED='Y'>TLC39</OBJECT>
-        <OBJECT MEMORY-LOCATION='Z:' TYPE='BMP' FORMAT='ZPL' SIZE='8168' PROTECTED='Y'>TOOLS-COLOR</OBJECT>
         <OBJECT MEMORY-LOCATION='Z:' TYPE='BMP' FORMAT='ZPL' SIZE='400' PROTECTED='Y'>TOOLS</OBJECT>
-        <OBJECT MEMORY-LOCATION='Z:' TYPE='BMP' FORMAT='ZPL' SIZE='480' PROTECTED='Y'>TOOLS52</OBJECT>
-        <OBJECT MEMORY-LOCATION='Z:' TYPE='WML' FORMAT='ZPL' SIZE='60088' PROTECTED='Y'>TOOLSCOLOR</OBJECT>
+        <OBJECT MEMORY-LOCATION='Z:' TYPE='TTF' FORMAT='ZPL' SIZE='169188' PROTECTED='Y'>TT0003M_</OBJECT>
+        <OBJECT MEMORY-LOCATION='Z:' TYPE='TTF' FORMAT='ZPL' SIZE='141592' PROTECTED='Y'>TT0005M_</OBJECT>
         <OBJECT MEMORY-LOCATION='Z:' TYPE='FNT' FORMAT='ZPL' SIZE='116' PROTECTED='Y'>U</OBJECT>
         <OBJECT MEMORY-LOCATION='Z:' TYPE='SS' FORMAT='ZPL' SIZE='11596' PROTECTED='Y'>UIF</OBJECT>
         <OBJECT MEMORY-LOCATION='Z:' TYPE='BAR' FORMAT='ZPL' SIZE='0' PROTECTED='Y'>UPC-A</OBJECT>
         <OBJECT MEMORY-LOCATION='Z:' TYPE='BAR' FORMAT='ZPL' SIZE='0' PROTECTED='Y'>UPC-E</OBJECT>
         <OBJECT MEMORY-LOCATION='Z:' TYPE='BAR' FORMAT='ZPL' SIZE='0' PROTECTED='Y'>UPC-EAN</OBJECT>
-        <OBJECT MEMORY-LOCATION='Z:' TYPE='BMP' FORMAT='ZPL' SIZE='166' PROTECTED='Y'>UP_ARROW_COLOR</OBJECT>
-        <OBJECT MEMORY-LOCATION='Z:' TYPE='NRD' FORMAT='ZPL' SIZE='7' PROTECTED='Y'>USBCNFIG</OBJECT>
         <OBJECT MEMORY-LOCATION='Z:' TYPE='SS' FORMAT='ZPL' SIZE='11588' PROTECTED='Y'>UTT</OBJECT>
         <OBJECT MEMORY-LOCATION='Z:' TYPE='FNT' FORMAT='ZPL' SIZE='116' PROTECTED='Y'>V</OBJECT>
+        <OBJECT MEMORY-LOCATION='E:' TYPE='FNT' FORMAT='ZPL' SIZE='45407' PROTECTED='N'>CGTRI_N</OBJECT>
+        <OBJECT MEMORY-LOCATION='E:' TYPE='TTF' FORMAT='ZPL' SIZE='62252' PROTECTED='N'>CG_TIMES</OBJECT>
+        <OBJECT MEMORY-LOCATION='E:' TYPE='TTF' FORMAT='ZPL' SIZE='63560' PROTECTED='N'>
+            CG_TRIUMVIRATE</OBJECT>
+        <OBJECT MEMORY-LOCATION='E:' TYPE='TTF' FORMAT='ZPL' SIZE='35356' PROTECTED='N'>EFONT_A</OBJECT>
+        <OBJECT MEMORY-LOCATION='E:' TYPE='TTF' FORMAT='ZPL' SIZE='34176' PROTECTED='N'>EFONT_B</OBJECT>
+        <OBJECT MEMORY-LOCATION='E:' TYPE='TTF' FORMAT='ZPL' SIZE='34316' PROTECTED='N'>EFONT_C</OBJECT>
+        <OBJECT MEMORY-LOCATION='E:' TYPE='FNT' FORMAT='ZPL' SIZE='12716' PROTECTED='N'>FONTM</OBJECT>
+        <OBJECT MEMORY-LOCATION='E:' TYPE='FNT' FORMAT='ZPL' SIZE='7040' PROTECTED='N'>FONTOA08</OBJECT>
+        <OBJECT MEMORY-LOCATION='E:' TYPE='FNT' FORMAT='ZPL' SIZE='9316' PROTECTED='N'>FONTOA12</OBJECT>
+        <OBJECT MEMORY-LOCATION='E:' TYPE='FNT' FORMAT='ZPL' SIZE='10177' PROTECTED='N'>FONTOB08</OBJECT>
+        <OBJECT MEMORY-LOCATION='E:' TYPE='FNT' FORMAT='ZPL' SIZE='8041' PROTECTED='N'>FONTS</OBJECT>
+        <OBJECT MEMORY-LOCATION='E:' TYPE='FNT' FORMAT='ZPL' SIZE='6910' PROTECTED='N'>FONTU</OBJECT>
+        <OBJECT MEMORY-LOCATION='E:' TYPE='FNT' FORMAT='ZPL' SIZE='25396' PROTECTED='N'>FONTWB</OBJECT>
+        <OBJECT MEMORY-LOCATION='E:' TYPE='FNT' FORMAT='ZPL' SIZE='51829' PROTECTED='N'>FONTWL</OBJECT>
+        <OBJECT MEMORY-LOCATION='E:' TYPE='FNT' FORMAT='ZPL' SIZE='43353' PROTECTED='N'>FONTXB</OBJECT>
+        <OBJECT MEMORY-LOCATION='E:' TYPE='FNT' FORMAT='ZPL' SIZE='69748' PROTECTED='N'>FONTXB_FIXED</OBJECT>
+        <OBJECT MEMORY-LOCATION='E:' TYPE='FNT' FORMAT='ZPL' SIZE='44540' PROTECTED='N'>FONTXL</OBJECT>
+        <OBJECT MEMORY-LOCATION='E:' TYPE='FNT' FORMAT='ZPL' SIZE='69718' PROTECTED='N'>FONTXL_FIXED</OBJECT>
+        <OBJECT MEMORY-LOCATION='E:' TYPE='FNT' FORMAT='ZPL' SIZE='16058' PROTECTED='N'>FONTXM</OBJECT>
+        <OBJECT MEMORY-LOCATION='E:' TYPE='FNT' FORMAT='ZPL' SIZE='19273' PROTECTED='N'>FONTXM_FIXED</OBJECT>
+        <OBJECT MEMORY-LOCATION='E:' TYPE='FNT' FORMAT='ZPL' SIZE='10036' PROTECTED='N'>FONTXS</OBJECT>
+        <OBJECT MEMORY-LOCATION='E:' TYPE='FNT' FORMAT='ZPL' SIZE='15130' PROTECTED='N'>FONTXS_FIXED</OBJECT>
+        <OBJECT MEMORY-LOCATION='E:' TYPE='FNT' FORMAT='ZPL' SIZE='6919' PROTECTED='N'>FONTXU</OBJECT>
+        <OBJECT MEMORY-LOCATION='E:' TYPE='FNT' FORMAT='ZPL' SIZE='6919' PROTECTED='N'>FONTXU_FIXED</OBJECT>
+        <OBJECT MEMORY-LOCATION='E:' TYPE='TTF' FORMAT='ZPL' SIZE='19920' PROTECTED='N'>M_BOLD</OBJECT>
+        <OBJECT MEMORY-LOCATION='E:' TYPE='TTF' FORMAT='ZPL' SIZE='57692' PROTECTED='N'>M_CG_6PT</OBJECT>
+        <OBJECT MEMORY-LOCATION='E:' TYPE='TTF' FORMAT='ZPL' SIZE='74640' PROTECTED='N'>M_CG_BOLD</OBJECT>
+        <OBJECT MEMORY-LOCATION='E:' TYPE='DAT' FORMAT='ZPL' SIZE='1024' PROTECTED='N'>M_CP0</OBJECT>
+        <OBJECT MEMORY-LOCATION='E:' TYPE='DAT' FORMAT='ZPL' SIZE='1024' PROTECTED='N'>M_CP1</OBJECT>
+        <OBJECT MEMORY-LOCATION='E:' TYPE='DAT' FORMAT='ZPL' SIZE='1024' PROTECTED='N'>M_CP437</OBJECT>
+        <OBJECT MEMORY-LOCATION='E:' TYPE='DAT' FORMAT='ZPL' SIZE='1024' PROTECTED='N'>M_CP850</OBJECT>
+        <OBJECT MEMORY-LOCATION='E:' TYPE='TTF' FORMAT='ZPL' SIZE='7184' PROTECTED='N'>M_HR1</OBJECT>
+        <OBJECT MEMORY-LOCATION='E:' TYPE='TTF' FORMAT='ZPL' SIZE='7192' PROTECTED='N'>M_HR2</OBJECT>
+        <OBJECT MEMORY-LOCATION='E:' TYPE='TTF' FORMAT='ZPL' SIZE='19964' PROTECTED='N'>M_REDUCED</OBJECT>
+        <OBJECT MEMORY-LOCATION='E:' TYPE='TTF' FORMAT='ZPL' SIZE='23004' PROTECTED='N'>M_STANDARD</OBJECT>
+        <OBJECT MEMORY-LOCATION='E:' TYPE='DAT' FORMAT='ZPL' SIZE='1024' PROTECTED='N'>PC437</OBJECT>
+        <OBJECT MEMORY-LOCATION='E:' TYPE='DAT' FORMAT='ZPL' SIZE='1024' PROTECTED='N'>PC850</OBJECT>
+        <OBJECT MEMORY-LOCATION='E:' TYPE='DAT' FORMAT='ZPL' SIZE='1024' PROTECTED='N'>PC850SPAINI</OBJECT>
+        <OBJECT MEMORY-LOCATION='E:' TYPE='DAT' FORMAT='ZPL' SIZE='1024' PROTECTED='N'>S_CP737</OBJECT>
+        <OBJECT MEMORY-LOCATION='E:' TYPE='DAT' FORMAT='ZPL' SIZE='1024' PROTECTED='N'>S_CP850_0</OBJECT>
+        <OBJECT MEMORY-LOCATION='E:' TYPE='DAT' FORMAT='ZPL' SIZE='1024' PROTECTED='N'>S_CP850_1</OBJECT>
+        <OBJECT MEMORY-LOCATION='E:' TYPE='DAT' FORMAT='ZPL' SIZE='1024' PROTECTED='N'>S_CP864</OBJECT>
+        <OBJECT MEMORY-LOCATION='E:' TYPE='DAT' FORMAT='ZPL' SIZE='1024' PROTECTED='N'>S_CP885</OBJECT>
+        <OBJECT MEMORY-LOCATION='E:' TYPE='TTF' FORMAT='ZPL' SIZE='66424' PROTECTED='N'>
+            S_HELVETICA_A</OBJECT>
+        <OBJECT MEMORY-LOCATION='E:' TYPE='TTF' FORMAT='ZPL' SIZE='66776' PROTECTED='N'>
+            S_HELVETICA_B</OBJECT>
+        <OBJECT MEMORY-LOCATION='E:' TYPE='DAT' FORMAT='ZPL' SIZE='1024' PROTECTED='N'>S_ISO_8859_1</OBJECT>
+        <OBJECT MEMORY-LOCATION='E:' TYPE='DAT' FORMAT='ZPL' SIZE='1024' PROTECTED='N'>S_ISO_8859_2</OBJECT>
+        <OBJECT MEMORY-LOCATION='E:' TYPE='DAT' FORMAT='ZPL' SIZE='1024' PROTECTED='N'>S_ISO_8859_5</OBJECT>
         <OBJECT MEMORY-LOCATION='E:' TYPE='TTF' FORMAT='ZPL' SIZE='169188' PROTECTED='N'>TT0003M_</OBJECT>
     </OBJECT-LIST>
 </ZEBRA-ELTRON-PERSONALITY>

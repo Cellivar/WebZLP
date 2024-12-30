@@ -1,29 +1,55 @@
 import { expect, describe, it } from 'vitest';
-import { ZD410_TXT } from './test_files/index.test.js';
+import * as tf from './test_files/index.test.js';
 import { CmdHostConfig, parseCmdHostConfig } from './CmdHostConfig.js';
 
 describe('parseCmdHostConfig', () => {
-  describe('Full', () => {
-    const cmd = new CmdHostConfig();
-    it('Extracts the config', () => {
-      const file = ZD410_TXT();
-      expect(parseCmdHostConfig(file, cmd)).toMatchInlineSnapshot(`
-        {
-          "messageIncomplete": false,
-          "messageMatchedExpectedCommand": true,
-          "messages": [
-            {
-              "messageType": "SettingUpdateMessage",
-              "printerHardware": {},
-              "printerMedia": {
-                "mediaGapDetectMode": 1,
-              },
-              "printerSettings": {},
-            },
-          ],
-          "remainder": "",
-        }
-      `);
+  const cmd = new CmdHostConfig();
+
+  describe("ZD410", () => {
+    const conf = tf.ZD410_TXT();
+    const snap = tf.ZD410_CONF;
+    it('Parses host config', () => {
+      expect(parseCmdHostConfig(conf, cmd)).toMatchFileSnapshot(snap);
     });
-  })
+  });
+
+  describe("ZD411", () => {
+    const conf = tf.ZD411_TXT();
+    const snap = tf.ZD411_CONF;
+    it('Parses host config', () => {
+      expect(parseCmdHostConfig(conf, cmd)).toMatchFileSnapshot(snap);
+    });
+  });
+
+  describe("ZP505", () => {
+    const conf = tf.ZP505_TXT();
+    const snap = tf.ZP505_CONF;
+    it('Parses host config', () => {
+      expect(parseCmdHostConfig(conf, cmd)).toMatchFileSnapshot(snap);
+    });
+  });
+
+  describe("LP2844-Z", () => {
+    const conf = tf.LP2844_Z_TXT();
+    const snap = tf.LP2844_Z_CONF;
+    it('Parses host config', () => {
+      expect(parseCmdHostConfig(conf, cmd)).toMatchFileSnapshot(snap);
+    });
+  });
+
+  describe("TLP2844-Z", () => {
+    const conf = tf.TLP2844_Z_TXT();
+    const snap = tf.TLP2844_Z_CONF;
+    it('Parses host config', () => {
+      expect(parseCmdHostConfig(conf, cmd)).toMatchFileSnapshot(snap);
+    });
+  });
+
+  describe("R2844-Z", () => {
+    const conf = tf.R2844_Z_TXT();
+    const snap = tf.R2844_Z_CONF;
+    it('Parses host config', () => {
+      expect(parseCmdHostConfig(conf, cmd)).toMatchFileSnapshot(snap);
+    });
+  });
 });

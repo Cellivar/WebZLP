@@ -1,0 +1,15 @@
+{
+  "messageIncomplete": false,
+  "messageMatchedExpectedCommand": true,
+  "messages": [
+    {
+      "messageType": "SettingUpdateMessage",
+      "printerHardware": {},
+      "printerMedia": {
+        "mediaGapDetectMode": 1,
+      },
+      "printerSettings": {},
+    },
+  ],
+  "remainder": "",
+}
