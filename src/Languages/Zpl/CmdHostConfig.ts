@@ -86,15 +86,23 @@ export function parseCmdHostConfig(
       //  TRANSMISSIVE        SENSOR SELECT
       // 2 spaces indent, 20 spaces value, 18 spaces key
       // We slice at 22 chars and construct a dictionary.
-      return {
-        key: s.substring(22).trim().toUpperCase(),
-        value: s.substring(0, 22).trim()
-      };
+      let key = s.substring(22).trim().toUpperCase();
+      const value = s.substring(0, 22).trim();
+      if (value.length === 12 && key === "") {
+        // There's at least one exception: old ZPL versions will include the serial
+        // at the top with no key.
+        key = "SERIAL";
+      }
+      return { key, value };
     })
     .forEach(l => {
       switch (l.key) {
         default:
           console.debug('Unhandled line: ', l.key, l.value);
+          break;
+
+        case "":
+          // Empty key??
           break;
 
         case "MEDIA TYPE":
@@ -119,6 +127,7 @@ export function parseCmdHostConfig(
         // Cases handled by XML.
         // TODO: Handle them here too, eventually deprecate XML for performance?
         case "FIRMWARE":
+        case "SERIAL":
         case "HARDWARE ID":
         case "DARKNESS":
         case "DARKNESS SWITCH":
