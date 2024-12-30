@@ -2,7 +2,7 @@ import { expect, describe, it } from 'vitest';
 import {ReadyToPrintDocuments} from '../ReadyToPrintDocuments.js';
 import { getNewTranspileState, PrinterConfig, type TranspiledDocumentState } from '../Commands/index.js';
 import { transpileDocument } from './DocumentTranspiler.js';
-import { EplPrinterCommandSet, ZplPrinterCommandSet } from '../Languages/index.js';
+import { EPL, ZPL } from '../Languages/index.js';
 
 function getFakeState(): TranspiledDocumentState {
   return getNewTranspileState(new PrinterConfig());
@@ -11,7 +11,7 @@ function getFakeState(): TranspiledDocumentState {
 describe('DocumentTranspiler', () => {
   describe('EPL', () => {
 
-    const epl = new EplPrinterCommandSet();
+    const epl = new EPL.EplPrinterCommandSet();
 
     describe('ReadyToPrint Docs', () => {
       it('configDocument', () => {
@@ -196,7 +196,7 @@ describe('DocumentTranspiler', () => {
 
   describe('ZPL', () => {
 
-    const zpl = new ZplPrinterCommandSet();
+    const zpl = new ZPL.ZplPrinterCommandSet();
 
     describe('ReadyToPrint Docs', () => {
       it('configDocument', () => {
