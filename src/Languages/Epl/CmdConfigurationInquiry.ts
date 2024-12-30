@@ -44,7 +44,9 @@ export function parseConfigResponse(
     return result;
   }
 
-  console.log('EPL config: ', msg);
+  if (window.location.hostname === "localhost") {
+    console.debug("Full EPL config message:\n", msg);
+  }
 
   // Unfortunately EPL-only printers tended to have a LOT of variance on
   // what they actually put into the config. Firmware versions, especially

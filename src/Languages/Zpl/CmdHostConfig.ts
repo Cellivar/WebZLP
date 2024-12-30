@@ -71,6 +71,13 @@ export function parseCmdHostConfig(
   update.printerMedia    ??= {};
   update.printerSettings ??= {};
 
+  if (window.location.hostname === "localhost") {
+    console.debug(
+      "Full ZPL config message:\n",
+      `${Util.AsciiCodeStrings.STX}${response}${Util.AsciiCodeStrings.ETX}`
+    );
+  }
+
   response
     .split('\n')
     .map((s) => {
