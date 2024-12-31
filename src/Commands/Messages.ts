@@ -96,7 +96,7 @@ export type AwaitedCommand = {
   reject?: (reason?: unknown) => void,
 }
 
-type UpdateClass<Type> = {
+export type UpdateClass<Type> = {
   -readonly [Property in keyof Type]?: Type[Property];
 };
 

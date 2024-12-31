@@ -5,7 +5,7 @@ export class CmdGraphSensorCalibration implements Cmds.IPrinterExtendedCommand {
   public static typeE = Symbol("CmdGraphSensorCalibration");
   typeExtended = CmdGraphSensorCalibration.typeE;
   commandLanguageApplicability = Conf.PrinterCommandLanguage.zpl;
-  name = "Print a series of labels showing the media sensor values"
+  name = "Print a series of labels showing the media sensor values";
   type = "CustomCommand" as const;
   effectFlags = new Cmds.CommandEffectFlags(['feedsPaperIgnoringPeeler']);
   toDisplay() { return this.name; }
@@ -22,7 +22,7 @@ export function handleCmdGraphSensorCalibration(
   cmd: Cmds.IPrinterCommand,
 ): string {
   if (cmd instanceof CmdGraphSensorCalibration) {
-    return `~JG`
+    return `~JG`;
   }
   return '';
 }

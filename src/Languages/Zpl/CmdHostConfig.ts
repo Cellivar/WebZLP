@@ -3,6 +3,13 @@
 import * as Conf from '../../Configs/index.js';
 import * as Cmds from '../../Commands/index.js';
 import * as Util from '../../Util/index.js';
+import type { IZplSettingUpdateMessage, PowerUpAction } from './Config.js';
+
+const powerUpMap: Record<string, PowerUpAction> = {
+  "NO MOTION": 'none',
+  "CALIBRATION": 'calibrateWebSensor',
+  "FEED": 'feedBlank',
+}
 
 export class CmdHostConfig implements Cmds.IPrinterExtendedCommand {
   public static typeE = Symbol("CmdHostStatus");
@@ -64,12 +71,25 @@ export function parseCmdHostConfig(
   // Content before and after should be preserved.
   result.remainder = msg.substring(0, msgStart) + msg.substring(msgEnd + 1);
 
-  const update: Cmds.ISettingUpdateMessage = {
+  const update: IZplSettingUpdateMessage = {
     messageType: 'SettingUpdateMessage' as const,
   }
-  update.printerHardware ??= {};
-  update.printerMedia    ??= {};
-  update.printerSettings ??= {};
+  update.printerHardware    ??= {};
+  update.printerMedia       ??= {};
+  update.printerSettings    ??= {};
+  update.printerZplSettings ??= {
+    sensorLevels: {
+      labelLengthDots: 1,
+      markLedBrightness   : 50,
+      markThreshold      : 50,
+      markMediaThreshold : 50,
+      mediaLedBrightness  : 50,
+      mediaThreshold     : 50,
+      ribbonLedBrightness : 50,
+      ribbonThreshold    : 50,
+      webThreshold       : 50,
+    }
+  };
 
   if (window.location.hostname === "localhost") {
     console.debug(
@@ -120,14 +140,13 @@ export function parseCmdHostConfig(
           }
           break;
         }
-        case "SENSOR SELECT":
+        case "SENSOR SELECT": // TRANSMISSIVE, REFLECTIVE, MANUAL
           // This should be set automatically with MEDIA TYPE.
           // TODO: Don't ignore this if it disagrees with MEDIA TYPE?
           break;
-        case "SENSOR TYPE":
-          // This is not a synonym, it has unique values. It still should be set
-          // automatically and shows up on my older LP2844-Z units.
-          // TODO: Don't ignore this if it disagrees with MEDIA TYPE
+        case "SENSOR TYPE": // MARK, WEB
+          // This should be set automatically with MEDIA TYPE. LP2844-Z units.
+          // TODO: Don't ignore this if it disagrees with MEDIA TYPE?
           break;
 
         // Cases handled by XML.
@@ -136,23 +155,35 @@ export function parseCmdHostConfig(
         case "SERIAL":
         case "HARDWARE ID":
         case "DARKNESS":
-        case "DARKNESS SWITCH":
-        case "PRINT SPEED":
+        case "DARKNESS SWITCH": // Physical hardware must be present
 
-        case "CONFIGURATION": // CUSTOMIZED, older?
+        case "PRINT SPEED": // Unreliably present
 
         case "TEAR OFF ADJUST":
         case "TEAR OFF": // Older synonym
 
         case "PRINT METHOD": // DIRECT-THERMAL, older?
-        case "PRINT MODE":
+        case "PRINT MODE": // tear-off, peel, etc.
         case "PRINT  WIDTH": // Older has two spaces?
         case "PRINT WIDTH":
+          // Newer firmware will be raw dots
+          // Older firmware is humanized, so
+          // 025 0/8 MM
+          // and must be parsed...
         case "LABEL LENGTH":
+          update.printerMedia!.mediaLengthDots = Number(l.value);
+          break;
         case "MAXIMUM LENGTH":
-        case "EARLY WARNING":
+          // Humanized, must be parsed
+          // 2.0IN   50MM
+
         case "MEDIA POWER UP":
+          update.printerZplSettings!.actionPowerUp = powerUpMap[l.value] ?? 'none';
+          break;
         case "HEAD CLOSE":
+          update.printerZplSettings!.actionHeadClose = powerUpMap[l.value] ?? 'none';
+          break;
+
         case "BACKFEED":
         case "LABEL TOP":
         case "LEFT POSITION":
@@ -160,23 +191,45 @@ export function parseCmdHostConfig(
         case "MODES ENABLED":
         case "MODES DISABLED":
         case "RESOLUTION":
+        case "RFID VERSION":
+
         // Sensor levels, also in XML. These have synonyms
         // in old config formats
         case "WEB SENSOR":
         case "WEB S.": // older synonym
-        case "TRANS GAIN": // whos lives matter yo
-        case "TRANS LED":
+          update.printerZplSettings!.sensorLevels!.webThreshold = Number(l.value);
+          break;
         case "MEDIA SENSOR":
         case "MEDIA S.": // older synonym
-        case "TAKE LABEL":
+          update.printerZplSettings!.sensorLevels!.mediaThreshold = Number(l.value);
+          break;
         case "MARK SENSOR":
         case "MARK S.": // older synonym
+          update.printerZplSettings!.sensorLevels!.markThreshold = Number(l.value);
+          break;
         case "MARK MED SENSOR":
         case "MARK MED S.": // older synonym
-        case "MARK GAIN":
+          update.printerZplSettings!.sensorLevels!.markMediaThreshold = Number(l.value);
+          break;
         case "MARK LED":
+          update.printerZplSettings!.sensorLevels!.markLedBrightness = Number(l.value);
+          break;
         case "MEDIA LED":
         case "RIBBON LED":
+          update.printerZplSettings!.sensorLevels!.ribbonLedBrightness = Number(l.value);
+          break;
+        case "RIBBON SENSOR":
+        case "RIBBON S.": //older synonym
+          update.printerZplSettings!.sensorLevels!.ribbonThreshold = Number(l.value);
+          break;
+
+        // These values don't correspond to ones that can be set via ^SS, so
+        // I'm not sure what they're for.
+        // TODO: Figure out what these sense and how to change them.
+        case "TRANS GAIN": // whos lives matter yo
+        case "TRANS LED":
+        case "MARK GAIN":
+        case "TAKE LABEL":
 
         // Time and counters, maybe useful?
         case "RTC DATE":
@@ -190,6 +243,7 @@ export function parseCmdHostConfig(
         case "RESET CNTR2":
 
         // Comm modes flags that might not be needed ever?
+        case "EARLY WARNING":
         case "USB COMM.":
         case "SER COMM. MODE":
         case "BAUD":
@@ -205,6 +259,7 @@ export function parseCmdHostConfig(
         case "USB HOST LOCK OUT":
         case "XML SCHEMA":
         case "IDLE DISPLAY":
+        case "CONFIGURATION": // CUSTOMIZED, older?
         case "FORMAT CONVERT":
         case "ZBI":
         case "ZBI VERSION":
