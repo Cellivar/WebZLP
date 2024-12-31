@@ -27,6 +27,7 @@ export class ZplPrinterCommandSet extends Cmds.StringCommandSet {
   ) {
     super(
       Conf.PrinterCommandLanguage.zpl,
+      handleMessage,
       {
         NoOp: { commandType: 'NoOp' },
         CustomCommand: {
@@ -197,14 +198,6 @@ export class ZplPrinterCommandSet extends Cmds.StringCommandSet {
   public override getConfig(config: Cmds.PrinterConfig) {
     return new ZplPrinterConfig(config);
   }
-
-  public parseMessage<TReceived extends Conf.MessageArrayLike>(
-    msg: TReceived,
-    sentCommand?: Cmds.IPrinterCommand
-  ): Cmds.IMessageHandlerResult<TReceived> {
-    return handleMessage(this, msg, sentCommand);
-  }
-
   private getFieldOffsetCommand(
     formMetadata: Cmds.TranspiledDocumentState,
     additionalHorizontal = 0,

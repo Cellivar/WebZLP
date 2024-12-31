@@ -1,10 +1,10 @@
 import * as Conf from '../../Configs/index.js';
 import * as Cmds from '../../Commands/index.js';
-import type { ZplPrinterCommandSet } from './ZplPrinterCommandSet.js';
 
 export function handleMessage<TReceived extends Conf.MessageArrayLike>(
-  cmdSet: ZplPrinterCommandSet,
+  cmdSet: Cmds.CommandSet<string>,
   message: TReceived,
+  _config: Cmds.PrinterConfig,
   sentCommand?: Cmds.IPrinterCommand,
 ): Cmds.IMessageHandlerResult<TReceived> {
   const result: Cmds.IMessageHandlerResult<TReceived> = {

@@ -16,6 +16,7 @@ export class EplPrinterCommandSet extends Cmds.StringCommandSet {
   ) {
     super(
       Conf.PrinterCommandLanguage.epl,
+      handleMessage,
       {
         // Printer control
         NoOp: { commandType: 'NoOp' },
@@ -179,13 +180,6 @@ export class EplPrinterCommandSet extends Cmds.StringCommandSet {
         cmdErrorReportingMapping,
         ...extendedCommands
       ]);
-  }
-
-  public parseMessage<TReceived extends Conf.MessageArrayLike>(
-    msg: TReceived,
-    sentCommand?: Cmds.IPrinterCommand
-  ): Cmds.IMessageHandlerResult<TReceived> {
-    return handleMessage(this, msg, sentCommand);
   }
 
   private setBackfeedAfterTaken(
