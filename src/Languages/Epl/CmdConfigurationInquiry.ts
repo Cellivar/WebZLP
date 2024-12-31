@@ -392,14 +392,14 @@ function updateHardwareOptions(str: string, msg: Cmds.ISettingUpdateMessage) {
   });
 }
 
-export function tryGetModel(rawModel?: string): Conf.IPrinterHardwareUpdate | undefined {
+export function tryGetModel(rawModel?: string): Conf.UpdateFor<Conf.IPrinterHardware> | undefined {
   if (rawModel === undefined || rawModel === '') { return undefined }
   const model = getModel(rawModel);
   return model.model !== "Unknown_EPL" ? model : undefined;
 }
 
 // TODO: Way to have user supply new models?
-function getModel(rawModel: string): Conf.IPrinterHardwareUpdate {
+function getModel(rawModel: string): Conf.UpdateFor<Conf.IPrinterHardware> {
   const speeds = eplPrinters.default.speedMaps;
   const models = eplPrinters.default.models;
 

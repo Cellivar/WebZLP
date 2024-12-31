@@ -96,17 +96,13 @@ export type AwaitedCommand = {
   reject?: (reason?: unknown) => void,
 }
 
-export type UpdateClass<Type> = {
-  -readonly [Property in keyof Type]?: Type[Property];
-};
-
 /** A printer settings message, describing printer configuration status. */
 export interface ISettingUpdateMessage {
   messageType: 'SettingUpdateMessage';
 
-  printerHardware?: UpdateClass<Conf.IPrinterHardware>;
-  printerMedia   ?: UpdateClass<Conf.IPrinterMedia>;
-  printerSettings?: UpdateClass<Conf.IPrinterSettings>;
+  printerHardware?: Conf.UpdateFor<Conf.IPrinterHardware>;
+  printerMedia   ?: Conf.UpdateFor<Conf.IPrinterMedia>;
+  printerSettings?: Conf.UpdateFor<Conf.IPrinterSettings>;
 }
 
 /** A status message sent by the printer. */

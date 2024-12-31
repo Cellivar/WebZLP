@@ -1,4 +1,5 @@
 import * as Cmds from '../../Commands/index.js';
+import * as Conf from '../../Configs/index.js';
 
 export type PowerUpAction
   = 'none'
@@ -18,7 +19,7 @@ export type SensorLevels = {
 }
 
 export interface IZplSettingUpdateMessage extends Cmds.ISettingUpdateMessage {
-  printerZplSettings?: Cmds.UpdateClass<IZplPrinterSettings>;
+  printerZplSettings?: Conf.UpdateFor<IZplPrinterSettings>;
 }
 
 /** ZPL-specific config information about a printer. */
