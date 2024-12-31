@@ -2,6 +2,7 @@ import * as Conf from '../Configs/index.js';
 import * as Commands from './Commands.js';
 import { TranspileDocumentError, type TranspiledDocumentState } from "./TranspileCommand.js";
 import { MessageParsingError, RawMessageTransformer, StringMessageTransformer, type IMessageHandlerResult, type MessageTransformer } from './Messages.js';
+import type { PrinterConfig } from './PrinterConfig.js';
 
 /** How a command should be wrapped into a form, if at all */
 export enum CommandFormInclusionMode {
@@ -34,6 +35,9 @@ export interface CommandSet<TMsgType extends Conf.MessageArrayLike> {
   isCommandNonFormCommand(cmd: Commands.IPrinterCommand): boolean;
   /** Combine separate commands into one. */
   combineCommands(...commands: TMsgType[]): TMsgType;
+
+  /** Expand a printer config to a language-specific config. */
+  getConfig(config: PrinterConfig): PrinterConfig;
 
   /** Transpile a single command, tracking its effects to a document. */
   transpileCommand(
@@ -136,6 +140,10 @@ export abstract class PrinterCommandSet<TMsgType extends Conf.MessageArrayLike> 
     return this.messageTransformer.combineMessages(...commands);
   }
 
+  public getConfig(config: PrinterConfig): PrinterConfig {
+    return config;
+  }
+
   public callMessageHandler(
     message: TMsgType,
     sentCommand?: Commands.IPrinterCommand
@@ -186,11 +194,6 @@ export abstract class RawCommandSet extends PrinterCommandSet<Uint8Array> {
     return RawCommandSet._noop;
   }
 
-  protected static noOpMapping: IPrinterCommandMapping<Uint8Array> = {
-    commandType: 'NoOp',
-    transpile: () => RawCommandSet._noop,
-  }
-
   protected constructor(
     implementedLanguage: Conf.PrinterCommandLanguage,
     basicCommands      : Record<Commands.CommandType,  IPrinterCommandMapping<Uint8Array>>,
@@ -210,11 +213,6 @@ export abstract class StringCommandSet extends PrinterCommandSet<string> {
   protected static readonly _noop = "";
   public get noop() {
     return StringCommandSet._noop;
-  }
-
-  protected static noOpMapping: IPrinterCommandMapping<string> = {
-    commandType: 'NoOp',
-    transpile: () => StringCommandSet._noop,
   }
 
   protected constructor(

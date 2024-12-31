@@ -169,7 +169,8 @@ export class LabelPrinter<TChannelType extends Conf.MessageArrayLike> extends Ev
       return false;
     }
 
-    this._printerOptions.update(Cmds.deviceInfoToOptionsUpdate(await this._channel.getDeviceInfo()));
+    const devInfo = await this._channel.getDeviceInfo();
+    this._printerOptions.update(Cmds.deviceInfoToOptionsUpdate(devInfo));
 
     this._streamListener = new Mux.InputMessageListener<TChannelType>(
       this._channel.receive.bind(this._channel),
@@ -179,7 +180,10 @@ export class LabelPrinter<TChannelType extends Conf.MessageArrayLike> extends Ev
     );
     this._streamListener.start();
 
-    this._commandSet = await this.detectLanguage(await this._channel.getDeviceInfo());
+    this._commandSet = await this.detectLanguage(devInfo);
+    // Get the language-specific config object, which may have more options than
+    // the common config object.
+    this._printerOptions = this._commandSet.getConfig(this._printerOptions);
 
     // Now that we're listening for messages we can query for the full config.
     await this.refreshPrinterConfiguration();
