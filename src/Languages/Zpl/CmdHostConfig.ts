@@ -1,8 +1,14 @@
-/* eslint-disable no-fallthrough */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import * as Conf from '../../Configs/index.js';
 import * as Cmds from '../../Commands/index.js';
 import * as Util from '../../Util/index.js';
+import type { IZplSettingUpdateMessage, PowerUpAction } from './Config.js';
+
+const powerUpMap: Record<string, PowerUpAction> = {
+  "NO MOTION": 'none',
+  "CALIBRATION": 'calibrateWebSensor',
+  "FEED": 'feedBlank',
+}
 
 export class CmdHostConfig implements Cmds.IPrinterExtendedCommand {
   public static typeE = Symbol("CmdHostStatus");
@@ -64,12 +70,31 @@ export function parseCmdHostConfig(
   // Content before and after should be preserved.
   result.remainder = msg.substring(0, msgStart) + msg.substring(msgEnd + 1);
 
-  const update: Cmds.ISettingUpdateMessage = {
+  const update: IZplSettingUpdateMessage = {
     messageType: 'SettingUpdateMessage' as const,
   }
-  update.printerHardware ??= {};
-  update.printerMedia    ??= {};
-  update.printerSettings ??= {};
+  update.printerHardware    ??= {};
+  update.printerMedia       ??= {};
+  update.printerSettings    ??= {};
+  update.printerZplSettings ??= {
+    sensorLevels: {
+      markLedBrightness  : 50,
+      markThreshold      : 50,
+      markMediaThreshold : 50,
+      mediaLedBrightness : 50,
+      mediaThreshold     : 50,
+      ribbonLedBrightness: 50,
+      ribbonThreshold    : 50,
+      webThreshold       : 50,
+    }
+  };
+
+  if (window.location.hostname === "localhost") {
+    console.debug(
+      "Full ZPL config message:\n",
+      `${Util.AsciiCodeStrings.STX}${response}${Util.AsciiCodeStrings.ETX}`
+    );
+  }
 
   response
     .split('\n')
@@ -79,10 +104,14 @@ export function parseCmdHostConfig(
       //  TRANSMISSIVE        SENSOR SELECT
       // 2 spaces indent, 20 spaces value, 18 spaces key
       // We slice at 22 chars and construct a dictionary.
-      return {
-        key: s.substring(22).trim().toUpperCase(),
-        value: s.substring(0, 22).trim()
-      };
+      let key = s.substring(22).trim().toUpperCase();
+      const value = s.substring(0, 22).trim();
+      if (value.length === 12 && key === "") {
+        // There's at least one exception: old ZPL versions will include the serial
+        // at the top with no key.
+        key = "SERIAL";
+      }
+      return { key, value };
     })
     .forEach(l => {
       switch (l.key) {
@@ -90,35 +119,74 @@ export function parseCmdHostConfig(
           console.debug('Unhandled line: ', l.key, l.value);
           break;
 
-        case "MEDIA TYPE":
-          if (l.value.startsWith('MARK')) {
-            update.printerMedia!.mediaGapDetectMode = Conf.MediaMediaGapDetectionMode.markSensing;
-          } else if (l.value.startsWith('GAP')) {
-            update.printerMedia!.mediaGapDetectMode = Conf.MediaMediaGapDetectionMode.webSensing;
-          }
-          // TODO: Other modes!
+        case "":
+          // Empty key??
           break;
 
-        case "SENSOR SELECT":
+        case "MEDIA TYPE": {
+          switch (l.value) {
+            case "MARK":
+              update.printerMedia!.mediaGapDetectMode = Conf.MediaMediaGapDetectionMode.markSensing;
+              break;
+            case "CONTINUOUS":
+              update.printerMedia!.mediaGapDetectMode = Conf.MediaMediaGapDetectionMode.continuous;
+              break;
+            case "GAP/NOTCH":
+            case "NON-CONTINUOUS":
+              update.printerMedia!.mediaGapDetectMode = Conf.MediaMediaGapDetectionMode.webSensing;
+              break;
+          }
+          break;
+        }
+        case "SENSOR SELECT": // TRANSMISSIVE, REFLECTIVE, MANUAL
           // This should be set automatically with MEDIA TYPE.
+          // TODO: Don't ignore this if it disagrees with MEDIA TYPE?
+          break;
+        case "SENSOR TYPE": // MARK, WEB
+          // This should be set automatically with MEDIA TYPE. LP2844-Z units.
           // TODO: Don't ignore this if it disagrees with MEDIA TYPE?
           break;
 
         // Cases handled by XML.
         // TODO: Handle them here too, eventually deprecate XML for performance?
         case "FIRMWARE":
+        case "SERIAL":
         case "HARDWARE ID":
         case "DARKNESS":
-        case "DARKNESS SWITCH":
-        case "PRINT SPEED":
+        case "DARKNESS SWITCH": // Physical hardware must be present
+          break;
+
+        case "PRINT SPEED": // Unreliably present
+          break;
+
         case "TEAR OFF ADJUST":
-        case "PRINT MODE":
+        case "TEAR OFF": // Older synonym
+          break;
+
+        case "PRINT METHOD": // DIRECT-THERMAL, older?
+        case "PRINT MODE": // tear-off, peel, etc.
+        case "PRINT  WIDTH": // Older has two spaces?
         case "PRINT WIDTH":
+          // Newer firmware will be raw dots
+          // Older firmware is humanized, so
+          // 025 0/8 MM
+          // and must be parsed...
+          break;
         case "LABEL LENGTH":
+          update.printerMedia!.mediaLengthDots = Number(l.value);
+          break;
         case "MAXIMUM LENGTH":
-        case "EARLY WARNING":
+          // Humanized, must be parsed
+          // 2.0IN   50MM
+          break;
+
         case "MEDIA POWER UP":
+          update.printerZplSettings!.actionPowerUp = powerUpMap[l.value] ?? 'none';
+          break;
         case "HEAD CLOSE":
+          update.printerZplSettings!.actionHeadClose = powerUpMap[l.value] ?? 'none';
+          break;
+
         case "BACKFEED":
         case "LABEL TOP":
         case "LEFT POSITION":
@@ -126,20 +194,52 @@ export function parseCmdHostConfig(
         case "MODES ENABLED":
         case "MODES DISABLED":
         case "RESOLUTION":
-        // Sensor levels, also in XML
+        case "RFID VERSION":
+          break;
+
+        // Sensor levels, also in XML. These have synonyms
+        // in old config formats
         case "WEB SENSOR":
+        case "WEB S.": // older synonym
+          update.printerZplSettings!.sensorLevels!.webThreshold = Number(l.value);
+          break;
+        case "MEDIA SENSOR":
+        case "MEDIA S.": // older synonym
+          update.printerZplSettings!.sensorLevels!.mediaThreshold = Number(l.value);
+          break;
+        case "MARK SENSOR":
+        case "MARK S.": // older synonym
+          update.printerZplSettings!.sensorLevels!.markThreshold = Number(l.value);
+          break;
+        case "MARK MED SENSOR":
+        case "MARK MED S.": // older synonym
+          update.printerZplSettings!.sensorLevels!.markMediaThreshold = Number(l.value);
+          break;
+        case "MARK LED":
+          update.printerZplSettings!.sensorLevels!.markLedBrightness = Number(l.value);
+          break;
+        case "MEDIA LED":
+        case "RIBBON LED":
+          update.printerZplSettings!.sensorLevels!.ribbonLedBrightness = Number(l.value);
+          break;
+        case "RIBBON SENSOR":
+        case "RIBBON S.": //older synonym
+          update.printerZplSettings!.sensorLevels!.ribbonThreshold = Number(l.value);
+          break;
+
+        // These values don't correspond to ones that can be set via ^SS, so
+        // I'm not sure what they're for.
+        // TODO: Figure out what these sense and how to change them.
         case "TRANS GAIN": // whos lives matter yo
         case "TRANS LED":
-        case "MEDIA SENSOR":
-        case "TAKE LABEL":
-        case "MARK SENSOR":
-        case "MARK MED SENSOR":
         case "MARK GAIN":
-        case "MARK LED":
+        case "TAKE LABEL":
+          break;
 
         // Time and counters, maybe useful?
         case "RTC DATE":
         case "RTC TIME":
+          break;
         // There is one nonresettable counter and two resettable ones
         // like a car odometer and trip, haha.
         // Unfortunately, they use the same key! You have to split by suffix.
@@ -147,8 +247,10 @@ export function parseCmdHostConfig(
         case "NONRESET CNTR":
         case "RESET CNTR1":
         case "RESET CNTR2":
+          break;
 
         // Comm modes flags that might not be needed ever?
+        case "EARLY WARNING":
         case "USB COMM.":
         case "SER COMM. MODE":
         case "BAUD":
@@ -164,12 +266,19 @@ export function parseCmdHostConfig(
         case "USB HOST LOCK OUT":
         case "XML SCHEMA":
         case "IDLE DISPLAY":
+        case "CONFIGURATION": // CUSTOMIZED, older?
         case "FORMAT CONVERT":
         case "ZBI":
         case "ZBI VERSION":
         case "ZBI STATUS":
         case "RAM":
         case "ONBOARD FLASH":
+        case "PARALLEL COMM.":
+        case "SERIAL COMM.":
+        case "NETWORK ID":
+        case "TWINAX/COAX ID":
+        case "ZEBRA NET II":
+          break;
 
         // TODO: Sanity check these, throw a fit if they're set differntly
         case "CONTROL PREFIX":
@@ -185,3 +294,4 @@ export function parseCmdHostConfig(
   result.messages = [update];
   return result
 }
+

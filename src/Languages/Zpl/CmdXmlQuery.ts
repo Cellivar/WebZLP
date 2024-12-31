@@ -125,6 +125,10 @@ export function parseCmdXmlQuery(
       "<RFID-TYPE ENUM='NONE, AUTO DETECT, TAG-IT, ICODE, PICO, ISO15693, EPC, UID'>"
     );
 
+  if (window.location.hostname === "localhost") {
+    console.debug("Full ZPL XML message:\n", rawXml);
+  }
+
   // The rest is straightforward: parse it as an XML document and pull out
   // the data. The format is standardized and semi-self-documenting.
   const parser = new DOMParser();

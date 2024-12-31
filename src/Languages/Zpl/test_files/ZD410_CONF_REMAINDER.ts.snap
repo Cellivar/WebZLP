@@ -25,7 +25,7 @@
         },
       },
       "printerMedia": {
-        "darknessPercent": 67,
+        "darknessPercent": 70,
         "mediaGapDetectMode": 1,
         "mediaLengthDots": 200,
         "mediaPrintMode": 0,
@@ -42,7 +42,7 @@
         "thermalPrintMode": 0,
       },
       "printerSettings": {
-        "backfeedAfterTaken": "disabled",
+        "backfeedAfterTaken": "10",
       },
     },
   ],
@@ -54,7 +54,7 @@
   GAP/NOTCH           MEDIA TYPE        
   TRANSMISSIVE        SENSOR SELECT     
   400                 PRINT WIDTH       
-  2205                LABEL LENGTH      
+  0212                LABEL LENGTH      
   2.0IN     50MM      MAXIMUM LENGTH    
   MAINT. OFF          EARLY WARNING     
   CONNECTED           USB COMM.         
@@ -96,20 +96,20 @@
   65536k...........E: ONBOARD FLASH     
   NONE                FORMAT CONVERT    
   ENABLED             IDLE DISPLAY      
-  12/29/24            RTC DATE          
-  01:20               RTC TIME          
+  12/30/24            RTC DATE          
+  11:12               RTC TIME          
   DISABLED            ZBI               
-  2.1                 ZBI VERSION       
+                      ZBI VERSION       
   READY               ZBI STATUS        
-  7,332 LABELS        NONRESET CNTR     
-  7,332 LABELS        RESET CNTR1       
-  7,332 LABELS        RESET CNTR2       
-  12,557 IN           NONRESET CNTR     
-  12,544 IN           RESET CNTR1       
-  12,544 IN           RESET CNTR2       
-  31,863 CM           NONRESET CNTR     
-  31,863 CM           RESET CNTR1       
-  31,863 CM           RESET CNTR2       
+  7,336 LABELS        NONRESET CNTR     
+  7,336 LABELS        RESET CNTR1       
+  7,336 LABELS        RESET CNTR2       
+  12,581 IN           NONRESET CNTR     
+  12,569 IN           RESET CNTR1       
+  12,569 IN           RESET CNTR2       
+  31,925 CM           NONRESET CNTR     
+  31,925 CM           RESET CNTR1       
+  31,925 CM           RESET CNTR2       
   003 WIRED           SLOT 1            
   0                   MASS STORAGE COUNT
   0                   HID COUNT         

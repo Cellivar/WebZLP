@@ -53,7 +53,8 @@ export abstract class DocumentBuilder<TBuilder extends DocumentBuilder<TBuilder>
     return { commands: this._commands }
   }
 
-  protected andThen(...command: Cmds.IPrinterCommand[]): this {
+  /** Add an arbitrary command to the document. */
+  andThen(...command: Cmds.IPrinterCommand[]): this {
     this._commands.push(...command);
     return this;
   }

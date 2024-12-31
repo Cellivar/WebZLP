@@ -56,6 +56,9 @@ export function parseCmdHostIdentification(
   // XXXXXX,V1.0.0,dpm,000KB,X
   // My LP2844-Z looks like this
   // LP2844-Z,V45.11.7Z   ,8,8192KB
+  // My ZP505 (FedEx) looks like this??
+  // ZP 500 (ZPL)-200dpi,ZSP-002281B,8,2104KB
+  // So, field 1 and field 2 are basically anything goes.c
   // The second field should have a consistent pattern.
   // ASSUMPTION: Min 4 fields always?
 
@@ -65,10 +68,11 @@ export function parseCmdHostIdentification(
     return result;
   }
 
-  const line = sliced.split(',');
+  const line = sliced.slice(1, -1).split(',');
 
-  // Firmware versions should (?) always start with /^V\d+\./ to disambiguate.
-  if (line.length < 4 || !/^V\d+\./.test(line.at(1) ?? '')) {
+  // At least 4 items should always be present, with an optional 5th.
+  // The memory size should always end in 'KB', supposedly.
+  if (line.length < 4 || !line.at(3)?.endsWith('KB')) {
     return result;
   }
 
@@ -76,21 +80,34 @@ export function parseCmdHostIdentification(
   result.messageMatchedExpectedCommand = true;
   result.remainder = msg.substring(0, msgStart) + remainder;
 
-  // The ZPL docs speak of a mysterious 5th field which my printers don't have.
-  // "recognizable options"
-  // "only options specific to printer are shown (cutter, options, et cetera.)"
-  // There are no further details on what this could be. Thank you Zebra.
-  // TODO: figure out what these could possibly be.
+  if (window.location.hostname === "localhost") {
+    console.debug("Full ZPL host ident:\n", sliced);
+  }
 
   result.messages.push({
     messageType: 'SettingUpdateMessage',
     printerHardware: {
-      firmware: line.at(1)?.trim(),
-
       // Note that the model here is different than the USB descriptor.
       // For consistenty we ignore these and get them from the CmdXmlQuery.
       //model: line.at(0)?.trim(),
-      //dpi: Number(line.at(2)) * 25, // dots per mm, ZPL says multiply by 25..
+
+      firmware: line.at(1)?.trim(),
+
+      // For DPI ZPL says multiply by 25 to get DPI from DPM.
+      //dpi: Number(line.at(2)) * 25,
+
+      // Memory size always (?) ends in 'KB'.
+      //memorySize: Number(line.at(3)?.slice(0, -2)),
+
+      // The ZPL docs speak of a mysterious 5th field which my printers don't have.
+      // "recognizable options"
+      // "only options specific to printer are shown (cutter, options, et cetera.)"
+      // If you go looking at the 2003 version of the manual the description is:
+      // "recognizable OBJECTS"
+      // and clarifies that these are options attached to the printer. There is
+      // no listing of what these look like.
+
+      // TODO: figure out what these could possibly be.
     },
     printerMedia: {}
   });

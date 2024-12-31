@@ -60,6 +60,6 @@
     "vitest": "^2.1.6"
   },
   "dependencies": {
-    "web-device-mux": "^0.4.1"
+    "web-device-mux": "^0.5.0"
   }
 }

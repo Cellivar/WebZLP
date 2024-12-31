@@ -1,16 +1,16 @@
   +21.0               DARKNESS          
-  MEDIUM              DARKNESS SWITCH   
+  LOW                 DARKNESS SWITCH   
   6.0 IPS             PRINT SPEED       
   +000                TEAR OFF ADJUST   
   TEAR OFF            PRINT MODE        
-  GAP/NOTCH           MEDIA TYPE        
-  TRANSMISSIVE        SENSOR SELECT     
-  400                 PRINT WIDTH       
-  0212                LABEL LENGTH      
-  2.0IN     50MM      MAXIMUM LENGTH    
+  MARK                MEDIA TYPE        
+  REFLECTIVE          SENSOR SELECT     
+  200                 PRINT WIDTH       
+  2217                LABEL LENGTH      
+  22.0IN   557MM      MAXIMUM LENGTH    
   MAINT. OFF          EARLY WARNING     
   CONNECTED           USB COMM.         
-  AUTO                SER COMM. MODE    
+  AUTO - DTE          SER COMM. MODE    
   9600                BAUD              
   8 BITS              DATA BITS         
   NONE                PARITY            
@@ -24,45 +24,45 @@
   INACTIVE            COMMAND OVERRIDE  
   NO MOTION           MEDIA POWER UP    
   FEED                HEAD CLOSE        
-  10%                 BACKFEED          
+  DEFAULT             BACKFEED          
   +000                LABEL TOP         
   +0000               LEFT POSITION     
   DISABLED            REPRINT MODE      
-  036                 WEB SENSOR        
+  053                 WEB SENSOR        
   096                 MEDIA SENSOR      
-  128                 TAKE LABEL        
-  050                 MARK SENSOR       
+  000                 TAKE LABEL        
+  070                 MARK SENSOR       
   004                 MARK MED SENSOR   
-  035                 TRANS GAIN        
-  022                 TRANS LED         
-  017                 MARK GAIN         
-  100                 MARK LED          
+  040                 TRANS GAIN        
+  028                 TRANS LED         
+  064                 MARK GAIN         
+  055                 MARK LED          
   DPCSWFXM            MODES ENABLED     
   ........            MODES DISABLED    
    448 8/MM FULL      RESOLUTION        
-  6.0                 LINK-OS VERSION   
-  V84.20.18Z <-       FIRMWARE          
+  6.7                 LINK-OS VERSION   
+  V93.21.17Z <-       FIRMWARE          
   1.3                 XML SCHEMA        
-  6.5.0 0.770         HARDWARE ID       
-  8192k............R: RAM               
+  7.0.1               HARDWARE ID       
+  8176k............R: RAM               
   65536k...........E: ONBOARD FLASH     
   NONE                FORMAT CONVERT    
-  ENABLED             IDLE DISPLAY      
+  FW VERSION          IDLE DISPLAY      
   12/30/24            RTC DATE          
-  11:12               RTC TIME          
+  10:18               RTC TIME          
   DISABLED            ZBI               
-                      ZBI VERSION       
+  2.1                 ZBI VERSION       
   READY               ZBI STATUS        
-  7,336 LABELS        NONRESET CNTR     
-  7,336 LABELS        RESET CNTR1       
-  7,336 LABELS        RESET CNTR2       
-  12,581 IN           NONRESET CNTR     
-  12,569 IN           RESET CNTR1       
-  12,569 IN           RESET CNTR2       
-  31,925 CM           NONRESET CNTR     
-  31,925 CM           RESET CNTR1       
-  31,925 CM           RESET CNTR2       
-  003 WIRED           SLOT 1            
+  10 LABELS           NONRESET CNTR     
+  10 LABELS           RESET CNTR1       
+  10 LABELS           RESET CNTR2       
+  136 IN              NONRESET CNTR     
+  136 IN              RESET CNTR1       
+  136 IN              RESET CNTR2       
+  346 CM              NONRESET CNTR     
+  346 CM              RESET CNTR1       
+  346 CM              RESET CNTR2       
+  002 WIRED           SLOT 1            
   0                   MASS STORAGE COUNT
   0                   HID COUNT         
   OFF                 USB HOST LOCK OUT 

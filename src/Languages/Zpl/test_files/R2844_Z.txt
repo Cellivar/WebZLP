@@ -1,0 +1,53 @@
+  75A000000000                          
+  +10                 DARKNESS          
+  +000                TEAR OFF          
+  TEAR OFF            PRINT MODE        
+  CONTINUOUS          MEDIA TYPE        
+  WEB                 SENSOR TYPE       
+  DIRECT-THERMAL      PRINT METHOD      
+  104 0/8 MM          PRINT  WIDTH      
+  1258                LABEL LENGTH      
+  39.0IN   988MM      MAXIMUM LENGTH    
+  CONNECTED           USB COMM.         
+  PARALLEL            PARALLEL COMM.    
+  RS232               SERIAL COMM.      
+  9600                BAUD              
+  8 BITS              DATA BITS         
+  NONE                PARITY            
+  XON/XOFF            HOST HANDSHAKE    
+  NONE                PROTOCOL          
+  000                 NETWORK ID        
+  NORMAL MODE         COMMUNICATIONS    
+  <~>  7EH            CONTROL PREFIX    
+  <^>  5EH            FORMAT PREFIX     
+  <,>  2CH            DELIMITER CHAR    
+  ZPL II              ZPL MODE          
+  CALIBRATION         MEDIA POWER UP    
+  CALIBRATION         HEAD CLOSE        
+  DEFAULT             BACKFEED          
+  +000                LABEL TOP         
+  +0000               LEFT POSITION     
+  072                 WEB S.            
+  087                 MEDIA S.          
+  075                 RIBBON S.         
+  050                 MARK S.           
+  000                 MARK MED S.       
+  059                 MEDIA LED         
+  050                 RIBBON LED        
+  084                 MARK LED          
+  CS                  MODES ENABLED     
+  ..                  MODES DISABLED    
+  832 8/MM FULL       RESOLUTION        
+  V45.11.6A    <-     FIRMWARE          
+  V18.0.0.42          HARDWARE ID       
+  CUSTOMIZED          CONFIGURATION     
+  8192.............R: RAM               
+  2816.............E: ONBOARD FLASH     
+  NONE                FORMAT CONVERT    
+                      TWINAX/COAX ID    
+  FW VERSION          IDLE DISPLAY      
+  05/05/37            RTC DATE          
+  00:00               RTC TIME          
+  NONE                ZEBRA NET II      
+  OEM400 : 02.5F      RFID VERSION      
+

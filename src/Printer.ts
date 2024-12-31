@@ -66,7 +66,7 @@ export class LabelPrinter<TChannelType extends Conf.MessageArrayLike> extends Ev
   }
 
   get ready() {
-    return this._channel.ready;
+    return Promise.resolve(this.connected);
   }
 
   /** Gets a document for configuring this printer. */
@@ -86,8 +86,9 @@ export class LabelPrinter<TChannelType extends Conf.MessageArrayLike> extends Ev
     device: USBDevice,
     options: Mux.IDeviceCommunicationOptions
   ): Promise<LabelPrinterUsb> {
+    const c = await Mux.UsbDeviceChannel.fromDevice(device, options);
     const p = new LabelPrinter(
-      new Mux.UsbDeviceChannel(device, options),
+      c,
       new Cmds.RawMessageTransformer(),
       'Uint8Array',
       options);
@@ -162,23 +163,27 @@ export class LabelPrinter<TChannelType extends Conf.MessageArrayLike> extends Ev
   }
 
   private async setup() {
-    const channelReady = await this._channel.ready;
-    if (!channelReady) {
+    if (!this._channel.connected) {
       // If the channel failed to connect we have no hope.
       await this.dispose();
       return false;
     }
 
-    this._printerOptions.update(Cmds.deviceInfoToOptionsUpdate(this._channel.getDeviceInfo()));
+    const devInfo = await this._channel.getDeviceInfo();
+    this._printerOptions.update(Cmds.deviceInfoToOptionsUpdate(devInfo));
 
     this._streamListener = new Mux.InputMessageListener<TChannelType>(
-      this._channel.getInput.bind(this._channel),
+      this._channel.receive.bind(this._channel),
       this.parseAndDispatchMessage.bind(this),
+      this.handleInputError.bind(this),
       this._deviceCommOpts.debug,
     );
     this._streamListener.start();
 
-    this._commandSet = await this.detectLanguage(this._channel.getDeviceInfo());
+    this._commandSet = await this.detectLanguage(devInfo);
+    // Get the language-specific config object, which may have more options than
+    // the common config object.
+    this._printerOptions = this._commandSet.getConfig(this._printerOptions);
 
     // Now that we're listening for messages we can query for the full config.
     await this.refreshPrinterConfiguration();
@@ -353,7 +358,7 @@ export class LabelPrinter<TChannelType extends Conf.MessageArrayLike> extends Ev
     }
 
     await promiseWithTimeout(
-      this._channel.sendCommands(sendCmds),
+      this._channel.send(sendCmds),
       5000,
       new Mux.DeviceCommunicationError(`Timed out sending commands to printer, is there a problem with the printer?`)
     );
@@ -372,6 +377,11 @@ export class LabelPrinter<TChannelType extends Conf.MessageArrayLike> extends Ev
       this._awaitedCommands = [];
     }
     return true;
+  }
+
+  private async handleInputError(error: Mux.DeviceCommunicationError) {
+    // TODO: Something?
+    console.error("Printer saw error from InputListener!", error.message, error.innerException);
   }
 
   private async parseAndDispatchMessage(

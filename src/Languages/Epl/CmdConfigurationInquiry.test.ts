@@ -1,7 +1,7 @@
 import { expect, describe, it } from 'vitest';
 import { parseConfigResponse, tryGetModel } from './CmdConfigurationInquiry.js';
 import type { ISettingUpdateMessage } from '../../Commands/Messages.js';
-import { MediaMediaGapDetectionMode, PrintSpeed, ThermalPrintMode } from '../../Configs/ConfigurationTypes.js';
+import { MediaMediaGapDetectionMode, ThermalPrintMode } from '../../Configs/ConfigurationTypes.js';
 
 describe("CmdConfigurationInquiry", () => {
   it('Rejects empty message', () => {

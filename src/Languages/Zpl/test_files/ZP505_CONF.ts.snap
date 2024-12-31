@@ -1,0 +1,30 @@
+{
+  "messageIncomplete": false,
+  "messageMatchedExpectedCommand": true,
+  "messages": [
+    {
+      "messageType": "SettingUpdateMessage",
+      "printerHardware": {},
+      "printerMedia": {
+        "mediaGapDetectMode": 0,
+        "mediaLengthDots": 1241,
+      },
+      "printerSettings": {},
+      "printerZplSettings": {
+        "actionHeadClose": "none",
+        "actionPowerUp": "none",
+        "sensorLevels": {
+          "markLedBrightness": 50,
+          "markMediaThreshold": 95,
+          "markThreshold": 50,
+          "mediaLedBrightness": 50,
+          "mediaThreshold": 96,
+          "ribbonLedBrightness": 50,
+          "ribbonThreshold": 50,
+          "webThreshold": 43,
+        },
+      },
+    },
+  ],
+  "remainder": "",
+}

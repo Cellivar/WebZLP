@@ -1,0 +1,458 @@
+<?xml version='1.0'?>
+<ZEBRA-ELTRON-PERSONALITY>
+    <DEFINITIONS>
+        <MODEL>LP2844-Z</MODEL>
+        <FIRMWARE-VERSION>V45.11.6ZH </FIRMWARE-VERSION>
+        <PLUG-AND-PLAY-VALUE>MANUFACTURER:Zebra Technologies;COMMAND SET:ZPL;MODEL:ZTC
+            LP2844-Z-200dpi;CLASS:PRINTER;PROTOCOLS:IEEE1284.4;</PLUG-AND-PLAY-VALUE>
+        <DOTS-PER-MM>8</DOTS-PER-MM>
+        <DOTS-PER-DOTROW>832</DOTS-PER-DOTROW>
+        <PHYSICAL-MEMORY>
+            <TYPE ENUM='R, E, B'>R</TYPE>
+            <SIZE>8388608</SIZE>
+            <AVAILABLE>4153324</AVAILABLE>
+        </PHYSICAL-MEMORY>
+        <PHYSICAL-MEMORY>
+            <TYPE ENUM='R, E, B'>E</TYPE>
+            <SIZE>2883584</SIZE>
+            <AVAILABLE>2883412</AVAILABLE>
+        </PHYSICAL-MEMORY>
+        <OPTIONS>
+            <CUTTER BOOL='Y,N'>N</CUTTER>
+            <REWIND BOOL='Y,N'>N</REWIND>
+            <LINER-TAKEUP BOOL='Y,N'>N</LINER-TAKEUP>
+            <VALUE-PEEL-REWIND BOOL='Y,N'>N</VALUE-PEEL-REWIND>
+            <PEEL BOOL='Y,N'>Y</PEEL>
+            <APPLICATOR BOOL='Y,N'>N</APPLICATOR>
+            <VERIFIER BOOL='Y,N'>N</VERIFIER>
+        </OPTIONS>
+    </DEFINITIONS>
+    <SAVED-SETTINGS>
+        <NAME></NAME>
+        <DESCRIPTION></DESCRIPTION>
+        <MEDIA-DARKNESS MIN='0' MAX='30'>
+            <CURRENT>27</CURRENT>
+            <STORED>27</STORED>
+            <DEFAULT>10</DEFAULT>
+        </MEDIA-DARKNESS>
+        <TEAR-OFF-POSITION MIN='-120' MAX='120'>
+            <CURRENT>0</CURRENT>
+            <STORED>0</STORED>
+            <DEFAULT>0</DEFAULT>
+        </TEAR-OFF-POSITION>
+        <PRINT-MODE>
+            <MODE ENUM='REWIND, TEAR OFF, PEEL OFF, CUTTER'>
+                <CURRENT>TEAR OFF</CURRENT>
+                <STORED>TEAR OFF</STORED>
+                <DEFAULT>TEAR OFF</DEFAULT>
+            </MODE>
+        </PRINT-MODE>
+        <MEDIA-TRACKING ENUM='CONTINUOUS, NONCONT-WEB, NONCONT-MARK'>
+            <CURRENT>NONCONT-MARK</CURRENT>
+            <STORED>NONCONT-MARK</STORED>
+            <DEFAULT>NONCONT-WEB</DEFAULT>
+        </MEDIA-TRACKING>
+        <MEDIA-TYPE ENUM='DIRECT-THERMAL, THERMAL-TRANS.'>
+            <CURRENT>DIRECT-THERMAL</CURRENT>
+            <STORED>DIRECT-THERMAL</STORED>
+            <DEFAULT>DIRECT-THERMAL</DEFAULT>
+        </MEDIA-TYPE>
+        <PRINT-WIDTH MIN='2' MAX='832'>
+            <CURRENT>200</CURRENT>
+            <STORED>200</STORED>
+            <DEFAULT>832</DEFAULT>
+        </PRINT-WIDTH>
+        <SERIAL-PORT1>
+            <BAUD ENUM='300, 600, 1200, 2400, 4800, 9600, 14400, 19200, 28800, 38400, 57600, 115200'>
+                <CURRENT>9600</CURRENT>
+                <STORED>9600</STORED>
+                <DEFAULT>9600</DEFAULT>
+            </BAUD>
+            <DATA-BITS ENUM='7 BITS, 8 BITS'>
+                <CURRENT>8 BITS</CURRENT>
+                <STORED>8 BITS</STORED>
+                <DEFAULT>8 BITS</DEFAULT>
+            </DATA-BITS>
+            <PARITY ENUM='NONE, ODD, EVEN'>
+                <CURRENT>NONE</CURRENT>
+                <STORED>NONE</STORED>
+                <DEFAULT>NONE</DEFAULT>
+            </PARITY>
+            <STOP-BITS ENUM='1 STOP BIT, 2 STOP BITS'>
+                <CURRENT>2 STOP BITS</CURRENT>
+                <STORED>1 STOP BIT</STORED>
+                <DEFAULT>1 STOP BIT</DEFAULT>
+            </STOP-BITS>
+            <HANDSHAKE ENUM='XON/XOFF, DSR/DTR, RTS/CTS'>
+                <CURRENT>XON/XOFF</CURRENT>
+                <STORED>XON/XOFF</STORED>
+                <DEFAULT>XON/XOFF</DEFAULT>
+            </HANDSHAKE>
+            <PROTOCOL ENUM='NONE, ZEBRA, ACK_NAK'>
+                <CURRENT>NONE</CURRENT>
+                <STORED>NONE</STORED>
+                <DEFAULT>NONE</DEFAULT>
+            </PROTOCOL>
+        </SERIAL-PORT1>
+        <ZNET-ID MIN='0' MAX='999'>
+            <CURRENT>0</CURRENT>
+            <STORED>0</STORED>
+            <DEFAULT>0</DEFAULT>
+        </ZNET-ID>
+        <PROTOCOL-1284-4 BOOL='Y,N'>
+            <CURRENT>Y</CURRENT>
+            <STORED>N</STORED>
+            <DEFAULT>N</DEFAULT>
+        </PROTOCOL-1284-4>
+        <WARN-HEAD-COLD BOOL='Y,N'>
+            <CURRENT>Y</CURRENT>
+            <STORED>Y</STORED>
+            <DEFAULT>Y</DEFAULT>
+        </WARN-HEAD-COLD>
+        <TILDE-DEFINE MIN='0' MAX='255'>
+            <CURRENT>126</CURRENT>
+            <STORED>126</STORED>
+            <DEFAULT>126</DEFAULT>
+        </TILDE-DEFINE>
+        <CARET-DEFINE MIN='0' MAX='255'>
+            <CURRENT>94</CURRENT>
+            <STORED>94</STORED>
+            <DEFAULT>94</DEFAULT>
+        </CARET-DEFINE>
+        <DELIM-DEFINE MIN='0' MAX='255'>
+            <CURRENT>44</CURRENT>
+            <STORED>44</STORED>
+            <DEFAULT>44</DEFAULT>
+        </DELIM-DEFINE>
+        <LABEL-DESCRIPTION-LANGUAGE ENUM='ZPL II, ZPL'>
+            <CURRENT>ZPL II</CURRENT>
+            <STORED>ZPL II</STORED>
+            <DEFAULT>ZPL II</DEFAULT>
+        </LABEL-DESCRIPTION-LANGUAGE>
+        <MEDIA-FEED>
+            <POWER-UP ENUM='FEED, CALIBRATION, LENGTH, NO MOTION'>
+                <CURRENT>NO MOTION</CURRENT>
+                <STORED>NO MOTION</STORED>
+                <DEFAULT>CALIBRATION</DEFAULT>
+            </POWER-UP>
+            <HEAD-CLOSE ENUM='FEED, CALIBRATION, LENGTH, NO MOTION'>
+                <CURRENT>NO MOTION</CURRENT>
+                <STORED>NO MOTION</STORED>
+                <DEFAULT>CALIBRATION</DEFAULT>
+            </HEAD-CLOSE>
+        </MEDIA-FEED>
+        <BACKFEED-PERCENT ENUM='BEFORE, 10%, 20%, 30%, 40%, 50%, 60%, 70%, 80%, DEFAULT, AFTER, OFF'>
+            <CURRENT>DEFAULT</CURRENT>
+            <STORED>DEFAULT</STORED>
+            <DEFAULT>DEFAULT</DEFAULT>
+        </BACKFEED-PERCENT>
+        <HEAD-TEST-INFO>
+            <FATAL BOOL='Y,N'>
+                <CURRENT>N</CURRENT>
+                <STORED>N</STORED>
+                <DEFAULT>N</DEFAULT>
+            </FATAL>
+            <INTERVAL MIN='0' MAX='9999'>
+                <CURRENT>0</CURRENT>
+                <STORED>0</STORED>
+                <DEFAULT>0</DEFAULT>
+            </INTERVAL>
+        </HEAD-TEST-INFO>
+        <LABEL-TOP MIN='-120' MAX='120'>
+            <CURRENT>0</CURRENT>
+            <STORED>0</STORED>
+            <DEFAULT>0</DEFAULT>
+        </LABEL-TOP>
+        <CALIBRATION-VALUES>
+            <CALIBRATED-LABEL-LENGTH MIN='0' MAX='7917'>
+                <CURRENT>235</CURRENT>
+                <STORED>235</STORED>
+                <DEFAULT>1225</DEFAULT>
+            </CALIBRATED-LABEL-LENGTH>
+            <WEB-THRESHOLD MIN='0' MAX='100'>
+                <CURRENT>38</CURRENT>
+                <STORED>38</STORED>
+                <DEFAULT>50</DEFAULT>
+            </WEB-THRESHOLD>
+            <MEDIA-THRESHOLD MIN='0' MAX='100'>
+                <CURRENT>46</CURRENT>
+                <STORED>46</STORED>
+                <DEFAULT>0</DEFAULT>
+            </MEDIA-THRESHOLD>
+            <RIBBON-THRESHOLD MIN='0' MAX='100'>
+                <CURRENT>75</CURRENT>
+                <STORED>75</STORED>
+                <DEFAULT>60</DEFAULT>
+            </RIBBON-THRESHOLD>
+            <MARK-THRESHOLD MIN='0' MAX='100'>
+                <CURRENT>46</CURRENT>
+                <STORED>46</STORED>
+                <DEFAULT>50</DEFAULT>
+            </MARK-THRESHOLD>
+            <MARK-MEDIA-THRESHOLD MIN='0' MAX='100'>
+                <CURRENT>27</CURRENT>
+                <STORED>27</STORED>
+                <DEFAULT>0</DEFAULT>
+            </MARK-MEDIA-THRESHOLD>
+            <MEDIA-LED-INTENSITY MIN='0' MAX='255'>
+                <CURRENT>34</CURRENT>
+                <STORED>34</STORED>
+                <DEFAULT>34</DEFAULT>
+            </MEDIA-LED-INTENSITY>
+            <RIBBON-LED-INTENSITY MIN='0' MAX='255'>
+                <CURRENT>0</CURRENT>
+                <STORED>0</STORED>
+                <DEFAULT>0</DEFAULT>
+            </RIBBON-LED-INTENSITY>
+            <MARK-LED-INTENSITY MIN='0' MAX='255'>
+                <CURRENT>43</CURRENT>
+                <STORED>43</STORED>
+                <DEFAULT>43</DEFAULT>
+            </MARK-LED-INTENSITY>
+        </CALIBRATION-VALUES>
+        <HALF-DENSITY BOOL='Y,N'>
+            <CURRENT>N</CURRENT>
+            <STORED>N</STORED>
+            <DEFAULT>N</DEFAULT>
+        </HALF-DENSITY>
+        <OPERATOR-LANGUAGE
+            ENUM='ENGLISH, SPANISH, FRENCH, GERMAN, ITALIAN, NORWEGIAN, PORTUGUESE, SWEDISH, DANISH, SPANISH2, DUTCH, FINNISH, JAPAN'>
+            <CURRENT>ENGLISH</CURRENT>
+            <STORED>ENGLISH</STORED>
+            <DEFAULT>ENGLISH</DEFAULT>
+        </OPERATOR-LANGUAGE>
+        <MODE-PROTECTION>
+            <DISABLE-DARKNESS BOOL='Y,N'>
+                <CURRENT>N</CURRENT>
+                <STORED>N</STORED>
+                <DEFAULT>N</DEFAULT>
+            </DISABLE-DARKNESS>
+            <DISABLE-POSITION BOOL='Y,N'>
+                <CURRENT>N</CURRENT>
+                <STORED>N</STORED>
+                <DEFAULT>N</DEFAULT>
+            </DISABLE-POSITION>
+            <DISABLE-CALIBRATION BOOL='Y,N'>
+                <CURRENT>N</CURRENT>
+                <STORED>N</STORED>
+                <DEFAULT>N</DEFAULT>
+            </DISABLE-CALIBRATION>
+            <DISABLE-SAVE-CONFIGURATION BOOL='Y,N'>
+                <CURRENT>N</CURRENT>
+                <STORED>N</STORED>
+                <DEFAULT>N</DEFAULT>
+            </DISABLE-SAVE-CONFIGURATION>
+            <DISABLE-PAUSE-KEY BOOL='Y,N'>
+                <CURRENT>N</CURRENT>
+                <STORED>N</STORED>
+                <DEFAULT>N</DEFAULT>
+            </DISABLE-PAUSE-KEY>
+            <DISABLE-FEED-KEY BOOL='Y,N'>
+                <CURRENT>N</CURRENT>
+                <STORED>N</STORED>
+                <DEFAULT>N</DEFAULT>
+            </DISABLE-FEED-KEY>
+            <DISABLE-CANCEL-KEY BOOL='Y,N'>
+                <CURRENT>N</CURRENT>
+                <STORED>N</STORED>
+                <DEFAULT>N</DEFAULT>
+            </DISABLE-CANCEL-KEY>
+            <DISABLE-MENU BOOL='Y,N'>
+                <CURRENT>N</CURRENT>
+                <STORED>N</STORED>
+                <DEFAULT>N</DEFAULT>
+            </DISABLE-MENU>
+        </MODE-PROTECTION>
+        <MEMORY-ALIAS>
+            <DRIVE-B ENUM='R, E, B'>
+                <CURRENT>B</CURRENT>
+                <STORED>B</STORED>
+                <DEFAULT>B</DEFAULT>
+            </DRIVE-B>
+            <DRIVE-E ENUM='R, E, B'>
+                <CURRENT>E</CURRENT>
+                <STORED>E</STORED>
+                <DEFAULT>E</DEFAULT>
+            </DRIVE-E>
+            <DRIVE-R ENUM='R, E, B'>
+                <CURRENT>R</CURRENT>
+                <STORED>R</STORED>
+                <DEFAULT>R</DEFAULT>
+            </DRIVE-R>
+        </MEMORY-ALIAS>
+        <PASSWORD MIN='0' MAX='9999'>
+            <CURRENT>1234</CURRENT>
+            <STORED>1234</STORED>
+            <DEFAULT>1234</DEFAULT>
+        </PASSWORD>
+        <RFID-TYPE ENUM='NONE, AUTO DETECT, TAG-IT, ICODE, PICO, ISO15693, EPC, UID'>
+            <CURRENT>AUTO DETECT</CURRENT>
+            <STORED>NONE</STORED>
+            <DEFAULT>NONE</DEFAULT>
+        </RFID-TYPE>
+        <RIBBON-TENSION ENUM='LOW, MEDIUM, HIGH'>
+            <CURRENT>HIGH</CURRENT>
+            <STORED>LOW</STORED>
+            <DEFAULT>LOW</DEFAULT>
+        </RIBBON-TENSION>
+        <MAX-LABEL-LENGTH MIN='0' MAX='7917'>
+            <CURRENT>4466</CURRENT>
+            <STORED>4466</STORED>
+            <DEFAULT>7917</DEFAULT>
+        </MAX-LABEL-LENGTH>
+        <HEAD-RESISTANCE MIN='488' MAX='2415'>
+            <CURRENT>0</CURRENT>
+            <STORED>0</STORED>
+            <DEFAULT>0</DEFAULT>
+        </HEAD-RESISTANCE>
+        <VERIFIER-PORT ENUM='OFF, VER-RPRNT ERR, VER-THRUPUT'>
+            <CURRENT>OFF</CURRENT>
+            <STORED>OFF</STORED>
+            <DEFAULT>OFF</DEFAULT>
+        </VERIFIER-PORT>
+        <APPLICATOR-PORT ENUM='OFF, MODE 1, MODE 2, MODE 3, MODE 4'>
+            <CURRENT>OFF</CURRENT>
+            <STORED>OFF</STORED>
+            <DEFAULT>OFF</DEFAULT>
+        </APPLICATOR-PORT>
+        <START-PRINT-SIG ENUM='PULSE MODE, LEVEL MODE'>
+            <CURRENT>PULSE MODE</CURRENT>
+            <STORED>PULSE MODE</STORED>
+            <DEFAULT>PULSE MODE</DEFAULT>
+        </START-PRINT-SIG>
+        <RESYNCH-MODE ENUM='FEED MODE, ERROR MODE'>
+            <CURRENT>FEED MODE</CURRENT>
+            <STORED>FEED MODE</STORED>
+            <DEFAULT>FEED MODE</DEFAULT>
+        </RESYNCH-MODE>
+        <PRE-PEEL BOOL='Y,N'>
+            <CURRENT>N</CURRENT>
+            <STORED>N</STORED>
+            <DEFAULT>N</DEFAULT>
+        </PRE-PEEL>
+        <PRINTER-SLEEP>
+            <FORCE-OFF-MODE BOOL='Y,N'>
+                <CURRENT>N</CURRENT>
+                <STORED>N</STORED>
+                <DEFAULT>N</DEFAULT>
+            </FORCE-OFF-MODE>
+            <IDLE-TIME MIN='0' MAX='999999'>
+                <CURRENT>0</CURRENT>
+                <STORED>0</STORED>
+                <DEFAULT>0</DEFAULT>
+            </IDLE-TIME>
+        </PRINTER-SLEEP>
+        <UNSOLICITED-MESSAGES>
+            <CURRENT>
+            </CURRENT>
+            <STORED>
+            </STORED>
+        </UNSOLICITED-MESSAGES>
+    </SAVED-SETTINGS>
+    <FORMAT-SETTINGS>
+        <CODE-VALIDATION BOOL='Y,N'>N</CODE-VALIDATION>
+        <REPRINT-AFTER-ERROR BOOL='Y,N'>Y</REPRINT-AFTER-ERROR>
+        <MODE-UNITS ENUM='DOTS, INCHES, MILLIMETERS'>DOTS</MODE-UNITS>
+        <LABEL-LENGTH MIN='0' MAX='7917'>235</LABEL-LENGTH>
+        <LABEL-REVERSE BOOL='Y,N'>N</LABEL-REVERSE>
+        <LABEL-SHIFT MIN='-9999' MAX='9999'>0</LABEL-SHIFT>
+        <LABEL-HOME>
+            <X-AXIS MIN='0' MAX='32000'>10</X-AXIS>
+            <Y-AXIS MIN='0' MAX='32000'>26</Y-AXIS>
+        </LABEL-HOME>
+        <RELATIVE-DARKNESS MIN='-30' MAX='30'>0</RELATIVE-DARKNESS>
+        <PRINT-RATE MIN='2' MAX='4'>2</PRINT-RATE>
+        <SLEW-RATE MIN='2' MAX='4'>2</SLEW-RATE>
+        <BACKFEED-RATE MIN='2' MAX='4'>2</BACKFEED-RATE>
+        <HEAD-TEST-INFO>
+            <MANUAL-RANGE BOOL='Y,N'>N</MANUAL-RANGE>
+            <FIRST-ELEMENT MIN='0' MAX='9999'>0</FIRST-ELEMENT>
+            <LAST-ELEMENT MIN='0' MAX='9999'>9999</LAST-ELEMENT>
+        </HEAD-TEST-INFO>
+        <DEFAULT-FONT>
+            <FONT-LETTER MIN='0' MAX='255'>65</FONT-LETTER>
+            <HEIGHT MIN='1' MAX='9999'>9</HEIGHT>
+            <WIDTH MIN='1' MAX='9999'>5</WIDTH>
+        </DEFAULT-FONT>
+        <DEFAULT-BARCODE>
+            <RATIO MIN='2.0' MAX='3.0'>3.0</RATIO>
+            <MODULE-WIDTH MIN='1' MAX='10'>2</MODULE-WIDTH>
+            <HEIGHT MIN='1' MAX='9999'>10</HEIGHT>
+        </DEFAULT-BARCODE>
+    </FORMAT-SETTINGS>
+    <STATUS>
+        <TOTAL-LABELS-IN-BATCH>0</TOTAL-LABELS-IN-BATCH>
+        <LABELS-REMAINING-IN-BATCH>0</LABELS-REMAINING-IN-BATCH>
+        <PRINTHEAD-TEMP>
+            <OVERTEMP-THRESHOLD>300</OVERTEMP-THRESHOLD>
+            <UNDERTEMP-THRESHOLD>-1</UNDERTEMP-THRESHOLD>
+            <CURRENT>22</CURRENT>
+        </PRINTHEAD-TEMP>
+        <HEAD-ELEMENT-STATUS>
+            <FAILED BOOL='Y,N'>N</FAILED>
+        </HEAD-ELEMENT-STATUS>
+        <HEAD-OPEN BOOL='Y,N'>N</HEAD-OPEN>
+        <CONFIG-LOST-ERROR BOOL='Y,N'>N</CONFIG-LOST-ERROR>
+        <RAM-ALLOCATION-ERROR BOOL='Y,N'>N</RAM-ALLOCATION-ERROR>
+        <BITMAP-ALLOCATION-ERROR BOOL='Y,N'>N</BITMAP-ALLOCATION-ERROR>
+        <STORED-FORMAT-ERROR BOOL='Y,N'>N</STORED-FORMAT-ERROR>
+        <STORED-GRAPHIC-ERROR BOOL='Y,N'>N</STORED-GRAPHIC-ERROR>
+        <STORED-BITMAP-ERROR BOOL='Y,N'>N</STORED-BITMAP-ERROR>
+        <STORED-FONT-ERROR BOOL='Y,N'>N</STORED-FONT-ERROR>
+        <CACHE-MEMORY-ERROR BOOL='Y,N'>N</CACHE-MEMORY-ERROR>
+        <BASIC-FORCED-ERROR BOOL='Y,N'>N</BASIC-FORCED-ERROR>
+        <HEAD-UNDERTEMP-WARNING BOOL='Y,N'>N</HEAD-UNDERTEMP-WARNING>
+        <HEAD-OVERTEMP-ERROR BOOL='Y,N'>N</HEAD-OVERTEMP-ERROR>
+        <RIBBON-IN-WARNING BOOL='Y,N'>N</RIBBON-IN-WARNING>
+        <BUFFER-FULL-ERROR BOOL='Y,N'>N</BUFFER-FULL-ERROR>
+        <CUTTER-JAM-ERROR BOOL='Y,N'>N</CUTTER-JAM-ERROR>
+        <COVER-OPEN BOOL='Y,N'>N</COVER-OPEN>
+        <RIBBON-TENSION-ERROR BOOL='Y,N'>N</RIBBON-TENSION-ERROR>
+        <VERIFIER-ERROR BOOL='Y,N'>N</VERIFIER-ERROR>
+        <RIBBON-LOW-WARNING BOOL='Y,N'>N</RIBBON-LOW-WARNING>
+        <POWERSUPPLY-TEMP>
+            <OVERTEMP-THRESHOLD>70</OVERTEMP-THRESHOLD>
+            <CURRENT>0</CURRENT>
+        </POWERSUPPLY-TEMP>
+        <POWERSUPPLY-OVERTEMP-ERROR BOOL='Y,N'>N</POWERSUPPLY-OVERTEMP-ERROR>
+        <BATTERY-TEMPERATURE>
+            <OVERTEMP-THRESHOLD>50</OVERTEMP-THRESHOLD>
+            <CURRENT>0</CURRENT>
+        </BATTERY-TEMPERATURE>
+        <CURRENT-BATTERY-VOLTAGE>0</CURRENT-BATTERY-VOLTAGE>
+        <NUMBER-OF-FORMATS>1</NUMBER-OF-FORMATS>
+        <PARTIAL-FORMAT-IN-PROGRESS BOOL='Y,N'>N</PARTIAL-FORMAT-IN-PROGRESS>
+        <PAUSE BOOL='Y,N'>N</PAUSE>
+        <PAPER-OUT BOOL='Y,N'>N</PAPER-OUT>
+        <RIBBON-OUT BOOL='Y,N'>N</RIBBON-OUT>
+        <BATTERY-DEAD-ERROR BOOL='Y,N'>N</BATTERY-DEAD-ERROR>
+        <BATTERY-OVERTEMP-ERROR BOOL='Y,N'>N</BATTERY-OVERTEMP-ERROR>
+        <BATTERY-VOLTAGE-ERROR BOOL='Y,N'>N</BATTERY-VOLTAGE-ERROR>
+        <BATTERY-LOW-WARNING BOOL='Y,N'>N</BATTERY-LOW-WARNING>
+        <PRINTER-COUNTER>
+            <COUNTER1>
+                <INCHES>0</INCHES>
+                <CENTIMETERS>0</CENTIMETERS>
+                <LABELS>0</LABELS>
+            </COUNTER1>
+            <COUNTER2>
+                <INCHES>0</INCHES>
+                <CENTIMETERS>0</CENTIMETERS>
+                <LABELS>0</LABELS>
+            </COUNTER2>
+            <NON-RESET-COUNTER>
+                <INCHES>0</INCHES>
+                <CENTIMETERS>0</CENTIMETERS>
+                <LABELS>0</LABELS>
+            </NON-RESET-COUNTER>
+        </PRINTER-COUNTER>
+        <CLOCK>
+            <DATE>
+                19??7???</DATE>
+            <TIME>
+                7?:??:7?</TIME>
+        </CLOCK>
+    </STATUS>
+    <OBJECT-LIST>
+    </OBJECT-LIST>
+</ZEBRA-ELTRON-PERSONALITY>

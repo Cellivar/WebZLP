@@ -19,7 +19,7 @@ describe('StringMessageTransformer', () => {
       .toStrictEqual('\r\n');
     expect(t.combineMessages('', '\n'))
       .toStrictEqual('\n');
-  })
+  });
 });
 
 describe('Converters', () => {
@@ -34,5 +34,5 @@ describe('Converters', () => {
     const arr = Msgs.asString(expected);
     const result = Msgs.asUint8Array(arr);
     expect(result).toStrictEqual(expected);
-  })
-})
+  });
+});

@@ -8,6 +8,10 @@ import { cmdHostQueryMapping } from './CmdHostQuery.js';
 import { CmdHostStatus, cmdHostStatusMapping } from './CmdHostStatus.js';
 import { CmdHostConfig, cmdHostConfigMapping } from './CmdHostConfig.js';
 import { CmdConfigUpdate, cmdConfigUpdateMapping } from './CmdConfigUpdate.js';
+import { cmdGraphSensorCalibrationMapping } from './CmdGraphSensorCalibration.js';
+import { cmdSetSensorCalibrationMapping } from './CmdSetSensorCalibration.js';
+import { ZplPrinterConfig } from './Config.js';
+import { cmdSetPowerUpAndHeadCloseActionMapping } from './CmdSetPowerUpAndHeadCloseAction.js';
 
 /** Command set for communicating with a ZPL II printer. */
 export class ZplPrinterCommandSet extends Cmds.StringCommandSet {
@@ -24,167 +28,174 @@ export class ZplPrinterCommandSet extends Cmds.StringCommandSet {
     super(
       Conf.PrinterCommandLanguage.zpl,
       {
+        NoOp: { commandType: 'NoOp' },
+        CustomCommand: {
+          commandType: 'CustomCommand',
+          transpile: (c, d) => this.getExtendedCommand(c)(c, d, this)
+        },
         // Printer control
-      NoOp: { commandType: 'NoOp' },
-      CustomCommand: {
-        commandType: 'CustomCommand',
-        transpile: (c, d) => this.getExtendedCommand(c)(c, d, this)
-      },
-      Identify: {
-        commandType: 'Identify',
-        expand: () => [new CmdHostIdentification()],
-      },
-      RebootPrinter: {
-        commandType: 'RebootPrinter',
-        transpile: () => '~JR\n',
-        formInclusionMode: Cmds.CommandFormInclusionMode.noForm,
-      },
-      Raw: {
-        commandType: 'Raw',
-        transpile: (c) => (c as Cmds.Raw).rawDocument,
-      },
-      GetStatus: {
-        commandType: 'GetStatus',
-        expand: () => [new CmdHostStatus()],
-        formInclusionMode: Cmds.CommandFormInclusionMode.noForm,
-      },
+        Identify: {
+          commandType: 'Identify',
+          expand: () => [new CmdHostIdentification()],
+        },
+        RebootPrinter: {
+          commandType: 'RebootPrinter',
+          transpile: () => '~JR\n',
+          formInclusionMode: Cmds.CommandFormInclusionMode.noForm,
+        },
+        Raw: {
+          commandType: 'Raw',
+          transpile: (c) => (c as Cmds.Raw).rawDocument,
+        },
+        GetStatus: {
+          commandType: 'GetStatus',
+          expand: () => [new CmdHostStatus()],
+          formInclusionMode: Cmds.CommandFormInclusionMode.noForm,
+        },
 
-      // Configuration
-      PrintConfiguration: {
-        commandType: 'PrintConfiguration',
-        transpile: () =>'~WC\n',
-        formInclusionMode: Cmds.CommandFormInclusionMode.noForm,
-      },
-      QueryConfiguration: {
-        commandType: 'QueryConfiguration',
-        expand: () => [
-          new CmdXmlQuery('All'),
-          new CmdHostConfig(),
-        ],
-      },
-      SaveCurrentConfiguration: {
-        commandType: 'SaveCurrentConfiguration',
-        expand: () => [
-          new Cmds.EndLabel(),
-          new Cmds.StartLabel(),
-          new CmdConfigUpdate('SaveCurrent'),
-          new Cmds.EndLabel(),
-        ],
-      },
-      AutosenseMediaDimensions: {
-        commandType: 'AutosenseMediaDimensions',
-        transpile: () => '~JC\n',
-        formInclusionMode: Cmds.CommandFormInclusionMode.noForm,
-      },
-      
-      SetDarkness: {
-        commandType: 'SetDarkness',
-        transpile: (c, d) => this.setDarknessCommand(c as Cmds.SetDarknessCommand, d),
-        formInclusionMode: Cmds.CommandFormInclusionMode.noForm,
-      },
-      SetLabelDimensions: {
-        commandType: 'SetLabelDimensions',
-        transpile: (c) => this.setLabelDimensionsCommand(c as Cmds.SetLabelDimensionsCommand),
-      },
-      SetLabelHome: {
-        commandType: 'SetLabelHome',
-        transpile: (c) => this.setLabelHomeCommand(c as Cmds.SetLabelHomeCommand),
-      },
-      SetLabelPrintOriginOffset: {
-        commandType: 'SetLabelPrintOriginOffset',
-        transpile: (c) => this.setLabelPrintOriginOffsetCommand(c as Cmds.SetLabelPrintOriginOffsetCommand),
-      },
-      SetMediaToContinuousMedia: {
-        commandType: 'SetMediaToContinuousMedia',
-        transpile: (c) => this.setLabelToContinuousMediaCommand(c as Cmds.SetMediaToContinuousMediaCommand),
-      },
-      SetMediaToWebGapMedia: {
-        commandType: 'SetMediaToWebGapMedia',
-        transpile: (c) => this.setLabelToWebGapMediaCommand(c as Cmds.SetMediaToWebGapMediaCommand),
-      },
-      SetMediaToMarkMedia: {
-        commandType: 'SetMediaToMarkMedia',
-        transpile: (c) => this.setLabelToMarkMediaCommand(c as Cmds.SetMediaToMarkMediaCommand),
-      },
-      SetPrintDirection: {
-        commandType: 'SetPrintDirection',
-        transpile: (c) => this.setPrintDirectionCommand((c as Cmds.SetPrintDirectionCommand).upsideDown),
-      },
-      SetPrintSpeed: {
-        commandType: 'SetPrintSpeed',
-        transpile: (c, d) => this.setPrintSpeedCommand(c as Cmds.SetPrintSpeedCommand, d),
-      },
-      SetBackfeedAfterTaken: {
-        commandType: 'SetBackfeedAfterTaken',
-        transpile: (c) => this.setBackfeedAfterTaken((c as Cmds.SetBackfeedAfterTakenMode).mode),
-      },
+        // Configuration
+        PrintConfiguration: {
+          commandType: 'PrintConfiguration',
+          transpile: () =>'~WC\n',
+          formInclusionMode: Cmds.CommandFormInclusionMode.noForm,
+        },
+        QueryConfiguration: {
+          commandType: 'QueryConfiguration',
+          expand: () => [
+            new CmdXmlQuery('All'),
+            new CmdHostConfig(),
+          ],
+        },
+        SaveCurrentConfiguration: {
+          commandType: 'SaveCurrentConfiguration',
+          expand: () => [
+            new Cmds.EndLabel(),
+            new Cmds.StartLabel(),
+            new CmdConfigUpdate('SaveCurrent'),
+            new Cmds.EndLabel(),
+          ],
+        },
+        AutosenseMediaDimensions: {
+          commandType: 'AutosenseMediaDimensions',
+          transpile: () => '~JC\n',
+          formInclusionMode: Cmds.CommandFormInclusionMode.noForm,
+        },
 
-      // Media
-      NewLabel: {
-        commandType: 'NewLabel',
-        expand: () => [
-          new Cmds.EndLabel(),
-          new Cmds.StartLabel()
-        ],
-      },
-      StartLabel: {
-        commandType: 'StartLabel',
-        transpile: () => '\n' + '^XA',
-        formInclusionMode: Cmds.CommandFormInclusionMode.noForm,
-      },
-      EndLabel: {
-        commandType: 'EndLabel',
-        transpile: () => '^XZ' +'\n',
-      },
-      CutNow: {
-        commandType: 'CutNow',
-        // ZPL doesn't have an OOTB cut command except for one printer.
-        // Cutter behavior should be managed by the ^MM command instead.
-        formInclusionMode: Cmds.CommandFormInclusionMode.noForm,
-      },
-      Print: {
-        commandType: 'Print',
-        transpile: (c) => this.printCommand(c as Cmds.PrintCommand),
-      },
-      ClearImageBuffer: {
-        commandType: 'ClearImageBuffer',
-        // Clear image buffer isn't a relevant command on ZPL printers.
-        // Closest equivalent is the ~JP (pause and cancel) or ~JA (cancel all) but both
-        // affect in-progress printing operations which is unlikely to be desired operation.
-        // Translate as a no-op.
-      },
+        SetDarkness: {
+          commandType: 'SetDarkness',
+          transpile: (c, d) => this.setDarknessCommand(c as Cmds.SetDarknessCommand, d),
+          formInclusionMode: Cmds.CommandFormInclusionMode.noForm,
+        },
+        SetLabelDimensions: {
+          commandType: 'SetLabelDimensions',
+          transpile: (c) => this.setLabelDimensionsCommand(c as Cmds.SetLabelDimensionsCommand),
+        },
+        SetLabelHome: {
+          commandType: 'SetLabelHome',
+          transpile: (c) => this.setLabelHomeCommand(c as Cmds.SetLabelHomeCommand),
+        },
+        SetLabelPrintOriginOffset: {
+          commandType: 'SetLabelPrintOriginOffset',
+          transpile: (c) => this.setLabelPrintOriginOffsetCommand(c as Cmds.SetLabelPrintOriginOffsetCommand),
+        },
+        SetMediaToContinuousMedia: {
+          commandType: 'SetMediaToContinuousMedia',
+          transpile: (c) => this.setLabelToContinuousMediaCommand(c as Cmds.SetMediaToContinuousMediaCommand),
+        },
+        SetMediaToWebGapMedia: {
+          commandType: 'SetMediaToWebGapMedia',
+          transpile: (c) => this.setLabelToWebGapMediaCommand(c as Cmds.SetMediaToWebGapMediaCommand),
+        },
+        SetMediaToMarkMedia: {
+          commandType: 'SetMediaToMarkMedia',
+          transpile: (c) => this.setLabelToMarkMediaCommand(c as Cmds.SetMediaToMarkMediaCommand),
+        },
+        SetPrintDirection: {
+          commandType: 'SetPrintDirection',
+          transpile: (c) => this.setPrintDirectionCommand((c as Cmds.SetPrintDirectionCommand).upsideDown),
+        },
+        SetPrintSpeed: {
+          commandType: 'SetPrintSpeed',
+          transpile: (c, d) => this.setPrintSpeedCommand(c as Cmds.SetPrintSpeedCommand, d),
+        },
+        SetBackfeedAfterTaken: {
+          commandType: 'SetBackfeedAfterTaken',
+          transpile: (c) => this.setBackfeedAfterTaken((c as Cmds.SetBackfeedAfterTakenMode).mode),
+        },
 
-      // Content
-      AddBox: {
-        commandType: 'AddBox',
-        transpile: (c, d) => this.addBoxCommand(c as Cmds.AddBoxCommand, d),
-      },
-      AddImage: {
-        commandType: 'AddImage',
-        transpile: (c, d) => this.addImageCommand(c as Cmds.AddImageCommand, d),
-      },
-      AddLine: {
-        commandType: 'AddLine',
-        transpile: (c, d) => this.addLineCommand(c as Cmds.AddLineCommand, d),
-      },
-      Offset: {
-        commandType: 'Offset',
-        transpile: (c, d) => {
-          Cmds.applyOffsetToDocState(c as Cmds.OffsetCommand, d);
-          return this.noop;
+        // Media
+        NewLabel: {
+          commandType: 'NewLabel',
+          expand: () => [
+            new Cmds.EndLabel(),
+            new Cmds.StartLabel()
+          ],
+        },
+        StartLabel: {
+          commandType: 'StartLabel',
+          transpile: () => '\n' + '^XA',
+          formInclusionMode: Cmds.CommandFormInclusionMode.noForm,
+        },
+        EndLabel: {
+          commandType: 'EndLabel',
+          transpile: () => '^XZ' +'\n',
+        },
+        CutNow: {
+          commandType: 'CutNow',
+          // ZPL doesn't have an OOTB cut command except for one printer.
+          // Cutter behavior should be managed by the ^MM command instead.
+          formInclusionMode: Cmds.CommandFormInclusionMode.noForm,
+        },
+        Print: {
+          commandType: 'Print',
+          transpile: (c) => this.printCommand(c as Cmds.PrintCommand),
+        },
+        ClearImageBuffer: {
+          commandType: 'ClearImageBuffer',
+          // Clear image buffer isn't a relevant command on ZPL printers.
+          // Closest equivalent is the ~JP (pause and cancel) or ~JA (cancel all) but both
+          // affect in-progress printing operations which is unlikely to be desired operation.
+          // Translate as a no-op.
+        },
+
+        // Content
+        AddBox: {
+          commandType: 'AddBox',
+          transpile: (c, d) => this.addBoxCommand(c as Cmds.AddBoxCommand, d),
+        },
+        AddImage: {
+          commandType: 'AddImage',
+          transpile: (c, d) => this.addImageCommand(c as Cmds.AddImageCommand, d),
+        },
+        AddLine: {
+          commandType: 'AddLine',
+          transpile: (c, d) => this.addLineCommand(c as Cmds.AddLineCommand, d),
+        },
+        Offset: {
+          commandType: 'Offset',
+          transpile: (c, d) => {
+            Cmds.applyOffsetToDocState(c as Cmds.OffsetCommand, d);
+            return this.noop;
+          },
         },
       },
-    },
-    [
-      cmdConfigUpdateMapping,
-      cmdHostConfigMapping,
-      cmdXmlQueryTypeMapping,
-      cmdHostIdentificationMapping,
-      cmdHostQueryMapping,
-      cmdHostStatusMapping,
-      ...extendedCommands,
-    ]
-  );
+      [
+        cmdConfigUpdateMapping,
+        cmdHostConfigMapping,
+        cmdXmlQueryTypeMapping,
+        cmdHostIdentificationMapping,
+        cmdHostQueryMapping,
+        cmdHostStatusMapping,
+        cmdSetPowerUpAndHeadCloseActionMapping,
+        cmdGraphSensorCalibrationMapping,
+        cmdSetSensorCalibrationMapping,
+        ...extendedCommands,
+      ]
+    );
+  }
+
+  public override getConfig(config: Cmds.PrinterConfig) {
+    return new ZplPrinterConfig(config);
   }
 
   public parseMessage<TReceived extends Conf.MessageArrayLike>(

@@ -1,0 +1,60 @@
+  15.0                DARKNESS          
+  3 IPS               PRINT SPEED       
+  +000                TEAR OFF          
+  TEAR OFF            PRINT MODE        
+  CONTINUOUS          MEDIA TYPE        
+  WEB                 SENSOR TYPE       
+  MANUAL              SENSOR SELECT     
+  832                 PRINT WIDTH       
+  1241                LABEL LENGTH      
+  13.0IN   329MM      MAXIMUM LENGTH    
+  CONNECTED           USB COMM.         
+  BIDIRECTIONAL       PARALLEL COMM.    
+  9600                BAUD              
+  8 BITS              DATA BITS         
+  NONE                PARITY            
+  DTR & XON/XOFF      HOST HANDSHAKE    
+  NONE                PROTOCOL          
+  AUTO                SER COMM. MODE    
+  <~>  7EH            CONTROL CHAR      
+  <^>  5EH            COMMAND CHAR      
+  <,>  2CH            DELIM. CHAR       
+  ZPL II              ZPL MODE          
+  NO MOTION           MEDIA POWER UP    
+  NO MOTION           HEAD CLOSE        
+  DEFAULT             BACKFEED          
+  +000                LABEL TOP         
+  +0000               LEFT POSITION     
+  NO                  HEXDUMP           
+  043                 WEB S.            
+  096                 MEDIA S.          
+  010                 WEB GAIN          
+  050                 MARK S.           
+  028                 MARK GAIN         
+  095                 MARK MED S.       
+  027                 MARK MEDIA GAIN   
+  096                 CONT MEDIA S.     
+  000                 CONT MEDIA GAIN   
+  100                 TAKE LABEL        
+  CWF                 MODES ENABLED     
+  ...                 MODES DISABLED    
+  832 8/MM FULL       RESOLUTION        
+  ZSP-002281B <-      FIRMWARE          
+  1.3                 XML SCHEMA        
+  V26.00.06           HARDWARE ID       
+  CUSTOMIZED          CONFIGURATION     
+  2104k............R: RAM               
+  1536k............E: ONBOARD FLASH     
+  NONE                FORMAT CONVERT    
+  DISABLED            ZBI               
+  2.1                 ZBI VERSION       
+  43,551 IN           LAST CLEANED      
+  43,551 IN           HEAD USAGE        
+  43,551 IN           TOTAL USAGE       
+  43,551 IN           RESET CNTR1       
+  43,551 IN           RESET CNTR2       
+  27J130201516        SERIAL NUMBER     
+  MAINTENANCE ON      EARLY WARNING     
+  450 M  1476 FT      HEAD CLEANING     
+  1968600             HEAD LIFE         
+
