@@ -12,14 +12,13 @@ export class CmdSetSensorCalibration implements Cmds.IPrinterExtendedCommand {
   effectFlags = new Cmds.CommandEffectFlags(['altersConfig']);
   toDisplay(): string {
     // TODO: better message?
-    return `Set sensor levels with ${handleCmdSetSensorCalibration(this)}`
+    return `Set sensor levels with ${JSON.stringify(this.levels)}`
   }
 
   readonly levels: Readonly<SensorLevels>;
 
   constructor(levels: SensorLevels) {
     this.levels = {
-      labelLengthDots    : Util.clampToRange(levels.labelLengthDots, 1, 32000),
       markLedBrightness  : Util.clampToRange(levels.markLedBrightness, 0, 255),
       markMediaThreshold : Util.clampToRange(levels.markMediaThreshold, 0, 100),
       markThreshold      : Util.clampToRange(levels.markThreshold, 0, 100),
@@ -36,7 +35,6 @@ export class CmdSetSensorCalibration implements Cmds.IPrinterExtendedCommand {
     levels: Partial<SensorLevels>
   ) {
     return new CmdSetSensorCalibration({
-      labelLengthDots    : levels.labelLengthDots ?? cfg.sensorLevels.labelLengthDots,
       markLedBrightness  : levels.markLedBrightness ?? cfg.sensorLevels.markLedBrightness,
       markMediaThreshold : levels.markMediaThreshold ?? cfg.sensorLevels.markMediaThreshold,
       markThreshold      : levels.markThreshold ?? cfg.sensorLevels.markThreshold,
@@ -56,6 +54,7 @@ export const cmdSetSensorCalibrationMapping: Cmds.IPrinterCommandMapping<string>
 
 export function handleCmdSetSensorCalibration(
   cmd: Cmds.IPrinterCommand,
+  docState: Cmds.TranspiledDocumentState,
 ): string {
   function pad(num: number, len = 3) {
     return num.toString().padStart(len, '0');
@@ -65,7 +64,7 @@ export function handleCmdSetSensorCalibration(
       `^SS${pad(cmd.levels.webThreshold)}`,
       pad(cmd.levels.mediaThreshold),
       pad(cmd.levels.ribbonThreshold),
-      pad(cmd.levels.labelLengthDots, 4),
+      pad(docState.initialConfig.mediaLengthDots, 4),
       pad(cmd.levels.mediaLedBrightness),
       pad(cmd.levels.ribbonLedBrightness),
       pad(cmd.levels.markThreshold),

@@ -1,4 +1,3 @@
-/* eslint-disable no-fallthrough */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import * as Conf from '../../Configs/index.js';
 import * as Cmds from '../../Commands/index.js';
@@ -79,13 +78,12 @@ export function parseCmdHostConfig(
   update.printerSettings    ??= {};
   update.printerZplSettings ??= {
     sensorLevels: {
-      labelLengthDots: 1,
-      markLedBrightness   : 50,
+      markLedBrightness  : 50,
       markThreshold      : 50,
       markMediaThreshold : 50,
-      mediaLedBrightness  : 50,
+      mediaLedBrightness : 50,
       mediaThreshold     : 50,
-      ribbonLedBrightness : 50,
+      ribbonLedBrightness: 50,
       ribbonThreshold    : 50,
       webThreshold       : 50,
     }
@@ -156,11 +154,14 @@ export function parseCmdHostConfig(
         case "HARDWARE ID":
         case "DARKNESS":
         case "DARKNESS SWITCH": // Physical hardware must be present
+          break;
 
         case "PRINT SPEED": // Unreliably present
+          break;
 
         case "TEAR OFF ADJUST":
         case "TEAR OFF": // Older synonym
+          break;
 
         case "PRINT METHOD": // DIRECT-THERMAL, older?
         case "PRINT MODE": // tear-off, peel, etc.
@@ -170,12 +171,14 @@ export function parseCmdHostConfig(
           // Older firmware is humanized, so
           // 025 0/8 MM
           // and must be parsed...
+          break;
         case "LABEL LENGTH":
           update.printerMedia!.mediaLengthDots = Number(l.value);
           break;
         case "MAXIMUM LENGTH":
           // Humanized, must be parsed
           // 2.0IN   50MM
+          break;
 
         case "MEDIA POWER UP":
           update.printerZplSettings!.actionPowerUp = powerUpMap[l.value] ?? 'none';
@@ -192,6 +195,7 @@ export function parseCmdHostConfig(
         case "MODES DISABLED":
         case "RESOLUTION":
         case "RFID VERSION":
+          break;
 
         // Sensor levels, also in XML. These have synonyms
         // in old config formats
@@ -230,10 +234,12 @@ export function parseCmdHostConfig(
         case "TRANS LED":
         case "MARK GAIN":
         case "TAKE LABEL":
+          break;
 
         // Time and counters, maybe useful?
         case "RTC DATE":
         case "RTC TIME":
+          break;
         // There is one nonresettable counter and two resettable ones
         // like a car odometer and trip, haha.
         // Unfortunately, they use the same key! You have to split by suffix.
@@ -241,6 +247,7 @@ export function parseCmdHostConfig(
         case "NONRESET CNTR":
         case "RESET CNTR1":
         case "RESET CNTR2":
+          break;
 
         // Comm modes flags that might not be needed ever?
         case "EARLY WARNING":
@@ -271,6 +278,7 @@ export function parseCmdHostConfig(
         case "NETWORK ID":
         case "TWINAX/COAX ID":
         case "ZEBRA NET II":
+          break;
 
         // TODO: Sanity check these, throw a fit if they're set differntly
         case "CONTROL PREFIX":

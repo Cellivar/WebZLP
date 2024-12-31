@@ -7,7 +7,6 @@ export type PowerUpAction
   | 'calibrateWebSensor';
 
 export type SensorLevels = {
-  labelLengthDots    : number,
   markLedBrightness  : number,
   markMediaThreshold : number,
   markThreshold      : number,
@@ -37,7 +36,6 @@ export interface IZplPrinterSettings {
 export class ZplPrinterConfig extends Cmds.PrinterConfig implements IZplPrinterSettings {
 
   private _sensorLevels : SensorLevels = {
-    labelLengthDots    : 123,
     markLedBrightness  : 50,
     markMediaThreshold : 50,
     markThreshold      : 50,
