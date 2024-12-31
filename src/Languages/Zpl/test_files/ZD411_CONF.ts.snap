@@ -7,8 +7,23 @@
       "printerHardware": {},
       "printerMedia": {
         "mediaGapDetectMode": 2,
+        "mediaLengthDots": 2217,
       },
       "printerSettings": {},
+      "printerZplSettings": {
+        "actionHeadClose": "feedBlank",
+        "actionPowerUp": "none",
+        "sensorLevels": {
+          "markLedBrightness": 55,
+          "markMediaThreshold": 4,
+          "markThreshold": 70,
+          "mediaLedBrightness": 50,
+          "mediaThreshold": 96,
+          "ribbonLedBrightness": 50,
+          "ribbonThreshold": 50,
+          "webThreshold": 53,
+        },
+      },
     },
   ],
   "remainder": "",
