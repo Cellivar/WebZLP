@@ -1,7 +1,7 @@
 import * as Conf from '../Configs/index.js';
 import * as Commands from './Commands.js';
 import { TranspileDocumentError, type TranspiledDocumentState } from "./TranspileCommand.js";
-import { MessageParsingError, RawMessageTransformer, StringMessageTransformer, type IMessageHandlerResult, type MessageTransformer } from './Messages.js';
+import { MessageParsingError, RawMessageTransformer, StringMessageTransformer, type CommandSetMessageHandlerDelegate, type IMessageHandlerResult, type MessageTransformer } from './Messages.js';
 import type { PrinterConfig } from './PrinterConfig.js';
 
 /** How a command should be wrapped into a form, if at all */
@@ -15,9 +15,10 @@ export enum CommandFormInclusionMode {
 /** Describes a command set for a printer. */
 export interface CommandSet<TMsgType extends Conf.MessageArrayLike> {
 
-  /** Parse a message object received from the printer. */
-  parseMessage<TReceived extends Conf.MessageArrayLike>(
+  /** Handle the dispatch of a message received from the printer. */
+  handleMessage<TReceived extends Conf.MessageArrayLike>(
     msg: TReceived,
+    config: PrinterConfig,
     sentCommand?: Commands.IPrinterCommand
   ): IMessageHandlerResult<TReceived>;
 
@@ -35,6 +36,11 @@ export interface CommandSet<TMsgType extends Conf.MessageArrayLike> {
   isCommandNonFormCommand(cmd: Commands.IPrinterCommand): boolean;
   /** Combine separate commands into one. */
   combineCommands(...commands: TMsgType[]): TMsgType;
+  /** Dispatch a message to the appropriate handler for it. */
+  callMessageHandler(
+    message: TMsgType,
+    sentCommand?: Commands.IPrinterCommand
+  ): IMessageHandlerResult<TMsgType>
 
   /** Expand a printer config to a language-specific config. */
   getConfig(config: PrinterConfig): PrinterConfig;
@@ -91,16 +97,20 @@ export abstract class PrinterCommandSet<TMsgType extends Conf.MessageArrayLike> 
 
   protected messageTransformer: MessageTransformer<TMsgType>;
 
+  protected messageHandlerDelegate: CommandSetMessageHandlerDelegate<TMsgType>;
+
   protected commandMap = new Map<Commands.CommandAnyType, IPrinterCommandMapping<TMsgType>>;
 
   protected constructor(
-    transformer        : MessageTransformer<TMsgType>,
-    implementedLanguage: Conf.PrinterCommandLanguage,
-    basicCommands      : Record<Commands.CommandType, IPrinterCommandMapping<TMsgType>>,
-    extendedCommands   : IPrinterCommandMapping<TMsgType>[] = []
+    transformer           : MessageTransformer<TMsgType>,
+    messageHandlerDelegate: CommandSetMessageHandlerDelegate<TMsgType>,
+    implementedLanguage   : Conf.PrinterCommandLanguage,
+    basicCommands         : Record<Commands.CommandType, IPrinterCommandMapping<TMsgType>>,
+    extendedCommands      : IPrinterCommandMapping<TMsgType>[] = []
   ) {
     this.cmdLanguage = implementedLanguage;
     this.messageTransformer = transformer;
+    this.messageHandlerDelegate = messageHandlerDelegate;
     for (const cmdType of Commands.basicCommandTypes) {
       this.commandMap.set(cmdType, basicCommands[cmdType]);
     }
@@ -108,7 +118,6 @@ export abstract class PrinterCommandSet<TMsgType extends Conf.MessageArrayLike> 
     extendedCommands.forEach(c => this.commandMap.set(c.commandType, c));
   }
 
-  abstract parseMessage<TReceived extends Conf.MessageArrayLike>(msg: TReceived, sentCommand?: Commands.IPrinterCommand): IMessageHandlerResult<TReceived>;
   abstract get documentStartPrefix(): TMsgType;
   abstract get documentEndSuffix(): TMsgType;
 
@@ -122,6 +131,19 @@ export abstract class PrinterCommandSet<TMsgType extends Conf.MessageArrayLike> 
     }
     const handler = mappedCmd.transpile ?? (() => this.noop);
     return handler(cmd, docMetadata, this);
+  }
+
+  public handleMessage<TReceived extends Conf.MessageArrayLike>(
+    msg: TReceived,
+    config: PrinterConfig,
+    sentCommand?: Commands.IPrinterCommand,
+  ): IMessageHandlerResult<TReceived> {
+    return this.messageHandlerDelegate(
+      this,
+      msg,
+      config,
+      sentCommand
+    );
   }
 
   protected getMappedCmd(cmd: Commands.IPrinterCommand) {
@@ -147,7 +169,7 @@ export abstract class PrinterCommandSet<TMsgType extends Conf.MessageArrayLike> 
   public callMessageHandler(
     message: TMsgType,
     sentCommand?: Commands.IPrinterCommand
-  ) {
+  ): IMessageHandlerResult<TMsgType> {
     if (sentCommand === undefined) {
       throw new MessageParsingError(
         `Received a command reply message without 'sentCommand' being provided, can't handle this message.`,
@@ -195,12 +217,14 @@ export abstract class RawCommandSet extends PrinterCommandSet<Uint8Array> {
   }
 
   protected constructor(
-    implementedLanguage: Conf.PrinterCommandLanguage,
-    basicCommands      : Record<Commands.CommandType,  IPrinterCommandMapping<Uint8Array>>,
-    extendedCommands   : IPrinterCommandMapping<Uint8Array>[] = []
+    implementedLanguage   : Conf.PrinterCommandLanguage,
+    messageHandlerDelegate: CommandSetMessageHandlerDelegate<Uint8Array>,
+    basicCommands         : Record<Commands.CommandType, IPrinterCommandMapping<Uint8Array>>,
+    extendedCommands      : IPrinterCommandMapping<Uint8Array>[] = []
   ) {
     super(
       new RawMessageTransformer(),
+      messageHandlerDelegate,
       implementedLanguage,
       basicCommands,
       extendedCommands
@@ -216,12 +240,14 @@ export abstract class StringCommandSet extends PrinterCommandSet<string> {
   }
 
   protected constructor(
-    implementedLanguage: Conf.PrinterCommandLanguage,
-    basicCommands      : Record<Commands.CommandType,  IPrinterCommandMapping<string>>,
-    extendedCommands   : IPrinterCommandMapping<string>[] = []
+    implementedLanguage   : Conf.PrinterCommandLanguage,
+    messageHandlerDelegate: CommandSetMessageHandlerDelegate<string>,
+    basicCommands         : Record<Commands.CommandType, IPrinterCommandMapping<string>>,
+    extendedCommands      : IPrinterCommandMapping<string>[] = []
   ) {
     super(
       new StringMessageTransformer(),
+      messageHandlerDelegate,
       implementedLanguage,
       basicCommands,
       extendedCommands

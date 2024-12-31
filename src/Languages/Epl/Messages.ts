@@ -2,11 +2,11 @@ import * as Util from '../../Util/index.js';
 import * as Conf from '../../Configs/index.js';
 import * as Cmds from '../../Commands/index.js';
 import { getErrorMessage } from "./ErrorMessage.js";
-import type { EplPrinterCommandSet } from './EplPrinterCommandSet.js';
 
 export function handleMessage<TReceived extends Conf.MessageArrayLike>(
-  cmdSet: EplPrinterCommandSet,
+  cmdSet: Cmds.CommandSet<string>,
   message: TReceived,
+  _config: Cmds.PrinterConfig,
   sentCommand?: Cmds.IPrinterCommand
 ): Cmds.IMessageHandlerResult<TReceived> {
   const result: Cmds.IMessageHandlerResult<TReceived> = {

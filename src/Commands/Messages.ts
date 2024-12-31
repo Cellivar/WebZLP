@@ -3,6 +3,7 @@ import * as Conf from '../Configs/index.js';
 import type { IDeviceInformation } from "web-device-mux";
 import type { IPrinterCommand } from "./Commands.js";
 import type { CommandSet } from './CommandSet.js';
+import type { PrinterConfig } from './PrinterConfig.js';
 
 export type PrinterMessage
   = ISettingUpdateMessage
@@ -96,17 +97,13 @@ export type AwaitedCommand = {
   reject?: (reason?: unknown) => void,
 }
 
-export type UpdateClass<Type> = {
-  -readonly [Property in keyof Type]?: Type[Property];
-};
-
 /** A printer settings message, describing printer configuration status. */
 export interface ISettingUpdateMessage {
   messageType: 'SettingUpdateMessage';
 
-  printerHardware?: UpdateClass<Conf.IPrinterHardware>;
-  printerMedia   ?: UpdateClass<Conf.IPrinterMedia>;
-  printerSettings?: UpdateClass<Conf.IPrinterSettings>;
+  printerHardware?: Conf.UpdateFor<Conf.IPrinterHardware>;
+  printerMedia   ?: Conf.UpdateFor<Conf.IPrinterMedia>;
+  printerSettings?: Conf.UpdateFor<Conf.IPrinterSettings>;
 }
 
 /** A status message sent by the printer. */
@@ -213,6 +210,14 @@ export interface IMessageHandlerResult<TInput> {
   remainder: TInput
 }
 
+export type CommandSetMessageHandlerDelegate<TMsgType extends Conf.MessageArrayLike> =
+  <TReceived extends Conf.MessageArrayLike>(
+    cmdSet: CommandSet<TMsgType>,
+    message: TReceived,
+    config: PrinterConfig,
+    sentCommand?: IPrinterCommand
+  ) => IMessageHandlerResult<TReceived>;
+
 /** An error indicating a problem parsing a received message. */
 export class MessageParsingError extends Util.WebZlpError {
   public readonly receivedMessage: Conf.MessageArrayLike;
@@ -237,6 +242,7 @@ export function deviceInfoToOptionsUpdate(deviceInfo: IDeviceInformation): ISett
 export async function parseRaw<TInput extends Conf.MessageArrayLike>(
   input: TInput,
   commandSet: CommandSet<Conf.MessageArrayLike>,
+  config: PrinterConfig,
   awaitedCommands: AwaitedCommand[]
 ): Promise<{ remainderMsg: TInput; remainderCommands: AwaitedCommand[], messages: PrinterMessage[]; }> {
   let remainderMsg = input;
@@ -249,7 +255,7 @@ export async function parseRaw<TInput extends Conf.MessageArrayLike>(
   do {
     if (remainderCommands.length === 0) {
       // No candidate commands, treat as raw!
-      const parseResult = commandSet.parseMessage(remainderMsg);
+      const parseResult = commandSet.handleMessage(remainderMsg, config);
       remainderMsg = parseResult.remainder;
       incomplete = parseResult.messageIncomplete;
       parseResult.messages.forEach(m => messages.push(m));
@@ -261,7 +267,7 @@ export async function parseRaw<TInput extends Conf.MessageArrayLike>(
           return true;
         }
 
-        const parseResult = commandSet.parseMessage(remainderMsg, c.cmd);
+        const parseResult = commandSet.handleMessage(remainderMsg, config, c.cmd);
         if (parseResult.messageMatchedExpectedCommand) {
           // The command found its response! Mark it accordingly.
           if (parseResult.messageIncomplete) {

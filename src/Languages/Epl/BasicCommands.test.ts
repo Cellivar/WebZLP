@@ -1,7 +1,7 @@
 import { expect, describe, it } from 'vitest';
 import * as Util from '../../Util/index.js';
 import * as Cmds from '../../Commands/index.js';
-import { EplPrinterCommandSet } from './index.js';
+import { addImageCommand } from './BasicCommands.js';
 
 // Class pulled from jest-mock-canvas which I can't seem to actually import.
 class ImageData {
@@ -83,15 +83,13 @@ function getImageDataInput(width: number, height: number, fill: number, alpha?: 
   return arr;
 }
 
-
-describe('EPL Image Conversion', () => {
+describe('addImageCommand', () => {
   it('Should convert blank images to valid command', () => {
-    const cmdSet = new EplPrinterCommandSet();
     const imageData = new ImageData(getImageDataInput(8, 1, 0), 8, 1);
     const bitmap = Util.BitmapGRF.fromCanvasImageData(imageData, { trimWhitespace: false });
     const cmd = new Cmds.AddImageCommand(bitmap, {});
     const doc = Cmds.getNewTranspileState(new Cmds.PrinterConfig());
-    const resultCmd = cmdSet['addImageCommand'](cmd, doc);
+    const resultCmd = addImageCommand(cmd, doc);
 
     const expectedCmd = 'GW0,0,1,1,ÿ\r\n';
 
@@ -99,7 +97,6 @@ describe('EPL Image Conversion', () => {
   });
 
   it('Should apply offsets in command', () => {
-    const cmdSet = new EplPrinterCommandSet();
     const imageData = new ImageData(getImageDataInput(8, 1, 0), 8, 1);
     const bitmap = Util.BitmapGRF.fromCanvasImageData(imageData, { trimWhitespace: false });
     const cmd = new Cmds.AddImageCommand(bitmap, {});
@@ -107,10 +104,11 @@ describe('EPL Image Conversion', () => {
     const doc = Cmds.getNewTranspileState(new Cmds.PrinterConfig());
     doc.horizontalOffset = appliedOffset;
     doc.verticalOffset = appliedOffset * 2;
-    const resultCmd = cmdSet['addImageCommand'](cmd, doc);
+    const resultCmd = addImageCommand(cmd, doc);
 
     const expectedCmd = `GW${appliedOffset},${appliedOffset * 2},1,1,ÿ\r\n`;
 
     expect(resultCmd).toEqual(expectedCmd);
   });
+
 });

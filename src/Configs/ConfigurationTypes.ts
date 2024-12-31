@@ -1,5 +1,10 @@
 import * as Util from '../Util/index.js';
 
+/** Utility type to create an 'update' object, making all properties optional and not readonly. */
+export type UpdateFor<Type> = {
+  -readonly [Property in keyof Type]?: Type[Property];
+};
+
 /** The darkness of the printer setting, higher being printing darker. */
 export type DarknessPercent = Util.Percent;
 
@@ -245,18 +250,6 @@ export interface IPrinterHardware {
   readonly speedTable: SpeedTable;
 }
 
-export interface IPrinterHardwareUpdate {
-  dpi?: number;
-  firmware?: string;
-  manufacturer?: string;
-  model?: string;
-  maxMediaWidthDots?: number;
-  maxMediaLengthDots?: number;
-  maxMediaDarkness?: number,
-  serialNumber?: string;
-  speedTable?: SpeedTable;
-}
-
 /** Settings for printer behavior */
 export interface IPrinterSettings {
   /** What percentage of backfeed happens after cutting/taking label, vs before printing. */
@@ -264,11 +257,6 @@ export interface IPrinterSettings {
 
   /** The behavior when pressing the feed button on the printer. */
   readonly feedButtonMode: FeedButtonMode;
-}
-
-export interface IPrinterSettingsUpdate {
-  backfeedAfterTaken?: BackfeedAfterTaken;
-  feedButtonMode?: FeedButtonMode;
 }
 
 /** Printer options related to the media media being printed */
@@ -325,20 +313,4 @@ export interface IPrinterMedia {
 
   /** Whether the media prints right-side-up or upside-down. */
   printOrientation: PrintOrientation;
-}
-
-export interface IPrinterMediaUpdate {
-  darknessPercent?: DarknessPercent;
-  mediaGapDetectMode?: MediaMediaGapDetectionMode;
-  mediaGapDots?: number;
-  mediaLineOffsetDots?: number;
-  mediaLengthDots?: number;
-  mediaWidthDots?: number;
-  mediaPrintOriginOffsetDots?: Coordinate;
-  mediaDimensionRoundingStep?: number;
-  thermalPrintMode?: ThermalPrintMode;
-  mediaPrintMode?: MediaPrintMode;
-  printOrientation?: PrintOrientation;
-
-  speed?: PrintSpeedSettings;
 }

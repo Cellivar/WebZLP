@@ -34,6 +34,7 @@ export default defineConfig({
       enabled: true,
       reporter: ['text', 'json-summary', 'json'],
       reportOnFailure: true,
+      include: ['src/**']
     }
   }
 });

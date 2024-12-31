@@ -404,7 +404,11 @@ export class LabelPrinter<TChannelType extends Conf.MessageArrayLike> extends Ev
     // Iterate through the response message and the command candidates in order,
     // but always validate the message is the format we wanted.
     const msg = this._channelMessageTransformer.combineMessages(...input);
-    const parsed = await Cmds.parseRaw(msg, this._commandSet, this._awaitedCommands);
+    const parsed = await Cmds.parseRaw(
+      msg,
+      this._commandSet,
+      this._printerOptions,
+      this._awaitedCommands);
 
     parsed.messages.forEach(m => {
       switch (m.messageType) {
