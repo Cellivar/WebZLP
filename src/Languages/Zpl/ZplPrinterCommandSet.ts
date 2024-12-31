@@ -8,10 +8,10 @@ import { cmdHostQueryMapping } from './CmdHostQuery.js';
 import { CmdHostStatus, cmdHostStatusMapping } from './CmdHostStatus.js';
 import { CmdHostConfig, cmdHostConfigMapping } from './CmdHostConfig.js';
 import { CmdConfigUpdate, cmdConfigUpdateMapping } from './CmdConfigUpdate.js';
-import { cmdSetBootAndCloseActionMapping } from './CmdSetBootAndCloseAction.js';
 import { cmdGraphSensorCalibrationMapping } from './CmdGraphSensorCalibration.js';
 import { cmdSetSensorCalibrationMapping } from './CmdSetSensorCalibration.js';
 import { ZplPrinterConfig } from './Config.js';
+import { cmdSetPowerUpAndHeadCloseActionMapping } from './CmdSetPowerUpAndHeadCloseAction.js';
 
 /** Command set for communicating with a ZPL II printer. */
 export class ZplPrinterCommandSet extends Cmds.StringCommandSet {
@@ -186,7 +186,7 @@ export class ZplPrinterCommandSet extends Cmds.StringCommandSet {
         cmdHostIdentificationMapping,
         cmdHostQueryMapping,
         cmdHostStatusMapping,
-        cmdSetBootAndCloseActionMapping,
+        cmdSetPowerUpAndHeadCloseActionMapping,
         cmdGraphSensorCalibrationMapping,
         cmdSetSensorCalibrationMapping,
         ...extendedCommands,

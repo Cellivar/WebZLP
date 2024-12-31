@@ -9,9 +9,9 @@ const bootActionToCmd: Record<PowerUpAction, string> = {
   none: 'N'
 }
 
-export class CmdSetBootAndCloseAction implements Cmds.IPrinterExtendedCommand {
-  public static typeE = Symbol("CmdSetBootAndCloseAction");
-  typeExtended = CmdSetBootAndCloseAction.typeE;
+export class CmdSetPowerUpAndHeadCloseAction implements Cmds.IPrinterExtendedCommand {
+  public static typeE = Symbol("CmdSetPowerUpAndHeadCloseAction");
+  typeExtended = CmdSetPowerUpAndHeadCloseAction.typeE;
   commandLanguageApplicability = Conf.PrinterCommandLanguage.zpl;
   name = 'Set the action when the printer boots or the head is closed.';
   type = "CustomCommand" as const;
@@ -26,15 +26,15 @@ export class CmdSetBootAndCloseAction implements Cmds.IPrinterExtendedCommand {
   ) {}
 }
 
-export const cmdSetBootAndCloseActionMapping: Cmds.IPrinterCommandMapping<string> = {
-  commandType: CmdSetBootAndCloseAction.typeE,
-  transpile: handleCmdSetBootAndCloseAction,
+export const cmdSetPowerUpAndHeadCloseActionMapping: Cmds.IPrinterCommandMapping<string> = {
+  commandType: CmdSetPowerUpAndHeadCloseAction.typeE,
+  transpile: handleCmdSetPowerUpAndHeadCloseAction,
 }
 
-export function handleCmdSetBootAndCloseAction(
+export function handleCmdSetPowerUpAndHeadCloseAction(
   cmd: Cmds.IPrinterCommand,
 ): string {
-  if (cmd instanceof CmdSetBootAndCloseAction) {
+  if (cmd instanceof CmdSetPowerUpAndHeadCloseAction) {
     const b = bootActionToCmd[cmd.actionPowerUp];
     const c = bootActionToCmd[cmd.actionHeadClose];
     return `^MF${b},${c}`;
