@@ -339,26 +339,14 @@ export class LabelPrinter<TChannelType extends Conf.MessageArrayLike> extends Ev
     });
 
     this.logResultIfDebug(() => {
-      const debugMsg = Cmds.asString(transaction.commands);
+      const debugMsg = this._channelMessageTransformer.asType(transaction.commands, 'string');
       return `Transaction being sent to printer:\n${debugMsg}\n--end of transaction--`;
     });
 
-    // TODO: Better type guards??
-    let sendCmds: TChannelType;
-    switch(this._channelType) {
-      default:
-        Util.exhaustiveMatchGuard(this._channelType);
-        break;
-      case 'Uint8Array':
-        sendCmds = Cmds.asUint8Array(transaction.commands) as TChannelType;
-        break;
-      case 'string':
-        sendCmds = Cmds.asString(transaction.commands) as TChannelType;
-        break;
-    }
-
     await promiseWithTimeout(
-      this._channel.send(sendCmds),
+      this._channel.send(
+        Cmds.asTargetMessageLikeType(transaction.commands, this._channelType)
+      ),
       5000,
       new Mux.DeviceCommunicationError(`Timed out sending commands to printer, is there a problem with the printer?`)
     );

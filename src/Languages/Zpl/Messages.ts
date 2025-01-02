@@ -13,7 +13,7 @@ export function handleMessage<TReceived extends Conf.MessageArrayLike>(
     messages: [],
     remainder: message,
   }
-  const msg = Cmds.asString(message).trimStart();
+  const msg = Cmds.asTargetMessageLikeType<string>(message, 'string').trimStart();
   let remainder = msg;
   if (msg === undefined || msg.length === 0) { return result; }
 
