@@ -1,0 +1,55 @@
+  15.0                DARKNESS          
+  2 IPS               PRINT SPEED       
+  +000                TEAR OFF          
+  CUTTER              PRINT MODE        
+  CONTINUOUS          MEDIA TYPE        
+  WEB                 SENSOR TYPE       
+  MANUAL              SENSOR SELECT     
+  406                 PRINT WIDTH       
+  0894                LABEL LENGTH      
+  39.0IN   989MM      MAXIMUM LENGTH    
+  CONNECTED           USB COMM.         
+  NONE                PROTOCOL          
+  LINER/TAG FULL      CUTTER TYPE       
+  <~>  7EH            CONTROL CHAR      
+  <^>  5EH            COMMAND CHAR      
+  <,>  2CH            DELIM. CHAR       
+  ZPL II              ZPL MODE          
+  NO MOTION           MEDIA POWER UP    
+  FEED                HEAD CLOSE        
+  DEFAULT             BACKFEED          
+  +000                LABEL TOP         
+  +0000               LEFT POSITION     
+  NO                  HEXDUMP           
+  01/03/25            RTC DATE          
+  08:52               RTC TIME          
+  048                 WEB S.            
+  096                 MEDIA S.          
+  018                 WEB GAIN          
+  050                 MARK S.           
+  011                 MARK GAIN         
+  095                 MARK MED S.       
+  064                 MARK MEDIA GAIN   
+  095                 CONT MEDIA S.     
+  007                 CONT MEDIA GAIN   
+  066                 TAKE LABEL        
+  CWF                 MODES ENABLED     
+  ...                 MODES DISABLED    
+  448 8/MM FULL       RESOLUTION        
+  V61.17.17Z <-       FIRMWARE          
+  1.3                 XML SCHEMA        
+  V30.00.00           HARDWARE ID       
+  CUSTOMIZED          CONFIGURATION     
+  2104k............R: RAM               
+  1536k............E: ONBOARD FLASH     
+  NONE                FORMAT CONVERT    
+  DISABLED            ZBI               
+  2.1                 ZBI VERSION       
+  4,242 IN            LAST CLEANED      
+  4,242 IN            HEAD USAGE        
+  4,242 IN            TOTAL USAGE       
+  4,242 IN            RESET CNTR1       
+  4,242 IN            RESET CNTR2       
+  36J161100670        SERIAL NUMBER     
+  MAINT. OFF          EARLY WARNING     
+

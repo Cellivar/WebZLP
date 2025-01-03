@@ -23,6 +23,9 @@ describe('parseCmdXmlQueryResponse', () => {
     it('TLP2844_Z', async () => {
       await expect(parseCmdXmlQuery(tf.TLP2844_Z_XML(), cmd)).toMatchFileSnapshot(tf.TLP2844_Z_FULL);
     });
+    it('LP2824PLUS', async () => {
+      await expect(parseCmdXmlQuery(tf.LP2824PLUS_XML(), cmd)).toMatchFileSnapshot(tf.LP2824PLUS_FULL);
+    });
   });
 
   describe('Partials', () => {

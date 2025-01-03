@@ -52,4 +52,12 @@ describe('parseCmdHostConfig', () => {
       expect(parseCmdHostConfig(conf, cmd)).toMatchFileSnapshot(snap);
     });
   });
+
+  describe("LP2824PLUS", () => {
+    const conf = tf.LP2824PLUS_TXT();
+    const snap = tf.LP2824PLUS_CONF;
+    it('Parses host config', () => {
+      expect(parseCmdHostConfig(conf, cmd)).toMatchFileSnapshot(snap);
+    });
+  });
 });
