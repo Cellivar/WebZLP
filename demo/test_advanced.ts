@@ -83,18 +83,42 @@ printerMgr.addEventListener('disconnectedDevice', ({ detail }) => {
 // Get some bookkeeping out of the way..
 // First we create an interface to describe our settings form.
 interface ConfigModalForm extends HTMLCollection {
-  modalCancel         : HTMLButtonElement
-  modalDarkness       : HTMLSelectElement
+  modalCancel          : HTMLButtonElement
+  modalSubmit          : HTMLButtonElement
+  modalPrinterIndex    : HTMLInputElement
+
+  // Media
+  modalLabelWidth     : HTMLInputElement
   modalLabelHeight    : HTMLInputElement
   modalLabelOffsetLeft: HTMLInputElement
   modalLabelOffsetTop : HTMLInputElement
-  modalLabelWidth     : HTMLInputElement
   modalMediaType      : HTMLSelectElement
+  modalWithAutosense  : HTMLInputElement
+
+  // Printer
+  modalDarkness       : HTMLSelectElement
   modalSpeed          : HTMLSelectElement
   modalBackfeedPercent: HTMLSelectElement
-  modalSubmit         : HTMLButtonElement
-  modalWithAutosense  : HTMLInputElement
+
+  // These are ZPL-specific settings. Different languages can have additional
+  // commands or configs specific to their printers.
+  // Sensors
+  modalZplRibbonTHold: HTMLInputElement
+  modalZplRibbonLed  : HTMLInputElement
+  modalZplWebTHold   : HTMLInputElement
+  modalZplWebMedia   : HTMLInputElement
+  modalZplWebLed     : HTMLInputElement
+  modalZplMarkTHold  : HTMLInputElement
+  modalZplMarkMedia  : HTMLInputElement
+  modalZplMarkLed    : HTMLInputElement
+
+  modalZplWithSensorGraph: HTMLInputElement
+
+  // Power up/head close actions
+  modalZplPowerUpAction  : HTMLSelectElement
+  modalZplHeadCloseAction: HTMLSelectElement
 }
+
 
 // A function to find and hide any alerts for a given alert ID.
 function hideAlerts(alertId: string) {
@@ -233,14 +257,27 @@ class BasicLabelDesignerApp {
 
   /** Display the configuration for a printer. */
   public showConfigModal(printer: WebLabel.LabelPrinterUsb, printerIdx: number) {
-    if (printer == undefined) {
+    if (printer === undefined || printerIdx < 0) {
       return;
     }
     const config = printer.printerOptions;
+    // If the printer uses ZPL it will have a special config, show those!
+    const isZpl = config instanceof WebLabel.ZPL.ZplPrinterConfig;
+
+    const formElement = this.configModal.querySelector('form')!;
+    const form = formElement.elements as ConfigModalForm;
+
+    // Only show ZPL settings if the printer language is ZPL.
+    for (const e of formElement.getElementsByTagName('modal-setting-zpl')) {
+      if (isZpl) {
+        e.classList.remove('d-hide');
+      } else {
+        e.classList.add('d-hide');
+      }
+    }
 
     // Translate the available speeds to options to be selected
-    const speedSelect = this.configModal.querySelector('#modalSpeed')! as HTMLSelectElement;
-    speedSelect.innerHTML = '';
+    form.modalSpeed.innerHTML = '';
     const speedTable = printer.printerOptions.speedTable.table;
     for (const [key] of speedTable) {
       // Skip utility values, so long as there's more than the defaults.
@@ -255,32 +292,47 @@ class BasicLabelDesignerApp {
       const opt = document.createElement('option');
       opt.value = key.toString();
       opt.innerHTML = WebLabel.PrintSpeed[key].substring(3).replaceAll('_', '.') + ' ips';
-      speedSelect.appendChild(opt);
+      form.modalSpeed.appendChild(opt);
     }
-    speedSelect.value = config.speed.printSpeed.toString();
+    form.modalSpeed.value = config.speed.printSpeed.toString();
 
-    const mediaSelect = this.configModal.querySelector('#modalMediaType')! as HTMLSelectElement;
     switch (config.mediaGapDetectMode) {
       case WebLabel.MediaMediaGapDetectionMode.continuous:
-        mediaSelect.value = "continuous";
+        form.modalMediaType.value = "continuous";
         break;
       default:
       case WebLabel.MediaMediaGapDetectionMode.webSensing:
-        mediaSelect.value = "gap";
+        form.modalMediaType.value = "gap";
         break;
       case WebLabel.MediaMediaGapDetectionMode.markSensing:
-        mediaSelect.value = "mark";
+        form.modalMediaType.value = "mark";
         break;
     }
 
-    (this.configModal.querySelector('#modalPrinterIndex') as HTMLInputElement)!.value = config.serialNumber;
-    (this.configModal.querySelector('#modalPrinterIndexText') as HTMLInputElement)!.textContent = printerIdx.toString();
-    (this.configModal.querySelector('#modalLabelWidth') as HTMLInputElement)!.value = config.mediaWidthInches.toString();
-    (this.configModal.querySelector('#modalLabelHeight') as HTMLInputElement)!.value = config.mediaLengthInches.toString();
-    (this.configModal.querySelector('#modalDarkness') as HTMLInputElement)!.value = config.darknessPercent.toString();
-    (this.configModal.querySelector('#modalLabelOffsetLeft') as HTMLInputElement)!.value = config.mediaPrintOriginOffsetDots.left.toString();
-    (this.configModal.querySelector('#modalLabelOffsetTop') as HTMLInputElement)!.value = config.mediaPrintOriginOffsetDots.top.toString();
-    (this.configModal.querySelector('#modalBackfeedPercent') as HTMLSelectElement)!.value = config.backfeedAfterTaken.toString();
+    // The other elements are just text.
+    (formElement.querySelector('#modalPrinterIndexText') as HTMLInputElement)!.textContent = printerIdx.toString();
+    form.modalPrinterIndex.value    = config.serialNumber;
+    form.modalLabelWidth.value      = config.mediaWidthInches.toString();
+    form.modalLabelHeight.value     = config.mediaLengthInches.toString();
+    form.modalDarkness.value        = config.darknessPercent.toString();
+    form.modalLabelOffsetLeft.value = config.mediaPrintOriginOffsetDots.left.toString();
+    form.modalLabelOffsetTop.value  = config.mediaPrintOriginOffsetDots.top.toString();
+    form.modalBackfeedPercent.value = config.backfeedAfterTaken.toString();
+    if (isZpl) {
+      const sensors = config.sensorLevels;
+      form.modalZplRibbonTHold.value = sensors.ribbonThreshold.toString();
+      form.modalZplRibbonLed.value   = sensors.ribbonLedBrightness.toString();
+      form.modalZplWebTHold.value    = sensors.webThreshold.toString();
+      form.modalZplWebMedia.value    = sensors.mediaThreshold.toString();
+      form.modalZplWebLed.value      = sensors.mediaLedBrightness.toString();
+      form.modalZplMarkTHold.value   = sensors.markThreshold.toString();
+      form.modalZplMarkMedia.value   = sensors.markMediaThreshold.toString();
+      form.modalZplMarkLed.value     = sensors.markLedBrightness.toString();
+
+      form.modalZplPowerUpAction.value   = config.actionPowerUp.toString();
+      form.modalZplHeadCloseAction.value = config.actionHeadClose.toString();
+    }
+
     this.configModalHandle.show();
   }
 
@@ -486,6 +538,7 @@ class BasicLabelDesignerApp {
     if (printer === undefined) {
       return;
     }
+    const isZpl = printer.printerOptions instanceof WebLabel.ZPL.ZplPrinterConfig;
 
     form.modalSubmit.setAttribute("disabled", "");
     form.modalCancel.setAttribute("disabled", "");
@@ -494,7 +547,6 @@ class BasicLabelDesignerApp {
     const darkness = parseInt(form.modalDarkness.value) as WebLabel.DarknessPercent;
     const rawSpeed = parseInt(form.modalSpeed.value) as WebLabel.PrintSpeed;
     const mediaWidthInches = parseFloat(form.modalLabelWidth.value);
-    const autosense = form.modalWithAutosense.checked;
 
     const mediaLengthInches = parseFloat(form.modalLabelHeight.value);
     const offsetLeft = parseInt(form.modalLabelOffsetLeft.value);
@@ -528,13 +580,67 @@ class BasicLabelDesignerApp {
       .setDarknessConfig(darkness)
       .setLabelDimensions(mediaWidthInches)
       .setBackfeedAfterTakenMode(backfeedAfterTaken);
-    const doc = autosense
-      ? configDoc.autosenseLabelLength()
-      : configDoc.finalize();
+
+    if (isZpl) {
+      // Send the ZPL-specific settings too!
+      let actionPowerUp: WebLabel.ZPL.PowerUpAction;
+      switch (form.modalZplPowerUpAction.value) {
+        case "none":
+          actionPowerUp = "none";
+          break;
+        default:
+        case "feedBlank":
+          actionPowerUp = "feedBlank";
+          break;
+        case "calibrateWebSensor":
+          actionPowerUp = "calibrateWebLength";
+          break;
+      }
+
+      let actionHeadClose: WebLabel.ZPL.PowerUpAction;
+      switch (form.modalZplHeadCloseAction.value) {
+        case "none":
+          actionHeadClose = "none";
+          break;
+        default:
+        case "feedBlank":
+          actionHeadClose = "feedBlank";
+          break;
+        case "calibrateWebSensor":
+          actionHeadClose = "calibrateWebLength";
+          break;
+      }
+
+      configDoc
+        .andThen(new WebLabel.ZPL.CmdSetPowerUpAndHeadCloseAction(
+          actionPowerUp, actionHeadClose
+        ))
+        .andThen(new WebLabel.ZPL.CmdSetSensorCalibration({
+          markLedBrightness: Number(form.modalZplMarkLed.value),
+          markMediaThreshold: Number(form.modalZplMarkMedia.value),
+          markThreshold: Number(form.modalZplMarkTHold.value),
+          mediaLedBrightness: Number(form.modalZplWebLed.value),
+          mediaThreshold: Number(form.modalZplWebMedia.value),
+          ribbonLedBrightness: Number(form.modalZplRibbonLed.value),
+          ribbonThreshold: Number(form.modalZplRibbonTHold.value),
+          webThreshold: Number(form.modalZplWebTHold.value),
+        }));
+    }
+
+    let doc: WebLabel.IDocument;
+    if (form.modalWithAutosense.checked) {
+      doc = configDoc.autosenseLabelLength();
+    } else if (isZpl && form.modalZplWithSensorGraph) {
+      doc = configDoc.andThen(new WebLabel.ZPL.CmdGraphSensorCalibration()).finalize();
+    } else {
+      doc = configDoc.finalize();
+    }
+
     // And send the whole shebang to the printer!
     await printer.sendDocument(doc);
 
     form.modalWithAutosense.checked = false;
+    form.modalZplWithSensorGraph.checked = false;
     form.modalSubmit.removeAttribute("disabled");
     form.modalCancel.removeAttribute("disabled");
     this.activePrinterIndex = printerIdx;
