@@ -76,18 +76,7 @@ export function parseCmdHostConfig(
   update.printerHardware    ??= {};
   update.printerMedia       ??= {};
   update.printerSettings    ??= {};
-  update.printerZplSettings ??= {
-    sensorLevels: {
-      markLedBrightness  : 50,
-      markThreshold      : 50,
-      markMediaThreshold : 50,
-      mediaLedBrightness : 50,
-      mediaThreshold     : 50,
-      ribbonLedBrightness: 50,
-      ribbonThreshold    : 50,
-      webThreshold       : 50,
-    }
-  };
+  update.printerZplSettings ??= {};
 
   if (window.location.hostname === "localhost") {
     console.debug(
@@ -95,6 +84,10 @@ export function parseCmdHostConfig(
       `${Util.AsciiCodeStrings.STX}${response}${Util.AsciiCodeStrings.ETX}`
     );
   }
+
+  // Store these for disambiguation later on..
+  let markLed, ribbonLed: number | undefined;
+  let sawGain = false;
 
   response
     .split('\n')
@@ -109,7 +102,7 @@ export function parseCmdHostConfig(
       if (value.length === 12 && key === "") {
         // There's at least one exception: old ZPL versions will include the serial
         // at the top with no key.
-        key = "SERIAL";
+        key = "SERIAL NUMBER";
       }
       return { key, value };
     })
@@ -150,7 +143,13 @@ export function parseCmdHostConfig(
         // Cases handled by XML.
         // TODO: Handle them here too, eventually deprecate XML for performance?
         case "FIRMWARE":
-        case "SERIAL":
+          // The firmware value should match that of the USB info. Here though
+          // it's displayed with a <- appended, to make it easier to find. Strip
+          // it before returning.
+          break;
+        case "SERIAL NUMBER":
+          // This is often not present on newer printers.
+          break;
         case "HARDWARE ID":
         case "DARKNESS":
         case "DARKNESS SWITCH": // Physical hardware must be present
@@ -197,56 +196,113 @@ export function parseCmdHostConfig(
         case "RFID VERSION":
           break;
 
-        // Sensor levels, also in XML. These have synonyms
-        // in old config formats
-        case "WEB SENSOR":
-        case "WEB S.": // older synonym
-          update.printerZplSettings!.sensorLevels!.webThreshold = Number(l.value);
-          break;
-        case "MEDIA SENSOR":
-        case "MEDIA S.": // older synonym
-          update.printerZplSettings!.sensorLevels!.mediaThreshold = Number(l.value);
-          break;
-        case "MARK SENSOR":
-        case "MARK S.": // older synonym
-          update.printerZplSettings!.sensorLevels!.markThreshold = Number(l.value);
-          break;
-        case "MARK MED SENSOR":
-        case "MARK MED S.": // older synonym
-          update.printerZplSettings!.sensorLevels!.markMediaThreshold = Number(l.value);
-          break;
-        case "MARK LED":
-          update.printerZplSettings!.sensorLevels!.markLedBrightness = Number(l.value);
-          break;
-        case "MEDIA LED":
-        case "RIBBON LED":
-          update.printerZplSettings!.sensorLevels!.ribbonLedBrightness = Number(l.value);
-          break;
-        case "RIBBON SENSOR":
-        case "RIBBON S.": //older synonym
-          update.printerZplSettings!.sensorLevels!.ribbonThreshold = Number(l.value);
+        case "TAKE LABEL":
+          update.printerZplSettings!.takeLabelThreshold = Number(l.value);
           break;
 
-        // These values don't correspond to ones that can be set via ^SS, so
-        // I'm not sure what they're for.
-        // TODO: Figure out what these sense and how to change them.
+        // These next values are special depending on the vintage of the printer.
+        // Somewhere beteween the ZP505 and the ZD410 the XML values for
+        // "LED-INTENSITY" became "GAIN", and a new "LED-BRIGHTNESS" was added
+        // for the ribbon and mark sensors. The MEDIA-LED-INTENSITY became
+        // TRANSMISSIVE-GAIN, and a new command ^SI was added to set the LED
+        // brightness itself. There are also separate SET-GET-DO commands.
+
+        // The LP2824Plus seems to be part of this migration, having no "LED"
+        // values and no "TRANS" config lines.
+
+        // My R2844-Z has "LED" lines, LP2824Plus has "GAIN", ZD410 has BOTH!
+        // The "MARK LED" and "RIBBON LED" lines on newer printers are not the same
+        // so we must store them here and figure out which one they mean later.
+        // Yay backwards incompatible changes!
+        // Ribbon sensor is consistent, if present.
+        case "RIBBON SENSOR":
+        case "RIBBON S.": //older synonym
+          update.printerZplSettings!.ribbonThreshold = Number(l.value);
+          break;
+        case "RIBBON GAIN":
+          sawGain = true;
+          update.printerZplSettings!.ribbonGain = Number(l.value);
+          break;
+        case "RIBBON LED":
+          // May be gain or brightness, defer disambiguation
+          ribbonLed = Number(l.value);
+          break;
+
+        // Web sense
+        // Web threshold
+        case "WEB SENSOR":
+        case "WEB S.": // older synonym
+          update.printerZplSettings!.webThreshold = Number(l.value);
+          break;
+        case "WEB GAIN": // 2824Plus synonym?
         case "TRANS GAIN": // whos lives matter yo
+          sawGain = true;
+          update.printerZplSettings!.transGain = Number(l.value);
+          break;
+        case "MEDIA LED": // Older name for same setting???
+          // My kingdom for an hour with a Zebra firmware architect...
+          update.printerZplSettings!.transGain = Number(l.value);
+          break;
+        // Media out threshold
+        case "MEDIA SENSOR":
+        case "MEDIA S.": // older synonym
+          update.printerZplSettings!.mediaThreshold = Number(l.value);
+          break;
         case "TRANS LED":
+          update.printerZplSettings!.transBrightness = Number(l.value);
+          break;
+
+        // Mark sense
+        // Web threshold
+        case "MARK SENSOR":
+        case "MARK S.": // older synonym
+          update.printerZplSettings!.markThreshold = Number(l.value);
+          break;
         case "MARK GAIN":
-        case "TAKE LABEL":
+          sawGain = true;
+          update.printerZplSettings!.markGain = Number(l.value);
+          break;
+        case "MARK LED":
+          // May be gain or brightness, defer disambiguation
+          markLed = Number(l.value);
+          break;
+        // Media out threshold
+        case "MARK MED SENSOR":
+        case "MARK MED S.": // older synonym
+          update.printerZplSettings!.markMediaThreshold = Number(l.value);
+          break;
+        case "MARK MEDIA GAIN":
+          // Only shows on ZP505 and LP2824Plus..?
+          sawGain = true;
+          update.printerZplSettings!.markMediaGain = Number(l.value);
+          break;
+
+        // These are on a ZP505 and an LP2824Plus, I don't know what they're
+        // for or how to configure them..
+        case 'CONT MEDIA SENSOR':
+        case 'CONT MEDIA S.': // Older synonym
+          break;
+        case "CONT MEDIA GAIN":
+          sawGain = true;
           break;
 
         // Time and counters, maybe useful?
         case "RTC DATE":
         case "RTC TIME":
           break;
-        // There is one nonresettable counter and two resettable ones
+
+        // There is one non-resettable counter and two resettable ones
         // like a car odometer and trip, haha.
         // Unfortunately, they use the same key! You have to split by suffix.
         // LABELS, IN, CM
         case "NONRESET CNTR":
         case "RESET CNTR1":
         case "RESET CNTR2":
+        case "LAST CLEANED":
+        case "HEAD USAGE":
+        case "TOTAL USAGE":
+        case "HEAD CLEANING":
+        case "HEAD LIFE":
           break;
 
         // Comm modes flags that might not be needed ever?
@@ -264,7 +320,8 @@ export function parseCmdHostConfig(
         case "MASS STORAGE COUNT":
         case "HID COUNT":
         case "USB HOST LOCK OUT":
-        case "XML SCHEMA":
+        case "XML SCHEMA": // Validate?
+        case "HEXDUMP": // Fedex only?
         case "IDLE DISPLAY":
         case "CONFIGURATION": // CUSTOMIZED, older?
         case "FORMAT CONVERT":
@@ -280,16 +337,28 @@ export function parseCmdHostConfig(
         case "ZEBRA NET II":
           break;
 
-        // TODO: Sanity check these, throw a fit if they're set differntly
+        // TODO: Sanity check these, throw a fit if they're set differently
         case "CONTROL PREFIX":
+        case "CONTROL CHAR": // old synonym
         case "FORMAT PREFIX":
+        case "COMMAND CHAR": // old synonym
         case "DELIMITER CHAR":
+        case "DELIM. CHAR": // old synonym
         case "ZPL MODE":
         case "COMMAND OVERRIDE":
           break;
       }
-
   });
+
+  // If any 'GAIN' lines were observed the LED values are for brightness,
+  // otherwise the values are for 'intensity' which is synonymous with 'gain'.
+  if (sawGain) {
+    update.printerZplSettings!.markBrightness = markLed;
+    update.printerZplSettings!.ribbonBrightness = ribbonLed;
+  } else {
+    update.printerZplSettings!.markGain  = markLed;
+    update.printerZplSettings!.ribbonGain = ribbonLed;
+  }
 
   result.messages = [update];
   return result
