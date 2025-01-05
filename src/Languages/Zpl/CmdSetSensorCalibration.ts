@@ -1,7 +1,7 @@
 import * as Conf from '../../Configs/index.js';
 import * as Cmds from '../../Commands/index.js';
 import * as Util from '../../Util/index.js';
-import type { IZplPrinterSettings, SensorLevels } from './Config.js';
+import { ZplPrinterConfig, type IZplPrinterSettings, type SensorLevels } from './Config.js';
 
 export class CmdSetSensorCalibration implements Cmds.IPrinterExtendedCommand {
   public static typeE = Symbol("CmdSetSensorCalibration");
@@ -15,18 +15,18 @@ export class CmdSetSensorCalibration implements Cmds.IPrinterExtendedCommand {
     return `Set sensor levels with ${JSON.stringify(this.levels)}`
   }
 
-  readonly levels: Readonly<SensorLevels>;
+  readonly levels: Conf.UpdateFor<SensorLevels>;
 
-  constructor(levels: SensorLevels) {
+  constructor(levels: Conf.UpdateFor<SensorLevels>) {
     this.levels = {
-      markLedBrightness  : Util.clampToRange(levels.markLedBrightness, 0, 255),
-      markMediaThreshold : Util.clampToRange(levels.markMediaThreshold, 0, 100),
-      markThreshold      : Util.clampToRange(levels.markThreshold, 0, 100),
-      mediaLedBrightness : Util.clampToRange(levels.mediaLedBrightness, 0, 255),
-      mediaThreshold     : Util.clampToRange(levels.mediaThreshold, 0, 100),
-      ribbonLedBrightness: Util.clampToRange(levels.ribbonLedBrightness, 0, 255),
-      ribbonThreshold    : Util.clampToRange(levels.ribbonThreshold, 1, 100),
-      webThreshold       : Util.clampToRange(levels.webThreshold, 0, 100),
+      markGain          : levels.markGain           !== undefined ? Util.clampToRange(levels.markGain, 0, 255) : undefined,
+      markMediaThreshold: levels.markMediaThreshold !== undefined ? Util.clampToRange(levels.markMediaThreshold, 0, 100) : undefined,
+      markThreshold     : levels.markThreshold      !== undefined ? Util.clampToRange(levels.markThreshold, 0, 100) : undefined,
+      transGain         : levels.transGain          !== undefined ? Util.clampToRange(levels.transGain, 0, 255) : undefined,
+      mediaThreshold    : levels.mediaThreshold     !== undefined ? Util.clampToRange(levels.mediaThreshold, 0, 100) : undefined,
+      ribbonGain        : levels.ribbonGain         !== undefined ? Util.clampToRange(levels.ribbonGain, 0, 255) : undefined,
+      ribbonThreshold   : levels.ribbonThreshold    !== undefined ? Util.clampToRange(levels.ribbonThreshold, 1, 100) : undefined,
+      webThreshold      : levels.webThreshold       !== undefined ? Util.clampToRange(levels.webThreshold, 0, 100) : undefined,
     }
   }
 
@@ -35,14 +35,14 @@ export class CmdSetSensorCalibration implements Cmds.IPrinterExtendedCommand {
     levels: Partial<SensorLevels>
   ) {
     return new CmdSetSensorCalibration({
-      markLedBrightness  : levels.markLedBrightness ?? cfg.sensorLevels.markLedBrightness,
-      markMediaThreshold : levels.markMediaThreshold ?? cfg.sensorLevels.markMediaThreshold,
-      markThreshold      : levels.markThreshold ?? cfg.sensorLevels.markThreshold,
-      mediaLedBrightness : levels.mediaLedBrightness ?? cfg.sensorLevels.mediaLedBrightness,
-      mediaThreshold     : levels.mediaThreshold ?? cfg.sensorLevels.mediaThreshold,
-      ribbonLedBrightness: levels.ribbonLedBrightness ?? cfg.sensorLevels.ribbonLedBrightness,
-      ribbonThreshold    : levels.ribbonThreshold ?? cfg.sensorLevels.ribbonThreshold,
-      webThreshold       : levels.webThreshold ?? cfg.sensorLevels.webThreshold,
+      markGain          : levels.markGain           ?? cfg.markGain,
+      markMediaThreshold: levels.markMediaThreshold ?? cfg.markMediaThreshold,
+      markThreshold     : levels.markThreshold      ?? cfg.markThreshold,
+      transGain         : levels.transGain          ?? cfg.transGain,
+      mediaThreshold    : levels.mediaThreshold     ?? cfg.mediaThreshold,
+      ribbonGain        : levels.ribbonGain         ?? cfg.ribbonGain,
+      ribbonThreshold   : levels.ribbonThreshold    ?? cfg.ribbonThreshold,
+      webThreshold      : levels.webThreshold       ?? cfg.webThreshold,
     });
   }
 }
@@ -59,17 +59,18 @@ export function handleCmdSetSensorCalibration(
   function pad(num: number, len = 3) {
     return num.toString().padStart(len, '0');
   }
-  if (cmd instanceof CmdSetSensorCalibration) {
+  const c = docState.initialConfig;
+  if (cmd instanceof CmdSetSensorCalibration && c instanceof ZplPrinterConfig) {
     return [
-      `^SS${pad(cmd.levels.webThreshold)}`,
-      pad(cmd.levels.mediaThreshold),
-      pad(cmd.levels.ribbonThreshold),
+      `^SS${pad(cmd.levels.webThreshold ?? c.webThreshold)}`,
+      pad(cmd.levels.mediaThreshold     ?? c.mediaThreshold),
+      pad(cmd.levels.ribbonThreshold    ?? c.ribbonThreshold),
       pad(docState.initialConfig.mediaLengthDots, 4),
-      pad(cmd.levels.mediaLedBrightness),
-      pad(cmd.levels.ribbonLedBrightness),
-      pad(cmd.levels.markThreshold),
-      pad(cmd.levels.markMediaThreshold),
-      pad(cmd.levels.markLedBrightness)
+      pad(cmd.levels.transGain          ?? c.transGain),
+      pad(cmd.levels.ribbonGain         ?? c.ribbonGain),
+      pad(cmd.levels.markThreshold      ?? c.markThreshold),
+      pad(cmd.levels.markMediaThreshold ?? c.markMediaThreshold),
+      pad(cmd.levels.markGain           ?? c.markGain)
     ].join(',');
   }
   return '';

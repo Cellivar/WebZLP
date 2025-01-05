@@ -318,16 +318,16 @@ class BasicLabelDesignerApp {
     form.modalLabelOffsetLeft.value = config.mediaPrintOriginOffsetDots.left.toString();
     form.modalLabelOffsetTop.value  = config.mediaPrintOriginOffsetDots.top.toString();
     form.modalBackfeedPercent.value = config.backfeedAfterTaken.toString();
+
     if (isZpl) {
-      const sensors = config.sensorLevels;
-      form.modalZplRibbonTHold.value = sensors.ribbonThreshold.toString();
-      form.modalZplRibbonLed.value   = sensors.ribbonLedBrightness.toString();
-      form.modalZplWebTHold.value    = sensors.webThreshold.toString();
-      form.modalZplWebMedia.value    = sensors.mediaThreshold.toString();
-      form.modalZplWebLed.value      = sensors.mediaLedBrightness.toString();
-      form.modalZplMarkTHold.value   = sensors.markThreshold.toString();
-      form.modalZplMarkMedia.value   = sensors.markMediaThreshold.toString();
-      form.modalZplMarkLed.value     = sensors.markLedBrightness.toString();
+      form.modalZplRibbonTHold.value = config.ribbonThreshold.toString();
+      form.modalZplRibbonLed.value   = config.ribbonGain.toString();
+      form.modalZplWebTHold.value    = config.webThreshold.toString();
+      form.modalZplWebMedia.value    = config.mediaThreshold.toString();
+      form.modalZplWebLed.value      = config.transGain.toString();
+      form.modalZplMarkTHold.value   = config.markThreshold.toString();
+      form.modalZplMarkMedia.value   = config.markMediaThreshold.toString();
+      form.modalZplMarkLed.value     = config.markGain.toString();
 
       form.modalZplPowerUpAction.value   = config.actionPowerUp.toString();
       form.modalZplHeadCloseAction.value = config.actionHeadClose.toString();
@@ -616,21 +616,21 @@ class BasicLabelDesignerApp {
           actionPowerUp, actionHeadClose
         ))
         .andThen(new WebLabel.ZPL.CmdSetSensorCalibration({
-          markLedBrightness: Number(form.modalZplMarkLed.value),
+          markGain          : Number(form.modalZplMarkLed.value),
           markMediaThreshold: Number(form.modalZplMarkMedia.value),
-          markThreshold: Number(form.modalZplMarkTHold.value),
-          mediaLedBrightness: Number(form.modalZplWebLed.value),
-          mediaThreshold: Number(form.modalZplWebMedia.value),
-          ribbonLedBrightness: Number(form.modalZplRibbonLed.value),
-          ribbonThreshold: Number(form.modalZplRibbonTHold.value),
-          webThreshold: Number(form.modalZplWebTHold.value),
+          markThreshold     : Number(form.modalZplMarkTHold.value),
+          transGain         : Number(form.modalZplWebLed.value),
+          mediaThreshold    : Number(form.modalZplWebMedia.value),
+          ribbonGain        : Number(form.modalZplRibbonLed.value),
+          ribbonThreshold   : Number(form.modalZplRibbonTHold.value),
+          webThreshold      : Number(form.modalZplWebTHold.value),
         }));
     }
 
     let doc: WebLabel.IDocument;
     if (form.modalWithAutosense.checked) {
       doc = configDoc.autosenseLabelLength();
-    } else if (isZpl && form.modalZplWithSensorGraph) {
+    } else if (isZpl && form.modalZplWithSensorGraph.checked) {
       doc = configDoc.andThen(new WebLabel.ZPL.CmdGraphSensorCalibration()).finalize();
     } else {
       doc = configDoc.finalize();
