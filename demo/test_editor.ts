@@ -1,13 +1,25 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import * as WebLabel from '../src/index.js';
 import * as WebDevices from 'web-device-mux';
+import * as Editor from '../../fabricjs-label-editor/lib/index.js'
 import bootstrap from 'bootstrap';
 // This file exists to test the index.html's typescript. Unfortunately there isn't
 // a good way to configure Visual Studio Code to, well, treat it as typescript.
 ////////////////////////////////////////////////////////////////////////////////
 
-// First import the lib!
-//import * as WebLabel from 'web-receiptline-printer';
+// This demo uses a more complex label designer using the Fabric.JS library.
+// Internally it makes use of an HTML canvas, and thus it's easy to plug into
+// WebZLP for label designing!
+// Import the canvas editor lib and create a canvas to use for printing.
+// import * as Editor from 'fabricjs-label-editor'
+// import * as WebLabel from 'webzlp';
+// import * as WebDevices from 'web-device-mux';
+(window as any).FabricEditor = Editor;
+(window as any).WebLabel = WebLabel;
+(window as any).WebDevices = WebDevices;
+
+const editor = new Editor.ImageEditor(document.getElementById('image-editor-container')!);
+(window as any).LabelEditor = editor;
 
 // For this demo we're going to make use of the USB printer manager
 // so it can take care of concerns like the USB connect and disconnect events.
@@ -40,46 +52,6 @@ addPrinterBtn.addEventListener('click', async () => printerMgr.promptForNewDevic
 // Next a button to manually refresh all printers, just in case.
 const refreshPrinterBtn = document.getElementById('refreshPrinters')!;
 refreshPrinterBtn.addEventListener('click', async () => printerMgr.forceReconnect());
-
-// Next we wire up some events on the UsbDeviceManager itself.
-printerMgr.addEventListener('connectedDevice', ({ detail }) => {
-
-  // Let's print some details about the printer that was connected.
-  const printer = detail.device;
-  console.log('New printer is a', printer.printerModel);
-  const config = printer.printerOptions;
-  console.log('Printer darkness is', config.darknessPercent, 'percent');
-  console.log('Printer speed is', WebLabel.PrintSpeed[config.speed.printSpeed]);
-  console.log(
-    'Label is',
-    config.mediaWidthInches,
-    'in wide and',
-    config.mediaLengthInches,
-    'in long');
-  console.log('Printer media mode is', WebLabel.MediaMediaGapDetectionMode[config.mediaGapDetectMode]);
-
-  // You can do stuff with the printer that connected. It's a good idea
-  // to immediately query the printer for its status.
-  printer.sendDocument(WebLabel.ReadyToPrintDocuments.printerStatusDocument);
-});
-
-// There's also an event that will tell you when a printer disconnects.
-printerMgr.addEventListener('disconnectedDevice', ({ detail }) => {
-  const printer = detail.device;
-  console.log('Lost printer', printer.printerModel, 'serial', printer.printerOptions.serialNumber);
-});
-
-// When the browser first loaded the page any previously connected printers would have caused
-// a connection event. Our listener wasn't listening yet so missed it.
-// It's good practice to force a reconnect once your event handlers are ready.
-// We're going to skip this for now though, because we want it to happen after the app is ready.
-//await printerMgr.reconnectAllPrinters();
-
-// And that's all there is to setup! The page can now talk to printers.
-// If you're using a chromebook this should just work. If you're on Windows
-// you might need to do some driver setup, see the repo README for more details.
-
-// The rest of this demo is an example of a basic label generator app.
 
 // Get some bookkeeping out of the way..
 // First we create an interface to describe our settings form.
@@ -159,7 +131,7 @@ class BasicLabelDesignerApp {
   constructor(
     private manager: PrinterManager,
     private btnContainer: HTMLElement,
-    private labelForm: HTMLElement,
+    private editor: Editor.ImageEditor,
     private labelFormInstructions: HTMLElement,
     private configModal: HTMLElement
   ) {
@@ -168,8 +140,6 @@ class BasicLabelDesignerApp {
     this.configModal
       .querySelector('form')!
       .addEventListener('submit', this.updatePrinterConfig.bind(this));
-    this.labelForm.addEventListener('blur', this.renderTextForm.bind(this));
-    this.labelForm.addEventListener('keyup', this.renderTextForm.bind(this));
 
     // Add a second set of event listeners for printer connect and disconnect to redraw
     // the printer list when it changes.
@@ -202,6 +172,7 @@ class BasicLabelDesignerApp {
         );
       });
     });
+
     this.manager.addEventListener('disconnectedDevice', () => {
       this.activePrinterIndex = -1;
       this.redrawPrinterButtons();
@@ -247,13 +218,13 @@ class BasicLabelDesignerApp {
   }
   set activePrinterIndex(printerIdx: number) {
     this._activePrinter = printerIdx;
-    this.redrawTextCanvas();
+    this.redrawLabelCanvas();
   }
 
   /** Initialize the app */
   public async init() {
     this.redrawPrinterButtons();
-    this.redrawTextCanvas();
+    this.redrawLabelCanvas();
   }
 
   /** Display the configuration for a printer. */
@@ -416,7 +387,7 @@ class BasicLabelDesignerApp {
         }
         this.activePrinterIndex = printerIdx;
         this.redrawPrinterButtonHighlights();
-        this.redrawTextCanvas();
+        this.redrawLabelCanvas();
       });
     document.getElementById(`printtest_${idx}`)!
       .addEventListener('click', async (e) => {
@@ -452,70 +423,34 @@ class BasicLabelDesignerApp {
       });
   }
 
-  /** Redraw the text canvas size according to the printer. */
-  private redrawTextCanvas() {
+  /** Redraw the canvas size according to the selected printer. */
+  private redrawLabelCanvas() {
     const printer = this.activePrinter;
     if (printer === undefined) {
-      this.labelForm.classList.add('d-none');
+      this.editor.containerElement.classList.add('d-none');
       this.labelFormInstructions.classList.remove('d-none');
       return;
+
     } else {
-      this.labelForm.classList.remove('d-none');
+      // Set the actual resolution of the canvas
+      this.editor.canvas.setDimensions({
+        height: printer.printerOptions.mediaLengthDots - 2,
+        width: printer.printerOptions.mediaWidthDots - 2,
+      });
+      // Scale the CSS size by half, keeping the same resolution.
+      this.editor.canvas.setDimensions({
+        height: printer.printerOptions.mediaLengthDots / 2,
+        width: printer.printerOptions.mediaWidthDots / 2,
+      }, { cssOnly: true });
+
+      this.editor.containerElement.classList.remove('d-none');
       this.labelFormInstructions.classList.add('d-none');
     }
-
-    // Resize the canvas to match the label size.
-    const canvas = this.labelForm.querySelector("#labelCanvas") as HTMLCanvasElement;
-    // Add a small margin as printer alignment is not exact.
-    canvas.width = printer.printerOptions.mediaWidthDots - 2;
-    canvas.height = printer.printerOptions.mediaLengthDots - 2;
-
-    const textarea = this.labelForm.querySelector('#labelFormText') as HTMLTextAreaElement;
-    textarea.value = "Enter your label text here!";
-    this.renderTextForm();
-  }
-
-  /** Render the text form to the canvas */
-  private renderTextForm() {
-    const printer = this.activePrinter;
-    if (printer === undefined) {
-      return;
-    }
-
-    const textarea = this.labelForm.querySelector('#labelFormText') as HTMLTextAreaElement;
-    const fontsizer = this.labelForm.querySelector('#previewFontSize') as HTMLInputElement;
-    const canvas = this.labelForm.querySelector("#labelCanvas") as HTMLCanvasElement;
-    const pageContext = canvas.getContext('2d')!;
-    pageContext.clearRect(0, 0, canvas.width, canvas.height);
-
-    const fontSize = Math.trunc(parseFloat(fontsizer.value));
-
-    // We'd like the preview image to be as close as possible to what the printer will
-    // actually print. To do this we don't draw text to the page's canvas directly,
-    // instead we draw to an offscreen canvas, render that canvas to a monochrome bitmap,
-    // then render *that* back to the page's canvas. This is a more accurate picture of
-    // what the label will end up looking like.
-
-    // A more complex app could do this more gracefully!
-    const offscreenContext = new OffscreenCanvas(canvas.width, canvas.height).getContext('2d')!;
-    offscreenContext.font = `${fontSize}pt ${this.fontName}`;
-    offscreenContext.fillStyle = "#000000";
-
-    // fillText doesn't do newlines, do that manually
-    textarea.value.split('\n').forEach((l, i) => {
-      offscreenContext.fillText(l, 5, (i * fontSize + 2) + fontSize);
-    })
-
-    // Now into the monochrome bitmap.
-    const offscreenImg = offscreenContext.getImageData(0, 0, canvas.width, canvas.height);
-    const monoImg = WebLabel.BitmapGRF.fromCanvasImageData(offscreenImg, { trimWhitespace: false });
-    // And finally back onto the page.
-    pageContext.putImageData(monoImg.toImageData(), 0, 0);
   }
 
   /** Render the canvas to a document for printing */
   private addCanvasImageToLabelDoc(builder: WebLabel.ILabelDocumentBuilder): WebLabel.IDocument {
-    const canvas = this.labelForm.querySelector("#labelCanvas") as HTMLCanvasElement;
+    const canvas = this.editor.canvas.toCanvasElement();
     const imgData = canvas.getContext('2d')!.getImageData(0, 0, canvas.width, canvas.height);
 
     // One of the benefits of this library is being able to render images to a canvas element
@@ -652,15 +587,13 @@ class BasicLabelDesignerApp {
 // With the app class defined we can run it.
 // First up collect the basic structure of the app
 const btnContainer          = document.getElementById("printerlist")!;
-const labelForm             = document.getElementById("labelForm")!;
 const labelFormInstructions = document.getElementById("labelFormInstructions")!;
 const configModal           = document.getElementById("printerOptionModal")!;
 
 // And feed that into the app class to manage the elements
-const app = new BasicLabelDesignerApp(printerMgr, btnContainer, labelForm, labelFormInstructions, configModal);
+const app = new BasicLabelDesignerApp(printerMgr, btnContainer, editor, labelFormInstructions, configModal);
 // and let it take over the UI.
 await app.init();
-
 
 // Now we can access our printer in the dev console if we want to mess with it!
 (window as any).label_app = app;
