@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import * as WebLabel from '../src/index.js';
 import * as WebDevices from 'web-device-mux';
 import bootstrap from 'bootstrap';
@@ -104,13 +105,13 @@ interface ConfigModalForm extends HTMLCollection {
   // commands or configs specific to their printers.
   // Sensors
   modalZplRibbonTHold: HTMLInputElement
-  modalZplRibbonLed  : HTMLInputElement
+  modalZplRibbonGain : HTMLInputElement
   modalZplWebTHold   : HTMLInputElement
   modalZplWebMedia   : HTMLInputElement
-  modalZplWebLed     : HTMLInputElement
+  modalZplTransGain  : HTMLInputElement
   modalZplMarkTHold  : HTMLInputElement
   modalZplMarkMedia  : HTMLInputElement
-  modalZplMarkLed    : HTMLInputElement
+  modalZplMarkGain   : HTMLInputElement
 
   modalZplWithSensorGraph: HTMLInputElement
 
@@ -321,13 +322,13 @@ class BasicLabelDesignerApp {
 
     if (isZpl) {
       form.modalZplRibbonTHold.value = config.ribbonThreshold.toString();
-      form.modalZplRibbonLed.value   = config.ribbonGain.toString();
+      form.modalZplRibbonGain.value  = config.ribbonGain.toString();
       form.modalZplWebTHold.value    = config.webThreshold.toString();
       form.modalZplWebMedia.value    = config.mediaThreshold.toString();
-      form.modalZplWebLed.value      = config.transGain.toString();
+      form.modalZplTransGain.value   = config.transGain.toString();
       form.modalZplMarkTHold.value   = config.markThreshold.toString();
       form.modalZplMarkMedia.value   = config.markMediaThreshold.toString();
-      form.modalZplMarkLed.value     = config.markGain.toString();
+      form.modalZplMarkGain.value    = config.markGain.toString();
 
       form.modalZplPowerUpAction.value   = config.actionPowerUp.toString();
       form.modalZplHeadCloseAction.value = config.actionHeadClose.toString();
@@ -616,12 +617,12 @@ class BasicLabelDesignerApp {
           actionPowerUp, actionHeadClose
         ))
         .andThen(new WebLabel.ZPL.CmdSetSensorCalibration({
-          markGain          : Number(form.modalZplMarkLed.value),
+          markGain          : Number(form.modalZplMarkGain.value),
           markMediaThreshold: Number(form.modalZplMarkMedia.value),
           markThreshold     : Number(form.modalZplMarkTHold.value),
-          transGain         : Number(form.modalZplWebLed.value),
+          transGain         : Number(form.modalZplTransGain.value),
           mediaThreshold    : Number(form.modalZplWebMedia.value),
-          ribbonGain        : Number(form.modalZplRibbonLed.value),
+          ribbonGain        : Number(form.modalZplRibbonGain.value),
           ribbonThreshold   : Number(form.modalZplRibbonTHold.value),
           webThreshold      : Number(form.modalZplWebTHold.value),
         }));
@@ -660,12 +661,9 @@ const app = new BasicLabelDesignerApp(printerMgr, btnContainer, labelForm, label
 // and let it take over the UI.
 await app.init();
 
-// Make the TypeScript type system happy by adding a property to the Window object.
-declare global {
-  interface Window { label_app: BasicLabelDesignerApp }
-}
+
 // Now we can access our printer in the dev console if we want to mess with it!
-window.label_app = app;
+(window as any).label_app = app;
 
 // Now we'll fire the reconnect since our UI is wired up.
 try {
