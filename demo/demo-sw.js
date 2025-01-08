@@ -13,29 +13,30 @@ self.addEventListener('activate', () => self.clients.claim());
 
 // Intercept fetch requests for modules and compile the intercepted typescript.
 self.addEventListener('fetch', (event) => {
-    if (!event.request.url.startsWith('https://')) {
+  const url = event.request.url;
+    if (!url.startsWith('https://')) {
         return;
     }
 
     // Start off easy: if it's a request for a TS file, transpile it.
-    if (event.request.url.endsWith('.ts')) {
-        log('Fetching', event.request.url, 'as just typescript');
-        event.respondWith(transpileTypeScript(event.request.url));
+    if (url.endsWith('.ts')) {
+        log('Fetching', url, 'as just typescript');
+        event.respondWith(transpileTypeScript(url));
         return;
     }
 
     // Next up is 'no extension'. In classical TS imports you omit any extension
     // when pulling in a file reference, interpret those as TS and be okay if it
     // ends up 404'ing.
-    if (!event.request.url.endsWith('.ts')
-        && !event.request.url.endsWith('.js')
+    const notExtensions = [".ts", ".js", ".mjs", ".cjs", ".css", ".json"]
+    if (notExtensions.find(e => url.endsWith(e)) === undefined
         && event.request.destination === 'script'
         && event.isTrusted) {
-        log("Interpreting", event.request.url, "as TypeScript request");
+        log("Interpreting", url, "as TypeScript request");
         // TS import statements elide the .ts extension, but this fetch is destined for a script
         // and it's not a javascript file. Assume it's actually a TS module.
         // This is _mostly_ safe as js run through the ts compiler is unmodified.
-        event.respondWith(transpileTypeScript(event.request.url + '.ts'));
+        event.respondWith(transpileTypeScript(url + '.ts'));
         return;
     }
 
@@ -44,11 +45,11 @@ self.addEventListener('fetch', (event) => {
     // https://github.com/microsoft/TypeScript/issues/16577#issuecomment-703190339
     // As such, we must test the fetch URL and see if it 404s, if so retry with
     // a .ts extension instead.
-    if (event.request.url.endsWith('.js')
+    if ((url.endsWith('.js') || url.endsWith('.mjs'))
         && event.request.destination === 'script'
         && event.isTrusted) {
-        log('Testing', event.request.url, 'as maybe javascript');
-        event.respondWith(maybeFetchJs(event.request.url));
+        log('Testing', url, 'as maybe javascript');
+        event.respondWith(maybeFetchJs(url));
         return;
     }
 });
