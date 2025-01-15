@@ -98,7 +98,13 @@ export default tseslint.config(
     },
   },
   {
-    ignores: ["dist/", "**/node_modules/**", "demo/**", "vite.config.ts"],
+    ignores: [
+      "dist/",
+      "**/node_modules/**",
+      "demo/**",
+      "vite.config.ts",
+      "eslint.config.js",
+    ],
   },
   {
     files: ["demo/**/*.{js,ts}"],
@@ -107,9 +113,6 @@ export default tseslint.config(
         ...globals.browser,
       },
     },
-  },
-  {
-    ignores: ["eslintrc.config.js"],
   },
   {
     files: ["src/**/*.test.ts"],
