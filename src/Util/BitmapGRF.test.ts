@@ -6,6 +6,8 @@ import {
   type ImageConversionOptions
 } from './BitmapGRF.js';
 
+import * as testImage1 from "./test_files/test_imgdata.json" with { type: 'json' }
+
 // Class pulled from jest-mock-canvas which I can't seem to actually import.
 class ImageData {
   _width = 0;
@@ -118,6 +120,14 @@ function getImageDataInputAlternatingDots(width: number, height: number) {
   }
 
   return arr;
+}
+
+function getSnap(filename: string) {
+  return `./test_files/${filename}.ts.snap`;
+}
+function getImageDataFromFileJson() {
+  const file = testImage1.default;
+  return new ImageData(new Uint8ClampedArray(file.data), file.width);
 }
 
 const imageConversionOptions: ImageConversionOptions = {
@@ -385,4 +395,11 @@ describe('BitmapGRF', () => {
     });
   });
 
+  describe('Raw binary output', () => {
+    it('should transform an image correctly', () => {
+      const imgData = getImageDataFromFileJson();
+      const img = BitmapGRF.fromCanvasImageData(imgData);
+      expect(img.toBinaryGRF()).toMatchFileSnapshot(getSnap("test_imgdata_binarygrf"));
+    });
+  });
 });
