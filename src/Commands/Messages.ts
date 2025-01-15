@@ -59,7 +59,7 @@ export class StringMessageTransformer implements MessageTransformer<string> {
 
 export function asUint8Array(commands: Conf.MessageArrayLike): Uint8Array {
   if (typeof commands === "string") {
-    return new TextEncoder().encode(commands);
+    return Util.EncodeAscii(commands);
   } else if (commands instanceof Uint8Array) {
     return commands;
   } else {

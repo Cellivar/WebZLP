@@ -132,7 +132,7 @@ export function EncodeAscii(str: string): Uint8Array {
   for (let charIdx = 0; charIdx < str.length; charIdx++) {
     const char = str.charCodeAt(charIdx);
     if (char > 0xFF) {
-      throw new Error(`Character at index ${charIdx} of "${str}" is not ASCII`);
+      throw new Error(`Encountered non-ASCII character \`${str[charIdx]}\` (code ${char}) at index ${charIdx} of \`${str}\``);
     }
     out[charIdx] = char;
   }
@@ -143,6 +143,7 @@ export function EncodeAscii(str: string): Uint8Array {
  * Convert a byte array of raw ASCII codepoints to a string.
  * @param array
  */
-export function DecodeAscii(array: Uint8Array): string {
-  return new TextDecoder('ascii').decode(array);
+export function DecodeAscii(input?: Uint8Array) {
+  if (input === undefined) { return ''; }
+  return String.fromCharCode(...input);
 }

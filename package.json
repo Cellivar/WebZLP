@@ -1,6 +1,6 @@
 {
   "name": "webzlp",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "A small library using WebUSB to print labels on label printers.",
   "type": "module",
   "repository": {
