@@ -88,6 +88,8 @@ export function parseCmdHostConfig(
   // Store these for disambiguation later on..
   let markLed, ribbonLed: number | undefined;
   let sawGain = false;
+  let sawNonCont = false;
+  let sawSensorType: string | undefined;
 
   response
     .split('\n')
@@ -125,19 +127,25 @@ export function parseCmdHostConfig(
               update.printerMedia!.mediaGapDetectMode = Conf.MediaMediaGapDetectionMode.continuous;
               break;
             case "GAP/NOTCH":
-            case "NON-CONTINUOUS":
               update.printerMedia!.mediaGapDetectMode = Conf.MediaMediaGapDetectionMode.webSensing;
+              break;
+            case "NON-CONTINUOUS":
+              // Older printers use this for both mark and web, then use SENSOR TYPE
+              // to determine what type of non-continuous.
+              sawNonCont = true;
               break;
           }
           break;
         }
         case "SENSOR SELECT": // TRANSMISSIVE, REFLECTIVE, MANUAL
+          // Seems to be present on newer firmware revisions
           // This should be set automatically with MEDIA TYPE.
           // TODO: Don't ignore this if it disagrees with MEDIA TYPE?
           break;
         case "SENSOR TYPE": // MARK, WEB
-          // This should be set automatically with MEDIA TYPE. LP2844-Z units.
-          // TODO: Don't ignore this if it disagrees with MEDIA TYPE?
+          // Seems to be present on older firmware revisions. Will still be set
+          // when in continuous mode, so disambiguate later on.
+          sawSensorType = l.value
           break;
 
         // Cases handled by XML.
@@ -358,6 +366,16 @@ export function parseCmdHostConfig(
   } else {
     update.printerZplSettings!.markGain  = markLed;
     update.printerZplSettings!.ribbonGain = ribbonLed;
+  }
+
+  // On older printers 'NON-CONTINOUS' media type is used for web and mark
+  // then the SENSOR TYPE is used to determine the gap mode.
+  if (sawNonCont && sawSensorType !== undefined) {
+    if (sawSensorType === "MARK") {
+      update.printerMedia!.mediaGapDetectMode = Conf.MediaMediaGapDetectionMode.markSensing;
+    } else if (sawSensorType === "WEB") {
+      update.printerMedia!.mediaGapDetectMode = Conf.MediaMediaGapDetectionMode.webSensing;
+    }
   }
 
   result.messages = [update];
