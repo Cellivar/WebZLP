@@ -342,6 +342,27 @@ describe('BitmapGRF', () => {
       expect(img.boundingBox.paddingRight).toBe(1);
     });
 
+    it('Should trim an all-white image', () => {
+      // A completely white image
+      const imageData = new ImageData(
+        new Uint8ClampedArray([
+          255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+          255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+          255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+        ]), 10, 3);
+      const img = BitmapGRF.fromCanvasImageData(imageData, { trimWhitespace: true });
+
+      // Width will always be a multiple of 8 due to byte padding.
+      expect(img.width).toBe(8);
+      expect(img.height).toBe(1);
+      expect(img.boundingBox.width).toBe(10);
+      expect(img.boundingBox.height).toBe(3);
+      expect(img.boundingBox.paddingTop).toBe(0);
+      expect(img.boundingBox.paddingLeft).toBe(0);
+      expect(img.boundingBox.paddingBottom).toBe(2);
+      expect(img.boundingBox.paddingRight).toBe(2);
+    });
+
     it('Should not trim an all-black image', () => {
       const imageWidth = 16;
       const imageHeight = 3;
