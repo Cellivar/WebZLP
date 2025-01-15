@@ -269,11 +269,11 @@ class BasicLabelDesignerApp {
     const form = formElement.elements as ConfigModalForm;
 
     // Only show ZPL settings if the printer language is ZPL.
-    for (const e of formElement.getElementsByTagName('modal-setting-zpl')) {
+    for (const e of formElement.querySelectorAll('.modal-setting-zpl')) {
       if (isZpl) {
-        e.classList.remove('d-hide');
+        e.classList.remove('d-none');
       } else {
-        e.classList.add('d-hide');
+        e.classList.add('d-none');
       }
     }
 
