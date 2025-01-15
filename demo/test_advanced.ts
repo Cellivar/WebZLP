@@ -377,18 +377,21 @@ class BasicLabelDesignerApp {
                         <span class="visually-hidden">Settings</span>
                     </button>
                     <ul class="dropdown-menu">
-                        <li><a id="printtest_${idx}" data-printer-idx="${idx}" class="dropdown-item" href="#">
-                            Print test page
-                        </a></li>
-                        <li><a id="feedlabel_${idx}" data-printer-idx="${idx}" class="dropdown-item" href="#">
-                            Feed blank label
-                        </a></li>
-                        <li><a id="configprinter_${idx}" data-printer-idx="${idx}" class="dropdown-item" href="#">
-                            Set label config
-                        </a></li>
-                        <li><a id="printconfig_${idx}" data-printer-idx="${idx}" class="dropdown-item" href="#">
-                            Print config on labels
-                        </a></li>
+                      <li><a id="printerStatus_${idx}" data-printer-idx="${idx}" class="dropdown-item" href="#">
+                        Query printer status
+                      </a></li>
+                      <li><a id="printtest_${idx}" data-printer-idx="${idx}" class="dropdown-item" href="#">
+                        Print test page
+                      </a></li>
+                      <li><a id="feedlabel_${idx}" data-printer-idx="${idx}" class="dropdown-item" href="#">
+                        Feed blank label
+                      </a></li>
+                      <li><a id="configprinter_${idx}" data-printer-idx="${idx}" class="dropdown-item" href="#">
+                        Set label config
+                      </a></li>
+                      <li><a id="printconfig_${idx}" data-printer-idx="${idx}" class="dropdown-item" href="#">
+                        Print config on labels
+                      </a></li>
                     </ul>
                 </div>
             </div>
@@ -417,6 +420,14 @@ class BasicLabelDesignerApp {
         this.activePrinterIndex = printerIdx;
         this.redrawPrinterButtonHighlights();
         this.redrawTextCanvas();
+      });
+    document.getElementById(`printerStatus_${idx}`)!
+      .addEventListener('click', async (e) => {
+        e.preventDefault();
+        const printerIdx = (e.currentTarget as HTMLAnchorElement).dataset.printerIdx as unknown as number;
+        const printer = this.printers[printerIdx];
+        const doc = printer.getConfigDocument().queryStatus().finalize();
+        await printer.sendDocument(doc);
       });
     document.getElementById(`printtest_${idx}`)!
       .addEventListener('click', async (e) => {
@@ -640,12 +651,19 @@ class BasicLabelDesignerApp {
     // And send the whole shebang to the printer!
     await printer.sendDocument(doc);
 
+    // Then get the updated printer info..
+    await printer.sendDocument(WebLabel.ReadyToPrintDocuments.configDocument);
+
+    // Hide the config modal
     form.modalWithAutosense.checked = false;
     form.modalZplWithSensorGraph.checked = false;
     form.modalSubmit.removeAttribute("disabled");
     form.modalCancel.removeAttribute("disabled");
     this.activePrinterIndex = printerIdx;
     this.configModalHandle.hide();
+
+    // Redraw the buttons with the updated config
+    this.redrawPrinterButtons();
   }
 }
 

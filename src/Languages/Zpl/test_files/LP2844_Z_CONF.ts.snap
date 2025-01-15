@@ -6,7 +6,7 @@
       "messageType": "SettingUpdateMessage",
       "printerHardware": {},
       "printerMedia": {
-        "mediaGapDetectMode": 1,
+        "mediaGapDetectMode": 2,
         "mediaLengthDots": 235,
       },
       "printerSettings": {},
