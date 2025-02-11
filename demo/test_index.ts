@@ -1,12 +1,19 @@
-import * as WebLabel from '../src/index.js';
-import * as WebDevices from 'web-device-mux';
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import bootstrap from 'bootstrap';
 // This file exists to test the index.html's typescript. Unfortunately there isn't
 // a good way to configure Visual Studio Code to, well, treat it as typescript.
 ////////////////////////////////////////////////////////////////////////////////
-
 // First import the lib!
-//import * as WebLabel from 'web-receiptline-printer';
+// This is our lib in this repo here
+import * as WebLabel from '../src/index.js';
+
+// This is a utility lib we'll be using that makes it easier to use devices.
+import * as WebDevices from 'web-device-mux';
+
+// We'll drop these into the Window object so we can play with them in
+// the DevTools console if we want to.
+(window as any).WebLabel = WebLabel;
+(window as any).WebDevices = WebDevices;
 
 // For this demo we're going to make use of the USB printer manager
 // so it can take care of concerns like the USB connect and disconnect events.
@@ -34,14 +41,55 @@ const printerMgr: PrinterManager = new WebDevices.UsbDeviceManager(
 // We'll wire up some basic event listeners to the printer manager.
 // First, a button to prompt a user to add a printer.
 const addPrinterBtn = document.getElementById('addprinter')!;
-addPrinterBtn.addEventListener('click', async () => printerMgr.promptForNewDevice());
+addPrinterBtn.addEventListener('click', async () => {
+  try {
+    await printerMgr.promptForNewDevice();
+  } catch (e) {
+    if (e instanceof WebDevices.DriverAccessDeniedError) {
+      deviceErrorAlert();
+    } else {
+      throw e;
+    }
+  }
+});
+
+// And a function to call if it fails
+function deviceErrorAlert() {
+  // This happens when the operating system didn't let Chrome connect.
+  // Usually either another tab is open talking to the device, or the driver
+  // is already loaded by another application.
+  showAlert(
+    'danger',
+    'alert-printer-comm-error',
+    `Operating system denied device access`,
+    `<p>Chrome wasn't allowed to connect to a device. This usually happens because:
+    <ul>
+    <li>Another browser tab is already connected to that device.
+    <li>You're on Windows and <a href="https://cellivar.github.io/WebZLP/docs/windows_driver">need to replace the driver for the device</a>.
+    <li>Another application loaded a driver to talk to the device.
+    </ul>
+    Fix the issue and re-connect to the device.</p>`
+  );
+}
 
 // Next a button to manually refresh all printers, just in case.
 const refreshPrinterBtn = document.getElementById('refreshPrinters')!;
-refreshPrinterBtn.addEventListener('click', async () => printerMgr.forceReconnect());
+refreshPrinterBtn.addEventListener('click', async () => {
+  try {
+    await printerMgr.forceReconnect();
+  } catch (e) {
+    if (e instanceof WebDevices.DriverAccessDeniedError) {
+      deviceErrorAlert();
+    } else {
+      throw e;
+    }
+  }
+});
 
 // Next we wire up some events on the UsbDeviceManager itself.
 printerMgr.addEventListener('connectedDevice', ({ detail }) => {
+
+  // Let's print some details about the printer that was connected.
   const printer = detail.device;
   console.log('New printer is a', printer.printerModel);
   const config = printer.printerOptions;
@@ -54,6 +102,10 @@ printerMgr.addEventListener('connectedDevice', ({ detail }) => {
     config.mediaLengthInches,
     'in long');
   console.log('Printer media mode is', WebLabel.MediaMediaGapDetectionMode[config.mediaGapDetectMode]);
+
+    // You can do stuff with the printer that connected. It's a good idea
+    // to immediately query the printer for its status.
+    printer.sendDocument(WebLabel.ReadyToPrintDocuments.printerStatusDocument);
 });
 
 // There's also an event that will tell you when a printer disconnects.
@@ -88,6 +140,39 @@ interface ConfigModalForm extends HTMLCollection {
   modalWithAutosense  : HTMLInputElement
 }
 
+// A function to find and hide any alerts for a given alert ID.
+function hideAlerts(alertId: string) {
+  const existingAlerts = document.getElementById('printerAlertSpace')?.querySelectorAll(`.${alertId}`) ?? [];
+  existingAlerts.forEach((a: Element) => { a.remove(); });
+}
+
+// A function to make it easier to show alerts
+function showAlert(
+  level: 'warning' | 'danger',
+  alertId: string,
+  titleHtml: string,
+  bodyHtml: string,
+  closedCallback = () => {}
+) {
+  hideAlerts(alertId);
+
+  // Create the bootstrap alert div with the provided content
+  const alertWrapper = document.createElement('div');
+  alertWrapper.classList.add("alert", `alert-${level}`, "alert-dismissible", "fade", "show", alertId);
+  alertWrapper.id = alertId;
+  alertWrapper.role = "alert";
+  alertWrapper.innerHTML = `
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    <h4>${titleHtml}</h4>
+    ${bodyHtml}`;
+
+  // Add it to the document and activate it
+  document.getElementById('printerAlertSpace')?.appendChild(alertWrapper);
+  new bootstrap.Alert(alertWrapper);
+
+  alertWrapper.addEventListener('closed.bs.alert', closedCallback);
+}
+
 // The app's logic is wrapped in a class just for ease of reading.
 class BasicLabelDesignerApp {
   constructor(
@@ -107,9 +192,34 @@ class BasicLabelDesignerApp {
 
     // Add a second set of event listeners for printer connect and disconnect to redraw
     // the printer list when it changes.
-    this.manager.addEventListener('connectedDevice', () => {
+    this.manager.addEventListener('connectedDevice', ({ detail }) => {
       this.activePrinterIndex = -1;
       this.redrawPrinterButtons();
+
+      // Printers themselves also have events, let's show an alert on errors.
+      const printer = detail.device;
+      printer.addEventListener('reportedError', ({ detail: msg }) => {
+        // Use the same ID so there's only one error message per printer.
+        const alertId = `alert-printererror-${printer.printerSerial}`;
+        hideAlerts(alertId);
+
+        // Error messages are also status messages, such as indicating no problem.
+        if (msg.errors.size === 0 || msg.errors.has(WebLabel.ErrorState.NoError)) { return; }
+
+        showAlert(
+          // Show a warning for this printer
+          'warning',
+          alertId,
+          `Printer <strong>${printer.printerSerial}</strong> has an error`,
+          // There can be multiple errors, just show their raw values. A better
+          // application would use these for good messages!
+          `<p><ul>${Array.from(msg.errors).map(e => `<li>${e}`)}</ul></p>
+                <hr>
+                <p>Fix the issue, then dismiss this alert to check the status again.</p>`,
+          // And when the alert is dismissed, check the status again!
+          () => printer.sendDocument(WebLabel.ReadyToPrintDocuments.printerStatusDocument)
+        );
+      });
     });
     this.manager.addEventListener('disconnectedDevice', () => {
       this.activePrinterIndex = -1;
@@ -167,7 +277,7 @@ class BasicLabelDesignerApp {
 
   /** Display the configuration for a printer. */
   public showConfigModal(printer: WebLabel.LabelPrinterUsb, printerIdx: number) {
-    if (printer == undefined) {
+    if (printer === undefined) {
       return;
     }
     const config = printer.printerOptions;
@@ -427,10 +537,16 @@ class BasicLabelDesignerApp {
     // And send the whole shebang to the printer!
     await printer.sendDocument(doc);
 
+    // Then get the updated printer info..
+    await printer.sendDocument(WebLabel.ReadyToPrintDocuments.configDocument);
+
     form.modalSubmit.removeAttribute("disabled");
     form.modalCancel.removeAttribute("disabled");
     this.activePrinterIndex = printerIdx;
     this.configModalHandle.hide();
+
+    // Redraw the buttons with the updated config
+    this.redrawPrinterButtons();
   }
 }
 
@@ -446,14 +562,18 @@ const app = new BasicLabelDesignerApp(printerMgr, btnContainer, labelForm, label
 // and let it take over the UI.
 await app.init();
 
-// Make the TypeScript type system happy by adding a property to the Window object.
-declare global {
-  interface Window { printer_app: BasicLabelDesignerApp }
-}
 // Now we can access our printer in the dev console if we want to mess with it!
-window.printer_app = app;
+(window as any).label_app = app;
 
 // Now we'll fire the reconnect since our UI is wired up.
-await printerMgr.forceReconnect();
+try {
+  await printerMgr.forceReconnect();
+} catch (e) {
+  if (e instanceof WebDevices.DriverAccessDeniedError) {
+    deviceErrorAlert();
+  } else {
+    throw e;
+  }
+}
 
 // We're done here. Bring in the dancing lobsters.
