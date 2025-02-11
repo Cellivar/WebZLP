@@ -1,7 +1,4 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import * as WebLabel from '../src/index.js';
-import * as WebDevices from 'web-device-mux';
-import * as Editor from '../../fabricjs-label-editor/lib/index.js'
 import bootstrap from 'bootstrap';
 // This file exists to test the index.html's typescript. Unfortunately there isn't
 // a good way to configure Visual Studio Code to, well, treat it as typescript.
@@ -11,9 +8,9 @@ import bootstrap from 'bootstrap';
 // Internally it makes use of an HTML canvas, and thus it's easy to plug into
 // WebZLP for label designing!
 // Import the canvas editor lib and create a canvas to use for printing.
-// import * as Editor from 'fabricjs-label-editor'
-// import * as WebLabel from 'webzlp';
-// import * as WebDevices from 'web-device-mux';
+import * as WebLabel from '../src/index.js';
+import * as WebDevices from 'web-device-mux';
+import * as Editor from '../../fabricjs-label-editor/lib/index.js'
 (window as any).FabricEditor = Editor;
 (window as any).WebLabel = WebLabel;
 (window as any).WebDevices = WebDevices;
@@ -47,11 +44,50 @@ const printerMgr: PrinterManager = new WebDevices.UsbDeviceManager(
 // We'll wire up some basic event listeners to the printer manager.
 // First, a button to prompt a user to add a printer.
 const addPrinterBtn = document.getElementById('addprinter')!;
-addPrinterBtn.addEventListener('click', async () => printerMgr.promptForNewDevice());
+addPrinterBtn.addEventListener('click', async () => {
+  try {
+    await printerMgr.promptForNewDevice();
+  } catch (e) {
+    if (e instanceof WebDevices.DriverAccessDeniedError) {
+      deviceErrorAlert();
+    } else {
+      throw e;
+    }
+  }
+});
+
+// And a function to call if it fails
+function deviceErrorAlert() {
+  // This happens when the operating system didn't let Chrome connect.
+  // Usually either another tab is open talking to the device, or the driver
+  // is already loaded by another application.
+  showAlert(
+    'danger',
+    'alert-printer-comm-error',
+    `Operating system denied device access`,
+    `<p>Chrome wasn't allowed to connect to a device. This usually happens because:
+    <ul>
+    <li>Another browser tab is already connected to that device.
+    <li>You're on Windows and <a href="https://cellivar.github.io/WebZLP/docs/windows_driver">need to replace the driver for the device</a>.
+    <li>Another application loaded a driver to talk to the device.
+    </ul>
+    Fix the issue and re-connect to the device.</p>`
+  );
+}
 
 // Next a button to manually refresh all printers, just in case.
 const refreshPrinterBtn = document.getElementById('refreshPrinters')!;
-refreshPrinterBtn.addEventListener('click', async () => printerMgr.forceReconnect());
+refreshPrinterBtn.addEventListener('click', async () => {
+  try {
+    await printerMgr.forceReconnect();
+  } catch (e) {
+    if (e instanceof WebDevices.DriverAccessDeniedError) {
+      deviceErrorAlert();
+    } else {
+      throw e;
+    }
+  }
+});
 
 // Get some bookkeeping out of the way..
 // First we create an interface to describe our settings form.
@@ -91,7 +127,6 @@ interface ConfigModalForm extends HTMLCollection {
   modalZplPowerUpAction  : HTMLSelectElement
   modalZplHeadCloseAction: HTMLSelectElement
 }
-
 
 // A function to find and hide any alerts for a given alert ID.
 function hideAlerts(alertId: string) {
@@ -621,21 +656,9 @@ try {
   await printerMgr.forceReconnect();
 } catch (e) {
   if (e instanceof WebDevices.DriverAccessDeniedError) {
-    // This happens when the operating system didn't let Chrome connect.
-    // Usually either another tab is open talking to the device, or the driver
-    // is already loaded by another application.
-    showAlert(
-      'danger',
-      'alert-printer-comm-error',
-      `Operating system refused device access`,
-      `<p>This usually happens for one of these reasons:
-      <ul>
-      <li>Another browser tab is already connected.
-      <li>Another application loaded a driver to talk to the device.
-      <li>You're on Windows and need to replace the driver.
-      </ul>
-      Fix the issue and re-connect to the device.</p>`
-    );
+    deviceErrorAlert();
+  } else {
+    throw e;
   }
 }
 
