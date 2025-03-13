@@ -44,8 +44,8 @@ export function getNewTranspileState(config: PrinterConfig): TranspiledDocumentS
       left: -1,
       top: -1
     },
-    horizontalOffset: config.mediaPrintOriginOffsetDots.left,
-    verticalOffset: config.mediaPrintOriginOffsetDots.top,
+    horizontalOffset: 0,
+    verticalOffset: 0,
     lineSpacingDots: 1,
     printWidth: config.mediaWidthDots,
     margin: {

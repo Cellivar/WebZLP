@@ -2,6 +2,7 @@
 import * as Util from '../../Util/index.js';
 import * as Conf from '../../Configs/index.js';
 import * as Cmds from '../../Commands/index.js';
+import type { IZplSettingUpdateMessage, PowerUpAction } from './Config.js';
 
 export type CmdXmlQueryType
   = 'All'
@@ -147,9 +148,9 @@ export function parseCmdXmlQuery(
 
 function docToUpdate(
   doc: Document
-): Cmds.ISettingUpdateMessage {
+): IZplSettingUpdateMessage {
 
-  const update: Cmds.ISettingUpdateMessage = {
+  const update: IZplSettingUpdateMessage = {
     messageType: 'SettingUpdateMessage'
   };
 
@@ -169,15 +170,20 @@ function docToUpdate(
     speed: getSpeed(doc),
     thermalPrintMode: getThermalPrintMode(doc)
   };
-  update.printerSettings = {};
+  update.printerSettings = {
+    backfeedAfterTaken: getBackfeedMode(doc),
+  };
+  update.printerZplSettings = {
+    actionHeadClose: getActions(doc, 'HEAD-CLOSE'),
+    actionPowerUp: getActions(doc, 'POWER-UP'),
+  };
 
   const dark = getDarkness(doc);
   update.printerHardware.maxMediaDarkness = dark.maxDarkness;
   update.printerMedia.darknessPercent = dark.currentDarkness;
 
-  update.printerSettings.backfeedAfterTaken = getBackfeedMode(doc);
-
   addLabelSize(update, doc);
+  addSensorLevels(update, doc);
 
   // TODO: more hardware options:
   // - Figure out how to encode C{num} for cut-after-label-count
@@ -298,6 +304,20 @@ function getBackfeedMode(doc: Document): Conf.BackfeedAfterTaken {
   return backfeedTable.get(getXmlCurrent(doc, 'BACKFEED-PERCENT') ?? 'DEFAULT') ?? '90';
 }
 
+const mediaFeedTable: Record<string, PowerUpAction> = {
+  'FEED'       : 'feedBlank',
+  'CALIBRATION': 'calibrateWebSensor',
+  'LENGTH'     : 'calibrateWebLength',
+  'NO MOTION'  : 'none',
+    // TODO: What does this do? Newer printers only?
+  'SHORT CAL.': 'calibrateWebSensor',
+}
+
+function getActions(doc: Document, val: 'POWER-UP' | 'HEAD-CLOSE'): PowerUpAction {
+  const action = getXmlCurrent(doc, val) ?? 'NO MOTION';
+  return mediaFeedTable[action] ?? 'none';
+}
+
 function getSpeed(doc: Document) {
   const printRate = parseInt(getXmlText(doc, 'PRINT-RATE') ?? '1');
   const slewRate = parseInt(getXmlText(doc, 'SLEW-RATE') ?? '1');
@@ -360,3 +380,32 @@ function addLabelSize(update: Cmds.ISettingUpdateMessage, doc: Document) {
   };
 }
 
+function addSensorLevels(update: IZplSettingUpdateMessage, doc: Document) {
+  update.printerZplSettings ??= {};
+
+  // Note this list of values is incomplete, the CmdHostConfig can get other values
+  // the XML omits.
+
+  const mg = Number(getXmlCurrent(doc, 'MARK-LED-INTENSITY') ?? getXmlCurrent(doc, 'MARK-GAIN'));
+  update.printerZplSettings.markGain = isNaN(mg) ? undefined : mg;
+
+  const mth = Number(getXmlCurrent(doc, 'MARK-THRESHOLD') ?? getXmlCurrent(doc, 'MARK-SENSOR'));
+  update.printerZplSettings.markThreshold = isNaN(mth) ? undefined : mth;
+
+  const mmt = Number(getXmlCurrent(doc, 'MARK-MEDIA-THRESHOLD') ?? getXmlCurrent(doc, 'MARK-MEDIA-SENSOR'));
+  update.printerZplSettings.markMediaThreshold = isNaN(mmt) ? undefined : mmt;
+
+  const wt = Number(getXmlCurrent(doc, 'WEB-THRESHOLD') ?? getXmlCurrent(doc, 'WEB-SENSOR'));
+  update.printerZplSettings.webThreshold = isNaN(wt) ? undefined : wt;
+  const mt = Number(getXmlCurrent(doc, 'MEDIA-THRESHOLD') ?? getXmlCurrent(doc, 'MEDIA-SENSOR'));
+  update.printerZplSettings.mediaThreshold = isNaN(mt) ? undefined : mt;
+  const tg = Number(getXmlCurrent(doc, 'MEDIA-LED-INTENSITY') ?? getXmlCurrent(doc, 'TRANSMISSIVE-GAIN'));
+  update.printerZplSettings.transGain = isNaN(tg) ? undefined : tg;
+  const tb = Number(getXmlCurrent(doc, 'TRANSISSIVE-LED'));
+  update.printerZplSettings.transBrightness = isNaN(tb) ? undefined : tb;
+
+  const rg = Number(getXmlCurrent(doc, 'RIBBON-LED-INTENSITY') ?? getXmlCurrent(doc, 'RIBBON-GAIN'));
+  update.printerZplSettings.ribbonGain = isNaN(rg) ? undefined : rg;
+  const rt = Number(getXmlCurrent(doc, 'RIBBON-THRESHOLD') ?? getXmlCurrent(doc, 'RIBBON-SENSOR'));
+  update.printerZplSettings.ribbonThreshold = isNaN(rt) ? undefined : rt;
+}

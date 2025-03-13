@@ -246,8 +246,7 @@ export function addImageCommand(
   // EPL only supports raw binary, get that.
   const bitmap = cmd.bitmap;
   const rawBitmap = bitmap.toBinaryGRF();
-  const decoder = new TextDecoder("ascii");
-  const buffer = decoder.decode(rawBitmap);
+  const buffer = Util.DecodeAscii(rawBitmap);
 
   // Add the text command prefix to the buffer data
   const parameters = [

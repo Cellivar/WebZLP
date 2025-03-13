@@ -75,8 +75,8 @@
 
         // We'll drop these into the Window object so we can play with them in
         // the DevTools console if we want to.
-        window.WebLabel = WebLabel;
-        window.WebDevices = WebDevices;
+        (window as any).WebLabel = WebLabel;
+        (window as any).WebDevices = WebDevices;
 
         // For this demo we're going to make use of the USB printer manager
         // so it can take care of concerns like the USB connect and disconnect events.
@@ -104,11 +104,50 @@
         // We'll wire up some basic event listeners to the printer manager.
         // First, a button to prompt a user to add a printer.
         const addPrinterBtn = document.getElementById('addprinter')!;
-        addPrinterBtn.addEventListener('click', async () => printerMgr.promptForNewDevice());
+        addPrinterBtn.addEventListener('click', async () => {
+          try {
+            await printerMgr.promptForNewDevice();
+          } catch (e) {
+            if (e instanceof WebDevices.DriverAccessDeniedError) {
+              deviceErrorAlert();
+            } else {
+              throw e;
+            }
+          }
+        });
+
+        // And a function to call if it fails
+        function deviceErrorAlert() {
+          // This happens when the operating system didn't let Chrome connect.
+          // Usually either another tab is open talking to the device, or the driver
+          // is already loaded by another application.
+          showAlert(
+            'danger',
+            'alert-printer-comm-error',
+            `Operating system denied device access`,
+            `<p>Chrome wasn't allowed to connect to a device. This usually happens because:
+            <ul>
+            <li>Another browser tab is already connected to that device.
+            <li>You're on Windows and <a href="https://cellivar.github.io/WebZLP/docs/windows_driver">need to replace the driver for the device</a>.
+            <li>Another application loaded a driver to talk to the device.
+            </ul>
+            Fix the issue and re-connect to the device.</p>`
+          );
+        }
 
         // Next a button to manually refresh all printers, just in case.
         const refreshPrinterBtn = document.getElementById('refreshPrinters')!;
-        refreshPrinterBtn.addEventListener('click', async () => printerMgr.forceReconnect());
+        refreshPrinterBtn.addEventListener('click', async () => {
+          try {
+            await printerMgr.forceReconnect();
+          } catch (e) {
+            if (e instanceof WebDevices.DriverAccessDeniedError) {
+              deviceErrorAlert();
+            } else {
+              throw e;
+            }
+          }
+        });
 
         // Next we wire up some events on the UsbDeviceManager itself.
         printerMgr.addEventListener('connectedDevice', ({ detail }) => {
@@ -153,18 +192,42 @@
         // Get some bookkeeping out of the way..
         // First we create an interface to describe our settings form.
         interface ConfigModalForm extends HTMLCollection {
-          modalCancel         : HTMLButtonElement
-          modalDarkness       : HTMLSelectElement
+          modalCancel          : HTMLButtonElement
+          modalSubmit          : HTMLButtonElement
+          modalPrinterIndex    : HTMLInputElement
+
+          // Media
+          modalLabelWidth     : HTMLInputElement
           modalLabelHeight    : HTMLInputElement
           modalLabelOffsetLeft: HTMLInputElement
           modalLabelOffsetTop : HTMLInputElement
-          modalLabelWidth     : HTMLInputElement
           modalMediaType      : HTMLSelectElement
+          modalWithAutosense  : HTMLInputElement
+
+          // Printer
+          modalDarkness       : HTMLSelectElement
           modalSpeed          : HTMLSelectElement
           modalBackfeedPercent: HTMLSelectElement
-          modalSubmit         : HTMLButtonElement
-          modalWithAutosense  : HTMLInputElement
+
+          // These are ZPL-specific settings. Different languages can have additional
+          // commands or configs specific to their printers.
+          // Sensors
+          modalZplRibbonTHold: HTMLInputElement
+          modalZplRibbonGain : HTMLInputElement
+          modalZplWebTHold   : HTMLInputElement
+          modalZplWebMedia   : HTMLInputElement
+          modalZplTransGain  : HTMLInputElement
+          modalZplMarkTHold  : HTMLInputElement
+          modalZplMarkMedia  : HTMLInputElement
+          modalZplMarkGain   : HTMLInputElement
+
+          modalZplWithSensorGraph: HTMLInputElement
+
+          // Power up/head close actions
+          modalZplPowerUpAction  : HTMLSelectElement
+          modalZplHeadCloseAction: HTMLSelectElement
         }
+
 
         // A function to find and hide any alerts for a given alert ID.
         function hideAlerts(alertId: string) {
@@ -303,14 +366,27 @@
 
           /** Display the configuration for a printer. */
           public showConfigModal(printer: WebLabel.LabelPrinterUsb, printerIdx: number) {
-            if (printer == undefined) {
+            if (printer === undefined || printerIdx < 0) {
               return;
             }
             const config = printer.printerOptions;
+            // If the printer uses ZPL it will have a special config, show those!
+            const isZpl = config instanceof WebLabel.ZPL.ZplPrinterConfig;
+
+            const formElement = this.configModal.querySelector('form')!;
+            const form = formElement.elements as ConfigModalForm;
+
+            // Only show ZPL settings if the printer language is ZPL.
+            for (const e of formElement.querySelectorAll('.modal-setting-zpl')) {
+              if (isZpl) {
+                e.classList.remove('d-none');
+              } else {
+                e.classList.add('d-none');
+              }
+            }
 
             // Translate the available speeds to options to be selected
-            const speedSelect = this.configModal.querySelector('#modalSpeed')! as HTMLSelectElement;
-            speedSelect.innerHTML = '';
+            form.modalSpeed.innerHTML = '';
             const speedTable = printer.printerOptions.speedTable.table;
             for (const [key] of speedTable) {
               // Skip utility values, so long as there's more than the defaults.
@@ -325,32 +401,47 @@
               const opt = document.createElement('option');
               opt.value = key.toString();
               opt.innerHTML = WebLabel.PrintSpeed[key].substring(3).replaceAll('_', '.') + ' ips';
-              speedSelect.appendChild(opt);
+              form.modalSpeed.appendChild(opt);
             }
-            speedSelect.value = config.speed.printSpeed.toString();
+            form.modalSpeed.value = config.speed.printSpeed.toString();
 
-            const mediaSelect = this.configModal.querySelector('#modalMediaType')! as HTMLSelectElement;
             switch (config.mediaGapDetectMode) {
               case WebLabel.MediaMediaGapDetectionMode.continuous:
-                mediaSelect.value = "continuous";
+                form.modalMediaType.value = "continuous";
                 break;
               default:
               case WebLabel.MediaMediaGapDetectionMode.webSensing:
-                mediaSelect.value = "gap";
+                form.modalMediaType.value = "gap";
                 break;
               case WebLabel.MediaMediaGapDetectionMode.markSensing:
-                mediaSelect.value = "mark";
+                form.modalMediaType.value = "mark";
                 break;
             }
 
-            (this.configModal.querySelector('#modalPrinterIndex')     as HTMLInputElement)!.value = config.serialNumber;
-            (this.configModal.querySelector('#modalPrinterIndexText') as HTMLInputElement)!.textContent = printerIdx.toString();
-            (this.configModal.querySelector('#modalLabelWidth')       as HTMLInputElement)!.value = config.mediaWidthInches.toString();
-            (this.configModal.querySelector('#modalLabelHeight')      as HTMLInputElement)!.value = config.mediaLengthInches.toString();
-            (this.configModal.querySelector('#modalDarkness')         as HTMLInputElement)!.value = config.darknessPercent.toString();
-            (this.configModal.querySelector('#modalLabelOffsetLeft')  as HTMLInputElement)!.value = config.mediaPrintOriginOffsetDots.left.toString();
-            (this.configModal.querySelector('#modalLabelOffsetTop')   as HTMLInputElement)!.value = config.mediaPrintOriginOffsetDots.top.toString();
-            (this.configModal.querySelector('#modalBackfeedPercent')  as HTMLSelectElement)!.value = config.backfeedAfterTaken.toString();
+            // The other elements are just text.
+            (formElement.querySelector('#modalPrinterIndexText') as HTMLInputElement)!.textContent = printerIdx.toString();
+            form.modalPrinterIndex.value    = config.serialNumber;
+            form.modalLabelWidth.value      = config.mediaWidthInches.toString();
+            form.modalLabelHeight.value     = config.mediaLengthInches.toString();
+            form.modalDarkness.value        = config.darknessPercent.toString();
+            form.modalLabelOffsetLeft.value = config.mediaPrintOriginOffsetDots.left.toString();
+            form.modalLabelOffsetTop.value  = config.mediaPrintOriginOffsetDots.top.toString();
+            form.modalBackfeedPercent.value = config.backfeedAfterTaken.toString();
+
+            if (isZpl) {
+              form.modalZplRibbonTHold.value = config.ribbonThreshold.toString();
+              form.modalZplRibbonGain.value  = config.ribbonGain.toString();
+              form.modalZplWebTHold.value    = config.webThreshold.toString();
+              form.modalZplWebMedia.value    = config.mediaThreshold.toString();
+              form.modalZplTransGain.value   = config.transGain.toString();
+              form.modalZplMarkTHold.value   = config.markThreshold.toString();
+              form.modalZplMarkMedia.value   = config.markMediaThreshold.toString();
+              form.modalZplMarkGain.value    = config.markGain.toString();
+
+              form.modalZplPowerUpAction.value   = config.actionPowerUp.toString();
+              form.modalZplHeadCloseAction.value = config.actionHeadClose.toString();
+            }
+
             this.configModalHandle.show();
           }
 
@@ -394,18 +485,21 @@
                                 <span class="visually-hidden">Settings</span>
                             </button>
                             <ul class="dropdown-menu">
-                                <li><a id="printtest_${idx}" data-printer-idx="${idx}" class="dropdown-item" href="#">
-                                    Print test page
-                                </a></li>
-                                <li><a id="feedlabel_${idx}" data-printer-idx="${idx}" class="dropdown-item" href="#">
-                                    Feed blank label
-                                </a></li>
-                                <li><a id="configprinter_${idx}" data-printer-idx="${idx}" class="dropdown-item" href="#">
-                                    Set label config
-                                </a></li>
-                                <li><a id="printconfig_${idx}" data-printer-idx="${idx}" class="dropdown-item" href="#">
-                                    Print config on labels
-                                </a></li>
+                              <li><a id="printerStatus_${idx}" data-printer-idx="${idx}" class="dropdown-item" href="#">
+                                Query printer status
+                              </a></li>
+                              <li><a id="printtest_${idx}" data-printer-idx="${idx}" class="dropdown-item" href="#">
+                                Print test page
+                              </a></li>
+                              <li><a id="feedlabel_${idx}" data-printer-idx="${idx}" class="dropdown-item" href="#">
+                                Feed blank label
+                              </a></li>
+                              <li><a id="configprinter_${idx}" data-printer-idx="${idx}" class="dropdown-item" href="#">
+                                Set label config
+                              </a></li>
+                              <li><a id="printconfig_${idx}" data-printer-idx="${idx}" class="dropdown-item" href="#">
+                                Print config on labels
+                              </a></li>
                             </ul>
                         </div>
                     </div>
@@ -434,6 +528,14 @@
                 this.activePrinterIndex = printerIdx;
                 this.redrawPrinterButtonHighlights();
                 this.redrawTextCanvas();
+              });
+            document.getElementById(`printerStatus_${idx}`)!
+              .addEventListener('click', async (e) => {
+                e.preventDefault();
+                const printerIdx = (e.currentTarget as HTMLAnchorElement).dataset.printerIdx as unknown as number;
+                const printer = this.printers[printerIdx];
+                const doc = printer.getConfigDocument().queryStatus().finalize();
+                await printer.sendDocument(doc);
               });
             document.getElementById(`printtest_${idx}`)!
               .addEventListener('click', async (e) => {
@@ -556,6 +658,7 @@
             if (printer === undefined) {
               return;
             }
+            const isZpl = printer.printerOptions instanceof WebLabel.ZPL.ZplPrinterConfig;
 
             form.modalSubmit.setAttribute("disabled", "");
             form.modalCancel.setAttribute("disabled", "");
@@ -564,7 +667,6 @@
             const darkness = parseInt(form.modalDarkness.value) as WebLabel.DarknessPercent;
             const rawSpeed = parseInt(form.modalSpeed.value) as WebLabel.PrintSpeed;
             const mediaWidthInches = parseFloat(form.modalLabelWidth.value);
-            const autosense = form.modalWithAutosense.checked;
 
             const mediaLengthInches = parseFloat(form.modalLabelHeight.value);
             const offsetLeft = parseInt(form.modalLabelOffsetLeft.value);
@@ -598,17 +700,78 @@
               .setDarknessConfig(darkness)
               .setLabelDimensions(mediaWidthInches)
               .setBackfeedAfterTakenMode(backfeedAfterTaken);
-            const doc = autosense
-              ? configDoc.autosenseLabelLength()
-              : configDoc.finalize();
+
+            if (isZpl) {
+              // Send the ZPL-specific settings too!
+              let actionPowerUp: WebLabel.ZPL.PowerUpAction;
+              switch (form.modalZplPowerUpAction.value) {
+                case "none":
+                  actionPowerUp = "none";
+                  break;
+                default:
+                case "feedBlank":
+                  actionPowerUp = "feedBlank";
+                  break;
+                case "calibrateWebSensor":
+                  actionPowerUp = "calibrateWebLength";
+                  break;
+              }
+
+              let actionHeadClose: WebLabel.ZPL.PowerUpAction;
+              switch (form.modalZplHeadCloseAction.value) {
+                case "none":
+                  actionHeadClose = "none";
+                  break;
+                default:
+                case "feedBlank":
+                  actionHeadClose = "feedBlank";
+                  break;
+                case "calibrateWebSensor":
+                  actionHeadClose = "calibrateWebLength";
+                  break;
+              }
+
+              configDoc
+                .andThen(new WebLabel.ZPL.CmdSetPowerUpAndHeadCloseAction(
+                  actionPowerUp, actionHeadClose
+                ))
+                .andThen(new WebLabel.ZPL.CmdSetSensorCalibration({
+                  markGain          : Number(form.modalZplMarkGain.value),
+                  markMediaThreshold: Number(form.modalZplMarkMedia.value),
+                  markThreshold     : Number(form.modalZplMarkTHold.value),
+                  transGain         : Number(form.modalZplTransGain.value),
+                  mediaThreshold    : Number(form.modalZplWebMedia.value),
+                  ribbonGain        : Number(form.modalZplRibbonGain.value),
+                  ribbonThreshold   : Number(form.modalZplRibbonTHold.value),
+                  webThreshold      : Number(form.modalZplWebTHold.value),
+                }));
+            }
+
+            let doc: WebLabel.IDocument;
+            if (form.modalWithAutosense.checked) {
+              doc = configDoc.autosenseLabelLength();
+            } else if (isZpl && form.modalZplWithSensorGraph.checked) {
+              doc = configDoc.andThen(new WebLabel.ZPL.CmdGraphSensorCalibration()).finalize();
+            } else {
+              doc = configDoc.finalize();
+            }
+
             // And send the whole shebang to the printer!
             await printer.sendDocument(doc);
 
+            // Then get the updated printer info..
+            await printer.sendDocument(WebLabel.ReadyToPrintDocuments.configDocument);
+
+            // Hide the config modal
             form.modalWithAutosense.checked = false;
+            form.modalZplWithSensorGraph.checked = false;
             form.modalSubmit.removeAttribute("disabled");
             form.modalCancel.removeAttribute("disabled");
             this.activePrinterIndex = printerIdx;
             this.configModalHandle.hide();
+
+            // Redraw the buttons with the updated config
+            this.redrawPrinterButtons();
           }
         }
 
@@ -624,33 +787,17 @@
         // and let it take over the UI.
         await app.init();
 
-        // Make the TypeScript type system happy by adding a property to the Window object.
-        declare global {
-          interface Window { label_app: BasicLabelDesignerApp }
-        }
         // Now we can access our printer in the dev console if we want to mess with it!
-        window.label_app = app;
+        (window as any).label_app = app;
 
         // Now we'll fire the reconnect since our UI is wired up.
         try {
           await printerMgr.forceReconnect();
         } catch (e) {
           if (e instanceof WebDevices.DriverAccessDeniedError) {
-            // This happens when the operating system didn't let Chrome connect.
-            // Usually either another tab is open talking to the device, or the driver
-            // is already loaded by another application.
-            showAlert(
-              'danger',
-              'alert-printer-comm-error',
-              `Operating system refused device access`,
-              `<p>This usually happens for one of these reasons:
-              <ul>
-              <li>Another browser tab is already connected.
-              <li>Another application loaded a driver to talk to the device.
-              <li>You're on Windows and need to replace the driver.
-              </ul>
-              Fix the issue and re-connect to the device.</p>`
-            );
+            deviceErrorAlert();
+          } else {
+            throw e;
           }
         }
 
@@ -701,6 +848,7 @@
                 <div class="alert alert-info" role="alert" id="loadingIndicator">
                   <h4>Loading....</h4>
                   <p>If you see this for a long time check the dev console for errors and try the <button id="emergencyRefreshBtn">emergency reset button.</button></p>
+                  <p>Chrome has a bug that prevents this page working in incognito, private browsing, or a Guest profile on ChomeOS.</p>
                 </div>
               </div>
             </div>
@@ -728,7 +876,7 @@
       </div>
     </div>
     <div id="printerOptionModal" class="modal" tabindex="-1">
-      <div class="modal-dialog">
+      <div class="modal-dialog modal-lg">
         <div class="modal-content">
           <form id="printerSettingsForm">
             <div class="modal-header">
@@ -736,12 +884,14 @@
               <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-              <div class="row">
-                <label for="modalPrinterIndex" class="form-label">Printer ID</label>
-                <div class="input-group mb-3">
-                  <span id="modalPrinterIndexText" class="input-group-text">42Q424242424</span>
-                  <input id="modalPrinterIndex" class="form-control" type="text" value="-1"
-                    aria-label="Printer ID" aria-describedby="modalPrinterIndexText" disabled readonly>
+              <div class="mb-3">
+                <div class="row">
+                  <label for="modalPrinterIndex" class="form-label">Printer ID</label>
+                  <div class="input-group mb-3">
+                    <span id="modalPrinterIndexText" class="input-group-text">42Q424242424</span>
+                    <input id="modalPrinterIndex" class="form-control" type="text" value="-1"
+                      aria-label="Printer ID" aria-describedby="modalPrinterIndexText" disabled readonly>
+                  </div>
                 </div>
               </div>
               <div class="mb-3">
@@ -749,7 +899,7 @@
                   <h5>Media Settings</h5>
                 </div>
                 <div class="row">
-                  <div class="col">
+                  <div class="col-md-4">
                     <label for="modalLabelWidth" class="form-label">Media Width</label>
                     <div class="input-group mb-3">
                       <input id="modalLabelWidth" type="text" class="form-control" placeholder="1.23"
@@ -758,7 +908,7 @@
                       <span id="modalLabelWidthText" class="input-group-text">in</span>
                     </div>
                   </div>
-                  <div class="col">
+                  <div class="col-md-4">
                     <label for="modalLabelHeight" class="form-label">Media Length</label>
                     <div class="input-group mb-3">
                       <input id="modalLabelHeight" type="text" class="form-control" placeholder="1.23"
@@ -767,7 +917,7 @@
                       <span id="modalLabelHeightText" class="input-group-text">in</span>
                     </div>
                   </div>
-                  <div class="col">
+                  <div class="col-md-4">
                     <label class="form-label">Auto-Calibrate</label>
                     <div class="input-group mb-3">
                       <input id="modalWithAutosense" type="checkbox" class="btn-check"
@@ -779,7 +929,7 @@
                   </div>
                 </div>
                 <div class="row">
-                  <div class="col">
+                  <div class="col-md-3">
                     <label for="modalLabelOffsetLeft" class="form-label">Left Offset</label>
                     <div class="input-group mb-3">
                       <input id="modalLabelOffsetLeft" type="text" class="form-control" placeholder="0"
@@ -788,7 +938,7 @@
                       <span class="input-group-text">dots</span>
                     </div>
                   </div>
-                  <div class="col">
+                  <div class="col-md-3">
                     <label for="modalLabelOffsetTop" class="form-label">Top Offset</label>
                     <div class="input-group mb-3">
                       <input id="modalLabelOffsetTop" type="text" class="form-control" placeholder="0"
@@ -796,7 +946,7 @@
                       <span class="input-group-text">dots</span>
                     </div>
                   </div>
-                  <div class="col">
+                  <div class="col-md-6">
                     <label for="modalMediaType" class="form-label">Media Type</label>
                     <div class="mb-3">
                       <select id="modalMediaType" class="form-select" aria-label="Media Type">
@@ -809,6 +959,7 @@
                 </div>
               </div>
               <div class="mb-3">
+                <hr/>
                 <div class="row">
                   <h5>Printer Settings</h5>
                 </div>
@@ -858,6 +1009,136 @@
                         <option value="90">90%</option>
                         <option value="100">100%</option>
                       </select>
+                    </div>
+                  </div>
+                </div>
+                <div class="row modal-setting-zpl">
+                  <div class="col-md-6">
+                    <div class="form-floating">
+                      <select id="modalZplPowerUpAction" class="form-select">
+                        <option value="feedBlank">Feed to next label</option>
+                        <option value="none">Do Nothing</option>
+                        <option value="calibrateWebSensor">Media Auto-Calibrate</option>
+                      </select>
+                      <label for="modalZplPowerUpAction">Action on power-up</label>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="form-floating">
+                      <select id="modalZplHeadCloseAction" class="form-select">
+                        <option value="feedBlank">Feed to next label</option>
+                        <option value="none">Do Nothing</option>
+                        <option value="calibrateWebSensor">Media Auto-Calibrate</option>
+                      </select>
+                      <label for="modalZplHeadCloseAction">Action on head close</label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="mb-3 modal-setting-zpl">
+                <hr/>
+                <div class="row">
+                  <div class="col-md-7">
+                    <h5>Sensor Settings</h5>
+                  </div>
+                  <div class="col-md-5">
+                    <div class="input-group mb-3">
+                      <input id="modalZplWithSensorGraph" type="checkbox" class="btn-check"
+                        aria-label="Run sensor graph" autocomplete="off">
+                      <label for="modalZplWithSensorGraph" class="btn btn-outline-primary"
+                        data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="right"
+                        title="SET LABEL LENGTH FIRST. Will graph sensor values on labels.<br/><b>Make sure to unspool peeler first!</b>"
+                        >Print graph on save</label>
+                    </div>
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="col-md-4">
+                    <p class="h5">Ribbon</p>
+                  </div>
+                  <div class="col-md-4">
+                    <p class="h5">Web sense</p>
+                  </div>
+                  <div class="col-md-4">
+                    <p class="h5">Mark sense</p>
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="col-md-4">
+                    <div class="form-floating">
+                      <input class="form-control" id="modalZplRibbonTHold" value="50"
+                      data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="left"
+                      title="Below this the ribbon is 'out'. OUT line on newer printer graphs, RIBBON line on older.<br>Should be at least 10 lower than the graphed value when loaded.<br>Ignored on direct-only printers."
+                      />
+                      <label for="modalZplRibbonTHold">Threshold</label>
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <div class="form-floating">
+                      <input class="form-control" id="modalZplWebTHold" value="50"
+                      data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="left"
+                      title="The WEB line on the graph. The sensor value should reliably cross this at every web.<br>Only used in gap sense."
+                      />
+                      <label for="modalZplWebTHold">Threshold</label>
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <div class="form-floating">
+                      <input class="form-control" id="modalZplMarkTHold" value="50"
+                      data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="right"
+                      title="The WEB line on the graph. The sensor value should reliably cross this at every mark.<br>Only used in mark sense."
+                      />
+                      <label for="modalZplMarkTHold">Threshold</label>
+                    </div>
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="col-md-4"></div>
+                  <div class="col-md-4">
+                    <div class="form-floating">
+                      <input class="form-control" id="modalZplWebMedia" value="50"
+                      data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="right"
+                      title="Above this the media is 'out'. OUT line on newer printer graphs, MEDIA line on older.<br>Should be 15 above the higest sensor spike.<br>Only used in web sense."
+                      />
+                      <label for="modalZplWebMedia">Media</label>
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <div class="form-floating">
+                      <input class="form-control" id="modalZplMarkMedia" value="50"
+                      data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="right"
+                      title="Below this line hte media is 'out'. OUT line on newer printer graphs, MEDIA line on older.<br>Should be 15 below the lowest sensor spike.<br>Only used in mark sense."
+                      />
+                      <label for="modalZplMarkMedia">Media</label>
+                    </div>
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="col-md-4">
+                    <div class="form-floating">
+                      <input class="form-control" id="modalZplRibbonGain" value="50"
+                      data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="left"
+                      title="Adjust lower or higher to increase or decrease the range of the ribbon sensor graph. Aim for a large difference between ribbon loaded and unloaded. Ignored on direct-only printers."
+                       />
+                      <label for="modalZplRibbonGain">Gain</label>
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <div class="form-floating">
+                      <input class="form-control" id="modalZplTransGain" value="50"
+                      data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="right"
+                      title="Adjust lower or higher to increase or decrease the range of the media sensor graph.<br>Aim for a large clear spike in the web, with low noise over the label.<br>Only used in web sense."
+                      />
+                      <label for="modalZplTransGain">Gain</label>
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <div class="form-floating">
+                      <input class="form-control" id="modalZplMarkGain" value="50"
+                      data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="right"
+                      title="Adjust lower or higher to increase or decrease the range of the media sensor graph.<br>Aim for a large clear spike in the mark, with low noise over the label.<br>Only used in mark sense."
+                      />
+                      <label for="modalZplMarkGain">Gain</label>
                     </div>
                   </div>
                 </div>

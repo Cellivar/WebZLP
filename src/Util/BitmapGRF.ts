@@ -399,38 +399,48 @@ export class BitmapGRF {
       }
     }
 
-    // One more time through the data, this time we create the cropped image.
-    const cx = maxx - minx + 1;
-    const cy = maxy - miny + 1;
-    const buffer = new Uint8Array(cx * cy);
-    let idx = 0;
-    for (let y = miny; y <= maxy; y++) {
-      let i = (y * width + minx) * 4;
-      for (let x = minx; x <= maxx; x++) {
-        // Alpha blend with white.
-        const gray = this.colorToGrayscale(
-          rgba[i + 0],
-          rgba[i + 1],
-          rgba[i + 2],
-          rgba[i + 3]
-        );
+    let contentWidth: number;
+    let contentHeight: number;
+    let buffer: Uint8Array;
+    if (minx > maxx || miny > maxy) {
+      // Image is blank, return one white pixel in the top left.
+      contentWidth = contentHeight = 1;
+      minx = miny = 0;
+      buffer = new Uint8Array([1]);
+    } else {
+      // One more time through the data, this time we create the cropped image.
+      contentWidth = maxx - minx + 1;
+      contentHeight = maxy - miny + 1;
+      buffer = new Uint8Array(contentWidth * contentHeight);
+      let idx = 0;
+      for (let y = miny; y <= maxy; y++) {
+        let i = (y * width + minx) * 4;
+        for (let x = minx; x <= maxx; x++) {
+          // Alpha blend with white.
+          const gray = this.colorToGrayscale(
+            rgba[i + 0],
+            rgba[i + 1],
+            rgba[i + 2],
+            rgba[i + 3]
+          );
 
-        buffer[idx++] = gray >= threshold ? 1 : 0;
-        i += 4;
+          buffer[idx++] = gray >= threshold ? 1 : 0;
+          i += 4;
+        }
       }
     }
 
     return {
       monochromeData: buffer,
-      imageWidth: cx,
-      imageHeight: cy,
+      imageWidth: contentWidth,
+      imageHeight: contentHeight,
       boundingBox: {
         width: width,
         height: height,
         paddingLeft: minx,
         paddingTop: miny,
-        paddingRight: width - (this.roundUpToByte(cx) + minx),
-        paddingBottom: height - (cy + miny)
+        paddingRight: width - (this.roundUpToByte(contentWidth) + minx),
+        paddingBottom: height - (contentHeight + miny)
       }
     };
   }
