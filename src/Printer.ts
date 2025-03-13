@@ -12,22 +12,6 @@ export interface LabelPrinterEventMap {
   reportedError: CustomEvent<Cmds.IErrorMessage>;
 }
 
-function promiseWithTimeout<T>(
-  promise: Promise<T>,
-  ms: number,
-  timeoutError = new Error('Promise timed out')
-): Promise<T> {
-  // create a promise that rejects in milliseconds
-  const timeout = new Promise<never>((_, reject) => {
-    setTimeout(() => {
-      reject(timeoutError);
-    }, ms);
-  });
-
-  // returns a race between timeout and the passed promise
-  return Promise.race<T>([promise, timeout]);
-}
-
 /** Type alias for a Label Printer that communicates over USB. */
 export type LabelPrinterUsb = LabelPrinter<Uint8Array>;
 
@@ -339,26 +323,14 @@ export class LabelPrinter<TChannelType extends Conf.MessageArrayLike> extends Ev
     });
 
     this.logResultIfDebug(() => {
-      const debugMsg = Cmds.asString(transaction.commands);
+      const debugMsg = this._channelMessageTransformer.asType(transaction.commands, 'string');
       return `Transaction being sent to printer:\n${debugMsg}\n--end of transaction--`;
     });
 
-    // TODO: Better type guards??
-    let sendCmds: TChannelType;
-    switch(this._channelType) {
-      default:
-        Util.exhaustiveMatchGuard(this._channelType);
-        break;
-      case 'Uint8Array':
-        sendCmds = Cmds.asUint8Array(transaction.commands) as TChannelType;
-        break;
-      case 'string':
-        sendCmds = Cmds.asString(transaction.commands) as TChannelType;
-        break;
-    }
-
-    await promiseWithTimeout(
-      this._channel.send(sendCmds),
+    await Util.promiseWithTimeout(
+      this._channel.send(
+        Cmds.asTargetMessageLikeType(transaction.commands, this._channelType)
+      ),
       5000,
       new Mux.DeviceCommunicationError(`Timed out sending commands to printer, is there a problem with the printer?`)
     );
@@ -366,7 +338,7 @@ export class LabelPrinter<TChannelType extends Conf.MessageArrayLike> extends Ev
     try {
       if (this._awaitedCommands.length > 0) {
         this.logIfDebug(`Awaiting response to ${this._awaitedCommands.length} commands for up to ${this._awaitedCommandTimeoutMS}ms...`);
-        await promiseWithTimeout(
+        await Util.promiseWithTimeout(
           Promise.all(this._awaitedCommands.map(c => c.promise)),
           this._awaitedCommandTimeoutMS,
           new Mux.DeviceCommunicationError(`Timed out waiting for sent command response, expected ${this._awaitedCommands.length} responses.`)

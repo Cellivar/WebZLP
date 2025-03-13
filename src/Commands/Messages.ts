@@ -16,8 +16,15 @@ export interface MessageTransformer<TMessage extends Conf.MessageArrayLike> {
   transformerType: Conf.MessageArrayLikeType;
   combineMessages(...messages: TMessage[]): TMessage;
 
-  messageToString(message: TMessage): string;
-  messageToUint8Array(message: TMessage): Uint8Array;
+  as<TTarget extends Conf.MessageArrayLike>(
+    msg: Conf.MessageArrayLike,
+    targetType: TTarget,
+  ): TTarget;
+
+  asType<TTarget extends Conf.MessageArrayLike>(
+    msg: Conf.MessageArrayLike,
+    targetType: Conf.MessageArrayLikeType,
+  ): TTarget;
 }
 
 export class RawMessageTransformer implements MessageTransformer<Uint8Array> {
@@ -34,12 +41,32 @@ export class RawMessageTransformer implements MessageTransformer<Uint8Array> {
     ).buffer;
   }
 
-  messageToString(message: Uint8Array): string {
-    return asString(message);
+  as<TTarget extends Conf.MessageArrayLike>(
+    msg: Conf.MessageArrayLike,
+    targetType: TTarget,
+  ): TTarget {
+    if (typeof targetType === "string") {
+      return asString(msg) as TTarget;
+    } else if (targetType instanceof Uint8Array) {
+      return msg as TTarget;
+    } else {
+      throw new Error("Unknown message type not implemented!");
+    }
   }
 
-  messageToUint8Array(message: Uint8Array): Uint8Array {
-    return message;
+  asType<TTarget extends Conf.MessageArrayLike>(
+    msg: Conf.MessageArrayLike,
+    targetType: Conf.MessageArrayLikeType,
+  ): TTarget {
+    switch(targetType) {
+      default:
+        Util.exhaustiveMatchGuard(targetType);
+        break;
+      case 'string':
+        return asString(msg) as TTarget;
+      case 'Uint8Array':
+        return msg as TTarget;
+    }
   }
 }
 
@@ -49,11 +76,33 @@ export class StringMessageTransformer implements MessageTransformer<string> {
   combineMessages(...messages: string[]): string {
     return messages.join('');
   }
-  messageToString(message: string): string {
-    return message;
+
+  as<TTarget extends Conf.MessageArrayLike>(
+    msg: Conf.MessageArrayLike,
+    targetType: TTarget,
+  ): TTarget {
+    if (typeof targetType === "string") {
+      return msg as TTarget;
+    } else if (targetType instanceof Uint8Array) {
+      return asUint8Array(msg) as TTarget;
+    } else {
+      throw new Error("Unknown message type not implemented!");
+    }
   }
-  messageToUint8Array(message: string): Uint8Array {
-    return asUint8Array(message);
+
+  asType<TTarget extends Conf.MessageArrayLike>(
+    msg: Conf.MessageArrayLike,
+    targetType: Conf.MessageArrayLikeType,
+  ): TTarget {
+    switch(targetType) {
+      default:
+        Util.exhaustiveMatchGuard(targetType);
+        break;
+      case 'string':
+        return msg as TTarget;
+      case 'Uint8Array':
+        return asUint8Array(msg) as TTarget;
+    }
   }
 }
 
@@ -87,6 +136,21 @@ export function asTargetMessageType<TMessage extends Conf.MessageArrayLike>(
     return asUint8Array(msg) as TMessage;
   } else {
     throw new Error("Unknown message type not implemented!");
+  }
+}
+
+export function asTargetMessageLikeType<TMessage extends Conf.MessageArrayLike>(
+  msg: Conf.MessageArrayLike,
+  targetType: Conf.MessageArrayLikeType,
+): TMessage {
+  switch(targetType) {
+    default:
+      Util.exhaustiveMatchGuard(targetType);
+      break;
+    case 'Uint8Array':
+      return asUint8Array(msg) as TMessage;
+    case 'string':
+      return asString(msg) as TMessage;
   }
 }
 
