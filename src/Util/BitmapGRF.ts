@@ -1,3 +1,4 @@
+import { exhaustiveMatchGuard } from './EnumUtils.js';
 import type { Percent } from './NumericRange.js';
 import { WebZlpError } from './WebZlpError.js';
 
@@ -78,6 +79,17 @@ export class BitmapGRF {
     this._height = imageHeight;
     this._bytesPerRow = bytesPerRow;
     this._boundingBox = Object.freeze(boundingBox);
+  }
+
+  /** Create a copy of this bitmap. */
+  public copy(): BitmapGRF {
+    return new BitmapGRF(
+      this._bitmap.slice(0),
+      this._width,
+      this._height,
+      this._bytesPerRow,
+      this.boundingBox
+    )
   }
 
   /** Get a raw binary representation of this GRF. This is raw binary with no compression, compatible with EPL and ZPL.
@@ -190,6 +202,47 @@ export class BitmapGRF {
     }
     acs += hex.substr(offset);
     return acs;
+  }
+
+  /**
+   * Rotate the image, returning a new image.
+   * @param angle The angle to rotate the image.
+   */
+  public rotate(angle: 0 | 180): BitmapGRF {
+    switch (angle) {
+      default:
+        exhaustiveMatchGuard(angle);
+        break;
+      case 0:
+        return this.copy();
+      case 180:
+        {
+          const buf = Array(this._bitmap.length);
+          for (let i = 0; i < this._bitmap.length; i++) {
+            buf[this._bitmap.length - 1 - i] = BitmapGRF.revByte(this._bitmap[i]);
+          }
+
+          return new BitmapGRF(
+            new Uint8Array(buf),
+            this._width,
+            this._height,
+            this._bytesPerRow,
+            this.boundingBox);
+        }
+    }
+  }
+
+
+  private static revByte(byte: number) {
+    let x = byte;
+    x = ((x >> 1) & 0x55555555) | ((x & 0x55555555) << 1);
+    x = ((x >> 2) & 0x33333333) | ((x & 0x33333333) << 2);
+    x = ((x >> 4) & 0x0F0F0F0F) | ((x & 0x0F0F0F0F) << 4);
+    // stop after first 8 bits
+    //x = ((x >> 8) & 0x00FF00FF) | ((x & 0x00FF00FF) << 8);
+    //x = (x >>> 16) | (x << 16);
+
+    return x >>> 0;
   }
 
   // TODO: ASCII-compressed formats are only supported on newer firmwares.

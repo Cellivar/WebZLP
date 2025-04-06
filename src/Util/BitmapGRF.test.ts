@@ -396,10 +396,48 @@ describe('BitmapGRF', () => {
   });
 
   describe('Raw binary output', () => {
-    it('should transform an image correctly', () => {
+    it('should transform an image correctly', async () => {
       const imgData = getImageDataFromFileJson();
       const img = BitmapGRF.fromCanvasImageData(imgData);
-      expect(img.toBinaryGRF()).toMatchFileSnapshot(getSnap("test_imgdata_binarygrf"));
+      await expect(img.toBinaryGRF()).toMatchFileSnapshot(getSnap("test_imgdata_binarygrf"));
     });
+  });
+
+  describe('rotate', () => {
+    it('should copy zero degree rotate', async () => {
+      const imgData = getImageDataFromFileJson();
+      const img = BitmapGRF.fromCanvasImageData(imgData).rotate(0);
+      await expect(img.toBinaryGRF()).toMatchFileSnapshot(getSnap("test_imgdata_binarygrf"));
+    });
+
+    it('should double rotate 180 back to original data', async () => {
+      const imgData = getImageDataFromFileJson();
+      const img = BitmapGRF.fromCanvasImageData(imgData).rotate(180).rotate(180);
+      await expect(img.toBinaryGRF()).toMatchFileSnapshot(getSnap("test_imgdata_binarygrf"));
+    });
+
+    it('should rotate image correctly', async () => {
+      const imgData = getImageDataFromFileJson();
+      const img = BitmapGRF.fromCanvasImageData(imgData).rotate(180);
+      await expect(img.toBinaryGRF()).toMatchFileSnapshot(getSnap("test_imgdata_binarygrf_rotate180"));
+    });
+
+    it('should reverse bytes', async () => {
+      const imgData = getImageDataInputAlternatingDots(8, 1);
+      const img = BitmapGRF.fromRGBA(imgData, 8);
+
+      // Non-rotated pattern is 0101_0101
+      expect(img.toBinaryGRF()[0]).toBe(85);
+      // thus rotated pattern should be 1010_1010
+      expect(img.rotate(180).toBinaryGRF()[0]).toBe(170);
+    });
+
+    it('reverses bytes correctly', () => {
+      const func = BitmapGRF['revByte'];
+      expect(func(254)).toBe(127);
+      expect(func(240)).toBe(15);
+      expect(func(170)).toBe(85);
+      expect(func(1)).toBe(128);
+    })
   });
 });
