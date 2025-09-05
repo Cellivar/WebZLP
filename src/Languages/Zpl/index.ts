@@ -7,6 +7,7 @@ export { CmdHostConfig } from './CmdHostConfig.js';
 export { CmdHostIdentification } from './CmdHostIdentification.js';
 export { CmdHostQuery, HostQueryErrorFlags, HostQueryWarningFlags } from './CmdHostQuery.js';
 export { CmdHostStatus } from './CmdHostStatus.js';
+export { CmdSetNetworkIpResolutionMode } from './CmdNetworkSettings.js';
 export { CmdSetPowerUpAndHeadCloseAction } from './CmdSetPowerUpAndHeadCloseAction.js';
 export { CmdSetSensorCalibration } from './CmdSetSensorCalibration.js';
 export { CmdXmlQuery } from './CmdXmlQuery.js';export type { CmdXmlQueryType } from './CmdXmlQuery.js';

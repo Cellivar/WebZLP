@@ -1,0 +1,31 @@
+{
+  "messageIncomplete": false,
+  "messageMatchedExpectedCommand": true,
+  "messages": [
+    {
+      "messageType": "SettingUpdateMessage",
+      "printerHardware": {},
+      "printerMedia": {
+        "mediaGapDetectMode": 1,
+        "mediaLengthDots": 1327,
+      },
+      "printerSettings": {},
+      "printerZplSettings": {
+        "actionHeadClose": "feedBlank",
+        "actionPowerUp": "none",
+        "defaultGateway": "010.048.112.001",
+        "ipAddress": "010.048.112.191",
+        "ipResolutionMode": "ALL",
+        "markGain": 87,
+        "markMediaThreshold": 9,
+        "markThreshold": 17,
+        "mediaThreshold": 90,
+        "ribbonGain": 50,
+        "subnetMask": "255.255.255.000",
+        "transGain": 70,
+        "webThreshold": 79,
+      },
+    },
+  ],
+  "remainder": "",
+}

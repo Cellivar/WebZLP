@@ -20,6 +20,9 @@ describe('parseCmdXmlQueryResponse', () => {
     it('LP2844_Z', async () => {
       await expect(parseCmdXmlQuery(tf.LP2844_Z_XML(), cmd)).toMatchFileSnapshot(tf.LP2844_Z_FULL);
     });
+    it('LP2844_Z_NET', async () => {
+      await expect(parseCmdXmlQuery(tf.LP2844_Z_NET_XML(), cmd)).toMatchFileSnapshot(tf.LP2844_Z_NET_FULL);
+    });
     it('TLP2844_Z', async () => {
       await expect(parseCmdXmlQuery(tf.TLP2844_Z_XML(), cmd)).toMatchFileSnapshot(tf.TLP2844_Z_FULL);
     });

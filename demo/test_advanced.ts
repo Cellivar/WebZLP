@@ -163,6 +163,12 @@ interface ConfigModalForm extends HTMLCollection {
   // Power up/head close actions
   modalZplPowerUpAction  : HTMLSelectElement
   modalZplHeadCloseAction: HTMLSelectElement
+
+  // Networking
+  modalNetworkProtocolMode  : HTMLSelectElement
+  modalNetworkIpAddress     : HTMLInputElement
+  modalNetworkDefaultGateway: HTMLInputElement
+  modalNetworkNetmask       : HTMLInputElement
 }
 
 // A function to find and hide any alerts for a given alert ID.
@@ -308,6 +314,11 @@ class BasicLabelDesignerApp {
     const config = printer.printerOptions;
     // If the printer uses ZPL it will have a special config, show those!
     const isZpl = config instanceof WebLabel.ZPL.ZplPrinterConfig;
+    // If the printer has an IP address show the networking config!
+    let isNetwork = false;
+    if (isZpl) {
+      isNetwork = config.ipResolutionMode !== undefined;
+    }
 
     const formElement = this.configModal.querySelector('form')!;
     const form = formElement.elements as ConfigModalForm;
@@ -315,6 +326,13 @@ class BasicLabelDesignerApp {
     // Only show ZPL settings if the printer language is ZPL.
     for (const e of formElement.querySelectorAll('.modal-setting-zpl')) {
       if (isZpl) {
+        e.classList.remove('d-none');
+      } else {
+        e.classList.add('d-none');
+      }
+    }
+    for (const e of formElement.querySelectorAll('.modal-setting-network')) {
+      if (isNetwork) {
         e.classList.remove('d-none');
       } else {
         e.classList.add('d-none');
@@ -376,6 +394,14 @@ class BasicLabelDesignerApp {
 
       form.modalZplPowerUpAction.value   = config.actionPowerUp.toString();
       form.modalZplHeadCloseAction.value = config.actionHeadClose.toString();
+
+      if (isNetwork) {
+        form.modalNetworkIpAddress.value      = config.ipAddress ?? "";
+        form.modalNetworkDefaultGateway.value = config.defaultGateway ?? "";
+        form.modalNetworkNetmask.value        = config.subnetMask ?? "";
+        form.modalNetworkProtocolMode.value   = config.ipResolutionMode ?? "ALL";
+        // TODO: On protocol change lock out IP settings for DHCP
+      }
     }
 
     this.configModalHandle.show();
@@ -681,6 +707,17 @@ class BasicLabelDesignerApp {
           ribbonThreshold   : Number(form.modalZplRibbonTHold.value),
           webThreshold      : Number(form.modalZplWebTHold.value),
         }));
+
+
+      const isNetwork = printer.printerOptions.ipResolutionMode !== undefined;
+      if (isNetwork) {
+        configDoc.andThen(new WebLabel.ZPL.CmdSetNetworkIpResolutionMode(
+          form.modalNetworkProtocolMode.value as WebLabel.ZPL.NetworkIpResolutionMode,
+          form.modalNetworkIpAddress.value,
+          form.modalNetworkNetmask.value,
+          form.modalNetworkDefaultGateway.value
+        ))
+      }
     }
 
     let doc: WebLabel.IDocument;

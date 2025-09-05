@@ -2,12 +2,22 @@
 import * as Conf from '../../Configs/index.js';
 import * as Cmds from '../../Commands/index.js';
 import * as Util from '../../Util/index.js';
-import type { IZplSettingUpdateMessage, PowerUpAction } from './Config.js';
+import type { IZplSettingUpdateMessage, NetworkIpResolutionMode, PowerUpAction } from './Config.js';
 
 const powerUpMap: Record<string, PowerUpAction> = {
   "NO MOTION": 'none',
   "CALIBRATION": 'calibrateWebSensor',
   "FEED": 'feedBlank',
+}
+
+const ipProtocolMap: Record<string, NetworkIpResolutionMode> = {
+  'ALL': 'ALL',
+  'BOOTP': 'BOOTP',
+  'DHCP': 'DHCP',
+  'PERMANENT': 'PERMANENT',
+  'DHCP AND BOOTP': 'DHCP_AND_BOOTP',
+  'GLEANING': 'GLEANING',
+  'RARP': 'RARP',
 }
 
 export class CmdHostConfig implements Cmds.IPrinterExtendedCommand {
@@ -297,6 +307,31 @@ export function parseCmdHostConfig(
         // Time and counters, maybe useful?
         case "RTC DATE":
         case "RTC TIME":
+          break;
+
+        // Networking
+        // These values are not present in the XML block on early firmware so
+        // pull them from here instead
+
+        // TODO: Figure out if this is a config or a status
+        // PERMANENT, ???
+        case "IP RESOLUTION":
+          break;
+        case "IP PROTOCOL":
+          //ALL, 
+          update.printerZplSettings!.ipResolutionMode = ipProtocolMap[l.value];
+          break;
+
+        // Addresses are zero-padded IPv4 addressses like 010.048.112.191
+        // TODO: Safer parsing!
+        case "IP ADDRESS": //010.048.112.191
+          update.printerZplSettings!.ipAddress = l.value;
+          break;
+        case "SUBNET MASK": //255.255.255.000
+          update.printerZplSettings!.subnetMask = l.value;
+          break;
+        case "DEFAULT GATEWAY": //010.048.112.001
+          update.printerZplSettings!.defaultGateway = l.value;
           break;
 
         // There is one non-resettable counter and two resettable ones
