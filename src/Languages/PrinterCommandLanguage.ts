@@ -24,6 +24,13 @@ export function guessLanguageFromModelHint(deviceInfo?: IDeviceInformation): Con
   const modelName = deviceInfo.productName ?? '';
   // ZPL printers follow standard formats and can usually be trusted.
   switch (true) {
+    // A number of printers support auto-detect based on the first command sent
+    // We prefer ZPL for a few reasons, so we try ZPL with them first.
+    case /ZD420/gim.test(modelName): // (guess)
+    case /GK420/gim.test(modelName): // ZTC GK420t
+    case /GK888/gim.test(modelName): // (guess)
+    case /GX4[23]0/gim.test(modelName): // (guess)
+    case /GT800/gim.test(modelName): // (guess)
     case /LP 2824 Plus/gim.test(modelName): // LP 2844 Plus
       return Conf.PrinterCommandLanguage.zplEmulateEpl;
 
