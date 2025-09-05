@@ -31,6 +31,20 @@ export interface IZplSettingUpdateMessage extends Cmds.ISettingUpdateMessage {
   printerZplSettings?: Conf.UpdateFor<IZplPrinterSettings>;
 }
 
+export type NetworkIpResolutionMode
+  = 'ALL'
+  | 'BOOTP'
+  | 'DHCP_AND_BOOTP'
+  | 'DHCP'
+  | 'GLEANING'
+  | 'RARP'
+  | 'PERMANENT';
+
+export type NetworkInterface
+  = 'ExternalWired'
+  | 'InternalWired'
+  | 'Wireless';
+
 /** ZPL-specific config information about a printer. */
 export interface IZplPrinterSettings extends SensorLevels {
   /** The action the printer takes on power up. */
@@ -38,6 +52,14 @@ export interface IZplPrinterSettings extends SensorLevels {
 
   /** The action the printer takes when the head is closed. */
   actionHeadClose: PowerUpAction;
+
+  ipResolutionMode?: NetworkIpResolutionMode;
+
+  ipAddress?: string | undefined;
+
+  subnetMask?: string | undefined;
+
+  defaultGateway?: string | undefined;
 }
 
 export class ZplPrinterConfig extends Cmds.PrinterConfig implements IZplPrinterSettings, SensorLevels {
@@ -119,6 +141,24 @@ export class ZplPrinterConfig extends Cmds.PrinterConfig implements IZplPrinterS
     return this._takeLabelThreshold;
   }
 
+  // Networking, if hardware is present
+  private _ipResolutionMode?: NetworkIpResolutionMode = undefined;
+  public get ipResolutionMode(): NetworkIpResolutionMode | undefined {
+    return this._ipResolutionMode;
+  }
+  private _ipAddress?: string; // TODO: Real types
+  public get ipAddress(): string | undefined {
+    return this._ipAddress;
+  }
+  private _subnetMask?: string;
+  public get subnetMask(): string | undefined {
+    return this._subnetMask;
+  }
+  private _defaultGateway?: string;
+  public get defaultGateway(): string | undefined {
+    return this._defaultGateway;
+  }
+
   public override update(msg: Cmds.ISettingUpdateMessage | IZplSettingUpdateMessage) {
     super.update(msg);
 
@@ -140,6 +180,11 @@ export class ZplPrinterConfig extends Cmds.PrinterConfig implements IZplPrinterS
       this._ribbonGain         = s?.ribbonGain ?? this._ribbonGain
       this._ribbonThreshold    = s?.ribbonThreshold ?? this._ribbonThreshold
       this._ribbonBrightness   = s?.ribbonBrightness ?? this._ribbonBrightness
+
+      this._ipAddress        = s?.ipAddress ?? this._ipAddress;
+      this._subnetMask       = s?.subnetMask ?? this._subnetMask;
+      this._defaultGateway   = s?.defaultGateway ?? this._defaultGateway;
+      this._ipResolutionMode = s?.ipResolutionMode ?? this._ipResolutionMode;
     }
   }
 

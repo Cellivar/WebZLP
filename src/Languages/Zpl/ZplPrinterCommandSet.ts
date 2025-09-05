@@ -12,6 +12,7 @@ import { cmdGraphSensorCalibrationMapping } from './CmdGraphSensorCalibration.js
 import { cmdSetSensorCalibrationMapping } from './CmdSetSensorCalibration.js';
 import { ZplPrinterConfig } from './Config.js';
 import { cmdSetPowerUpAndHeadCloseActionMapping } from './CmdSetPowerUpAndHeadCloseAction.js';
+import { cmdSetNetworkIpResolutionModeMapping } from './CmdNetworkSettings.js';
 
 /** Command set for communicating with a ZPL II printer. */
 export class ZplPrinterCommandSet extends Cmds.StringCommandSet {
@@ -182,14 +183,15 @@ export class ZplPrinterCommandSet extends Cmds.StringCommandSet {
       },
       [
         cmdConfigUpdateMapping,
+        cmdGraphSensorCalibrationMapping,
         cmdHostConfigMapping,
-        cmdXmlQueryTypeMapping,
         cmdHostIdentificationMapping,
         cmdHostQueryMapping,
         cmdHostStatusMapping,
+        cmdSetNetworkIpResolutionModeMapping,
         cmdSetPowerUpAndHeadCloseActionMapping,
-        cmdGraphSensorCalibrationMapping,
         cmdSetSensorCalibrationMapping,
+        cmdXmlQueryTypeMapping,
         ...extendedCommands,
       ]
     );
