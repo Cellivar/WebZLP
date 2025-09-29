@@ -37,6 +37,14 @@ describe('parseCmdHostConfig', () => {
     });
   });
 
+  describe("LP2844-Z-NET", () => {
+    const conf = tf.LP2844_Z_NET_TXT();
+    const snap = tf.LP2844_Z_NET_CONF;
+    it('Parses host config', () => {
+      expect(parseCmdHostConfig(conf, cmd)).toMatchFileSnapshot(snap);
+    });
+  });
+
   describe("TLP2844-Z", () => {
     const conf = tf.TLP2844_Z_TXT();
     const snap = tf.TLP2844_Z_CONF;

@@ -1,0 +1,55 @@
+  46J000000000                          
+  +21                 DARKNESS          
+  +000                TEAR OFF          
+  TEAR OFF            PRINT MODE        
+  NON-CONTINUOUS      MEDIA TYPE        
+  WEB                 SENSOR TYPE       
+  DIRECT-THERMAL      PRINT METHOD      
+  100 0/8 MM          PRINT  WIDTH      
+  1327                LABEL LENGTH      
+  12.0IN   304MM      MAXIMUM LENGTH    
+  CONNECTED           USB COMM.         
+  PARALLEL            PARALLEL COMM.    
+  RS232               SERIAL COMM.      
+  9600                BAUD              
+  8 BITS              DATA BITS         
+  NONE                PARITY            
+  XON/XOFF            HOST HANDSHAKE    
+  NONE                PROTOCOL          
+  000                 NETWORK ID        
+  NORMAL MODE         COMMUNICATIONS    
+  <~>  7EH            CONTROL PREFIX    
+  <^>  5EH            FORMAT PREFIX     
+  <,>  2CH            DELIMITER CHAR    
+  ZPL II              ZPL MODE          
+  NO MOTION           MEDIA POWER UP    
+  FEED                HEAD CLOSE        
+  DEFAULT             BACKFEED          
+  +000                LABEL TOP         
+  +0000               LEFT POSITION     
+  079                 WEB S.            
+  090                 MEDIA S.          
+  017                 MARK S.           
+  009                 MARK MED S.       
+  070                 MEDIA LED         
+  050                 RIBBON LED        
+  087                 MARK LED          
+  CS                  MODES ENABLED     
+  ..                  MODES DISABLED    
+  832 8/MM FULL       RESOLUTION        
+  V45.11.7Z    <-     FIRMWARE          
+  V22.0.0.42          HARDWARE ID       
+  CUSTOMIZED          CONFIGURATION     
+  8192.............R: RAM               
+  2816.............E: ONBOARD FLASH     
+  NONE                FORMAT CONVERT    
+                      TWINAX/COAX ID    
+  FW VERSION          IDLE DISPLAY      
+  05/05/37            RTC DATE          
+  00:00               RTC TIME          
+  PERMANENT           IP RESOLUTION     
+  ALL                 IP PROTOCOL       
+  010.048.112.191     IP ADDRESS        
+  255.255.255.000     SUBNET MASK       
+  010.048.112.001     DEFAULT GATEWAY   
+

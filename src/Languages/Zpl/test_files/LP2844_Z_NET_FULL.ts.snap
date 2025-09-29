@@ -1,0 +1,61 @@
+{
+  "messageIncomplete": false,
+  "messageMatchedExpectedCommand": true,
+  "messages": [
+    {
+      "messageType": "SettingUpdateMessage",
+      "printerHardware": {
+        "dpi": 200,
+        "firmware": "V45.11.7Z ",
+        "maxMediaDarkness": 30,
+        "maxMediaLengthDots": 7917,
+        "maxMediaWidthDots": 832,
+        "model": "LP2844-Z",
+        "speedTable": SpeedTable {
+          "speedTable": Map {
+            0 => 0,
+            1 => 2,
+            1000 => 4,
+            4 => 2,
+            6 => 3,
+            8 => 4,
+          },
+        },
+      },
+      "printerMedia": {
+        "darknessPercent": 70,
+        "mediaGapDetectMode": 1,
+        "mediaLengthDots": 1350,
+        "mediaPrintMode": 0,
+        "mediaPrintOriginOffsetDots": {
+          "left": 0,
+          "top": 0,
+        },
+        "mediaWidthDots": 800,
+        "printOrientation": 0,
+        "speed": PrintSpeedSettings {
+          "printSpeed": 4,
+          "slewSpeed": 4,
+        },
+        "thermalPrintMode": 0,
+      },
+      "printerSettings": {
+        "backfeedAfterTaken": "90",
+      },
+      "printerZplSettings": {
+        "actionHeadClose": "feedBlank",
+        "actionPowerUp": "none",
+        "markGain": 87,
+        "markMediaThreshold": 9,
+        "markThreshold": 17,
+        "mediaThreshold": 90,
+        "ribbonGain": 50,
+        "ribbonThreshold": 75,
+        "transBrightness": undefined,
+        "transGain": 70,
+        "webThreshold": 79,
+      },
+    },
+  ],
+  "remainder": "",
+}

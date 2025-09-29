@@ -42,6 +42,11 @@ export const LP2844_Z_FULL = getSnap("LP2844_Z_FULL");
 export const LP2844_Z_TXT = () => getFile("LP2844_Z.txt");
 export const LP2844_Z_CONF = getSnap("LP2844_Z_CONF");
 
+export const LP2844_Z_NET_XML = () => getFile("LP2844_Z_NET.xml");
+export const LP2844_Z_NET_FULL = getSnap("LP2844_Z_NET_FULL");
+export const LP2844_Z_NET_TXT = () => getFile("LP2844_Z_NET.txt");
+export const LP2844_Z_NET_CONF = getSnap("LP2844_Z_NET_CONF");
+
 export const TLP2844_Z_XML = () => getFile("TLP2844_Z.xml");
 export const TLP2844_Z_FULL = getSnap("TLP2844_Z_FULL");
 export const TLP2844_Z_TXT = () => getFile("TLP2844_Z.txt");

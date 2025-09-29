@@ -226,8 +226,13 @@
           // Power up/head close actions
           modalZplPowerUpAction  : HTMLSelectElement
           modalZplHeadCloseAction: HTMLSelectElement
-        }
 
+          // Networking
+          modalNetworkProtocolMode  : HTMLSelectElement
+          modalNetworkIpAddress     : HTMLInputElement
+          modalNetworkDefaultGateway: HTMLInputElement
+          modalNetworkNetmask       : HTMLInputElement
+        }
 
         // A function to find and hide any alerts for a given alert ID.
         function hideAlerts(alertId: string) {
@@ -372,6 +377,11 @@
             const config = printer.printerOptions;
             // If the printer uses ZPL it will have a special config, show those!
             const isZpl = config instanceof WebLabel.ZPL.ZplPrinterConfig;
+            // If the printer has an IP address show the networking config!
+            let isNetwork = false;
+            if (isZpl) {
+              isNetwork = config.ipResolutionMode !== undefined;
+            }
 
             const formElement = this.configModal.querySelector('form')!;
             const form = formElement.elements as ConfigModalForm;
@@ -379,6 +389,13 @@
             // Only show ZPL settings if the printer language is ZPL.
             for (const e of formElement.querySelectorAll('.modal-setting-zpl')) {
               if (isZpl) {
+                e.classList.remove('d-none');
+              } else {
+                e.classList.add('d-none');
+              }
+            }
+            for (const e of formElement.querySelectorAll('.modal-setting-network')) {
+              if (isNetwork) {
                 e.classList.remove('d-none');
               } else {
                 e.classList.add('d-none');
@@ -440,6 +457,14 @@
 
               form.modalZplPowerUpAction.value   = config.actionPowerUp.toString();
               form.modalZplHeadCloseAction.value = config.actionHeadClose.toString();
+
+              if (isNetwork) {
+                form.modalNetworkIpAddress.value = config.ipAddress ?? "";
+                form.modalNetworkDefaultGateway.value = config.defaultGateway ?? "";
+                form.modalNetworkNetmask.value = config.subnetMask ?? "";
+                form.modalNetworkProtocolMode.value = config.ipResolutionMode ?? "ALL";
+                // TODO: On protocol change lock out IP settings for DHCP
+              }
             }
 
             this.configModalHandle.show();
@@ -745,6 +770,17 @@
                   ribbonThreshold   : Number(form.modalZplRibbonTHold.value),
                   webThreshold      : Number(form.modalZplWebTHold.value),
                 }));
+
+
+              const isNetwork = printer.printerOptions.ipResolutionMode !== undefined;
+              if (isNetwork) {
+                configDoc.andThen(new WebLabel.ZPL.CmdSetNetworkIpResolutionMode(
+                  form.modalNetworkProtocolMode.value as WebLabel.ZPL.NetworkIpResolutionMode,
+                  form.modalNetworkIpAddress.value,
+                  form.modalNetworkNetmask.value,
+                  form.modalNetworkDefaultGateway.value
+                ))
+              }
             }
 
             let doc: WebLabel.IDocument;
@@ -1031,6 +1067,54 @@
                         <option value="calibrateWebSensor">Media Auto-Calibrate</option>
                       </select>
                       <label for="modalZplHeadCloseAction">Action on head close</label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="mb-3 modal-settings-network">
+                <hr/>
+                <div class="row">
+                  <div class="col-md-6">
+                    <h5>Network Settings</h5>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="form-floating">
+                      <select id="modalNetworkProtocolMode" class="form-select">
+                        <option value="ALL">All Protocols</option>
+                        <option value="PERMANENT">Permanent (static)</option>
+                        <option value="DHCP">DHCP</option>
+                        <option value="BOOTP">BOOTP</option>
+                        <option value="DHCP_AND_BOOTP">DHCP and BOOTP</option>
+                        <option value="GLEANING">Gleaning (Deprecated)</option>
+                        <option value="RARP">RARP (Deprecated)</option>
+                      </select>
+                      <label for="modalNetworkProtocolMode">IP Address resolution mode</label>
+                    </div>
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="col-md-6">
+                    <label for="modalNetworkIpAddress" class="form-label">IP Address</label>
+                    <div class="input-group mb-6">
+                      <input id="modalNetworkIpAddress" type="text" class="form-control" placeholder="192.168.1.69"
+                        aria-label="IP Address" minlength="7" maxlength="15" size="15" pattern="^((\d{1,2}|[01]\d\d|2[0-4]\d|25[0-5])\.){3}(\d{1,2}|[01]\d\d|2[0-4]\d|25[0-5])$"
+                        data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="bottom" title="Wired network IP address.">
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <label for="modalNetworkDefaultGateway" class="form-label">Default Gateway</label>
+                    <div class="input-group mb-6">
+                      <input id="modalNetworkDefaultGateway" type="text" class="form-control" placeholder="192.168.1.1"
+                        aria-label="IP Address" minlength="7" maxlength="15" size="15" pattern="^((\d{1,2}|[01]\d\d|2[0-4]\d|25[0-5])\.){3}(\d{1,2}|[01]\d\d|2[0-4]\d|25[0-5])$"
+                        data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="bottom" title="Wired network default gateway.">
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <label for="modalNetworkNetmask" class="form-label">Netmask</label>
+                    <div class="input-group mb-6">
+                      <input id="modalNetworkNetmask" type="text" class="form-control" placeholder="255.255.255.0"
+                        aria-label="IP Address" minlength="7" maxlength="15" size="15" pattern="^((\d{1,2}|[01]\d\d|2[0-4]\d|25[0-5])\.){3}(\d{1,2}|[01]\d\d|2[0-4]\d|25[0-5])$"
+                        data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="bottom" title="Wired network netmask.">
                     </div>
                   </div>
                 </div>
