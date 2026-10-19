@@ -340,6 +340,6 @@ export class Raw implements IPrinterBasicCommand {
 
   constructor(
     public readonly rawDocument: string,
-    public readonly effectFlags: CommandEffectFlags
+    public readonly effectFlags: CommandEffectFlags = NoEffect
   ) { }
 }

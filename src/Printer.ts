@@ -146,7 +146,7 @@ export class LabelPrinter<TChannelType extends Conf.MessageArrayLike> extends Ev
     return super.dispatchEvent(new CustomEvent<Cmds.IErrorMessage | Cmds.IStatusMessage>(eventName, { detail }));
   }
 
-  private async setup() {
+  protected async setup() {
     if (!this._channel.connected) {
       // If the channel failed to connect we have no hope.
       await this.dispose();
@@ -188,6 +188,7 @@ export class LabelPrinter<TChannelType extends Conf.MessageArrayLike> extends Ev
     // a valid config. Mostly EPL models.
     // Give it 3 chances before we give up.
     let retryLimit = 3;
+    const retryMax = retryLimit;
     do {
       retryLimit--;
       try {
@@ -199,7 +200,7 @@ export class LabelPrinter<TChannelType extends Conf.MessageArrayLike> extends Ev
       }
     } while (retryLimit > 0);
 
-    throw new Mux.DeviceCommunicationError(`Tried ${retryLimit} times to read config and failed.`);
+    throw new Mux.DeviceCommunicationError(`Tried ${retryMax} times to read config and failed.`);
   }
 
   /** Send a document to the printer, applying the commands. */
